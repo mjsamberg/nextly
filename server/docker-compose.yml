@@ -1,16 +1,17 @@
-# Nextly sync server for a host that already runs Tailscale.
+# Nextly sync server behind a Cloudflare Tunnel.
 #
-#   1. cp .env.example .env   and fill in NEXTLY_TOKEN + NEXTLY_BIND
+#   1. cp .env.example .env   and fill in NEXTLY_TOKEN + CLOUDFLARE_TUNNEL_TOKEN
 #   2. docker compose up -d --build
-#   3. Clients point at http://<this-machine>.<your-tailnet>.ts.net:8080
+#   3. Clients point at https://<your public hostname>, with the Cloudflare
+#      Access service token headers set in Settings. See docs/cloudflare.md.
+#
+# cloudflared makes an outbound connection to Cloudflare, so the host needs no
+# open ports and no firewall changes. The sync server isn't published on the
+# host at all; only cloudflared can reach it, at http://nextly:8080.
 #
 # The image builds straight from GitHub (the server/ folder of main), so this
 # file and .env are all the host needs. To pick up new commits:
 #   docker compose build --pull --no-cache && docker compose up -d
-#
-# NEXTLY_BIND is this host's Tailscale IP (`tailscale ip -4`), so the port is
-# only reachable over the tailnet, not the LAN. If Docker starts before
-# Tailscale is up, the bind fails and `restart` retries until it succeeds.
 
 services:
   nextly:
@@ -19,13 +20,23 @@ services:
     # Always build from GitHub; there is no published image to pull.
     pull_policy: build
     environment:
-      NEXTLY_TOKEN: ${NEXTLY_TOKEN}
+      NEXTLY_TOKEN: ${NEXTLY_TOKEN:?set NEXTLY_TOKEN in .env}
       NEXTLY_DATA: /data
       PORT: "8080"
-    ports:
-      - "${NEXTLY_BIND:?set NEXTLY_BIND to this host's Tailscale IP}:8080:8080"
     volumes:
       - nextly-data:/data
+    restart: unless-stopped
+    # To also reach it directly on this machine for testing, uncomment:
+    # ports:
+    #   - "127.0.0.1:8080:8080"
+
+  cloudflared:
+    image: cloudflare/cloudflared:2024.12.2
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:?set CLOUDFLARE_TUNNEL_TOKEN in .env}
+    depends_on:
+      - nextly
     restart: unless-stopped
 
 volumes:

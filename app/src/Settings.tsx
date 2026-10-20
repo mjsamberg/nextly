@@ -2,6 +2,7 @@ import { useState } from 'react';
 import * as I from './icons';
 import { createArea, deleteArea, deleteProject, deviceId, updateArea, updateProject, useStore } from './store';
 import { getSettings, saveSettings, syncNow, useSyncStatus } from './sync';
+import { checkHeaders, type HeaderRow } from './logic';
 import { mod } from './net';
 
 export default function Settings({ onBack }: { onBack: () => void }) {
@@ -9,8 +10,12 @@ export default function Settings({ onBack }: { onBack: () => void }) {
   const sync = useSyncStatus();
   const [url, setUrl] = useState(getSettings().url);
   const [token, setToken] = useState(getSettings().token);
+  const [headers, setHeaders] = useState<HeaderRow[]>(getSettings().headers);
   const [area, setArea] = useState('');
   const urlOk = !url || /^https?:\/\/[^\s/]+/.test(url.trim());
+  const headerError = checkHeaders(headers);
+  const hasAccess = headers.some((h) => /^cf-access-client-/i.test(h.name));
+  const setRow = (i: number, p: Partial<HeaderRow>) => setHeaders(headers.map((h, j) => (j === i ? { ...h, ...p } : h)));
 
   return (
     <div className="list settings">
@@ -21,15 +26,33 @@ export default function Settings({ onBack }: { onBack: () => void }) {
 
       <section className="panel">
         <h2>Sync</h2>
-        <p className="muted">Point every device at the same Nextly server on your tailnet, for example <code>http://homeserver.your-tailnet.ts.net:8080</code>.</p>
-        <form className="form" onSubmit={(e) => { e.preventDefault(); if (urlOk) void saveSettings({ url, token }); }}>
+        <p className="muted">Point every device at the same Nextly server, for example <code>https://nextly.example.com</code> through a Cloudflare Tunnel.</p>
+        <form className="form" onSubmit={(e) => { e.preventDefault(); if (urlOk && !headerError) void saveSettings({ url, token, headers }); }}>
           <label htmlFor="sync-url">Server address</label>
-          <input id="sync-url" value={url} placeholder="http://machine.tailnet.ts.net:8080" onChange={(e) => setUrl(e.target.value)} autoCapitalize="off" autoCorrect="off" spellCheck={false} />
+          <input id="sync-url" value={url} placeholder="https://nextly.example.com" onChange={(e) => setUrl(e.target.value)} autoCapitalize="off" autoCorrect="off" spellCheck={false} />
           {!urlOk && <p className="error">The address should start with http:// or https://.</p>}
           <label htmlFor="sync-token">Sync token</label>
           <input id="sync-token" type="password" value={token} placeholder="NEXTLY_TOKEN from the server’s .env" onChange={(e) => setToken(e.target.value)} autoComplete="off" />
+
+          <label>Request headers</label>
+          <p className="muted small">Sent with every sync and file request. For Cloudflare Access, add your service token’s Client ID and Client Secret.</p>
+          {headers.map((h, i) => (
+            <div key={i} className="header-row">
+              <input id={`hdr-name-${i}`} value={h.name} placeholder="Header name" aria-label="Header name" onChange={(e) => setRow(i, { name: e.target.value })} autoCapitalize="off" autoCorrect="off" spellCheck={false} />
+              <input id={`hdr-value-${i}`} value={h.value} placeholder="Value" aria-label={`Value for ${h.name || 'header'}`} type={/secret|token|key|password/i.test(h.name) ? 'password' : 'text'} onChange={(e) => setRow(i, { value: e.target.value })} autoCapitalize="off" autoCorrect="off" spellCheck={false} autoComplete="off" />
+              <button type="button" className="icon-btn" aria-label={`Remove ${h.name || 'header'}`} onClick={() => setHeaders(headers.filter((_, j) => j !== i))}><I.X /></button>
+            </div>
+          ))}
+          <div className="row-btns left">
+            <button type="button" onClick={() => setHeaders([...headers, { name: '', value: '' }])}>Add header</button>
+            {!hasAccess && (
+              <button type="button" onClick={() => setHeaders([...headers, { name: 'CF-Access-Client-Id', value: '' }, { name: 'CF-Access-Client-Secret', value: '' }])}>Add Cloudflare Access headers</button>
+            )}
+          </div>
+          {headerError && <p className="error">{headerError}</p>}
+
           <div className="row-btns">
-            <button type="submit" className="pri" disabled={!urlOk}>Save and sync</button>
+            <button type="submit" className="pri" disabled={!urlOk || !!headerError}>Save and sync</button>
             <button type="button" onClick={() => void syncNow()} disabled={!getSettings().url}>Sync now</button>
           </div>
         </form>

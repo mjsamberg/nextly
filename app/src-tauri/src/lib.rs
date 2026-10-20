@@ -1,7 +1,7 @@
 // The app is all frontend; Rust only hosts the webview and the two plugins.
 // Sync goes through tauri-plugin-http so requests come from Rust, which avoids
-// CORS and mixed-content rules in the webview and iOS App Transport Security
-// when the sync server is plain http on the tailnet.
+// CORS and mixed-content rules in the webview and lets the app send custom
+// headers such as the Cloudflare Access service token.
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {

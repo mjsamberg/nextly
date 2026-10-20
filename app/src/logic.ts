@@ -166,6 +166,43 @@ export function parseQuickAdd(input: string, now = new Date()): QuickAdd {
   return out;
 }
 
+// ---------- extra request headers (Cloudflare Access and similar) ----------
+
+export interface HeaderRow { name: string; value: string }
+
+// Header names the app sets itself, or that the HTTP stack won't let us set.
+const RESERVED = new Set(['authorization', 'content-type', 'content-length', 'host', 'connection', 'transfer-encoding']);
+
+/** Checks the rows from Settings. Blank rows are ignored. */
+export function checkHeaders(rows: HeaderRow[]): string | null {
+  const seen = new Set<string>();
+  for (const { name, value } of rows) {
+    const n = name.trim();
+    if (!n && !value.trim()) continue;
+    if (!/^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/.test(n)) return `“${n || '(blank)'}” isn’t a valid header name. Use letters, numbers and dashes, like CF-Access-Client-Id.`;
+    if (RESERVED.has(n.toLowerCase())) return `Nextly sets ${n} itself, so it can’t be added here.`;
+    if (seen.has(n.toLowerCase())) return `${n} is listed twice.`;
+    if (/[\r\n]/.test(value)) return `The value for ${n} can’t contain line breaks.`;
+    seen.add(n.toLowerCase());
+  }
+  return null;
+}
+
+export function headerObject(rows: HeaderRow[]): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const { name, value } of rows) if (name.trim()) out[name.trim()] = value.trim();
+  return out;
+}
+
+/**
+ * Cloudflare Access answers a request without a valid service token with a
+ * 403 or a redirect to its login page instead of reaching the server.
+ */
+export function blockedByAccess(status: number, contentType: string | null, finalUrl: string): boolean {
+  if (/cloudflareaccess\.com|\/cdn-cgi\/access\//.test(finalUrl)) return true;
+  return (status === 403 || status === 302 || (status === 200 && !!contentType && contentType.includes('text/html')));
+}
+
 export function noteText(t: Task): string {
   return t.notes.map((b) => [b.text, b.subject, b.name].filter(Boolean).join(' ')).join(' ');
 }

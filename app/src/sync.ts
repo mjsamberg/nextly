@@ -6,12 +6,14 @@ import { useSyncExternalStore } from 'react';
 import * as db from './db';
 import { http } from './net';
 import { applyRemote, markSent, pendingChanges, setOnLocalChange } from './store';
+import { blockedByAccess, headerObject, type HeaderRow } from './logic';
 import type { Rec } from './types';
 
-export interface SyncSettings { url: string; token: string }
+/** headers: sent with every request, e.g. a Cloudflare Access service token. */
+export interface SyncSettings { url: string; token: string; headers: HeaderRow[] }
 export interface SyncStatus { state: 'off' | 'idle' | 'syncing' | 'error'; message: string; lastSync: string | null }
 
-let settings: SyncSettings = { url: '', token: '' };
+let settings: SyncSettings = { url: '', token: '', headers: [] };
 let status: SyncStatus = { state: 'off', message: 'Sync isn’t set up yet', lastSync: null };
 const listeners = new Set<() => void>();
 let running = false;
@@ -25,11 +27,25 @@ export const getSettings = () => settings;
 const base = () => settings.url.replace(/\/+$/, '');
 const authed = (init: RequestInit = {}): RequestInit => ({
   ...init,
-  headers: { ...(init.headers as Record<string, string>), authorization: `Bearer ${settings.token}` },
+  headers: {
+    ...headerObject(settings.headers),
+    ...(init.headers as Record<string, string>),
+    authorization: `Bearer ${settings.token}`,
+  },
 });
 
+const ACCESS_HELP = 'Cloudflare Access blocked the request. Check the CF-Access-Client-Id and CF-Access-Client-Secret headers in Settings.';
+
+/** Throws a readable error for anything but a real answer from the Nextly server. */
+function check(res: Response, what: string) {
+  if (blockedByAccess(res.status, res.headers.get('content-type'), res.url)) throw new Error(ACCESS_HELP);
+  if (res.status === 401) throw new Error('The server rejected the sync token. Check it in Settings.');
+  if (!res.ok) throw new Error(`${what}: the server answered ${res.status}.`);
+}
+
 export async function initSync() {
-  settings = (await db.get<SyncSettings>('meta', 'sync')) ?? settings;
+  const saved = await db.get<Partial<SyncSettings>>('meta', 'sync');
+  settings = { url: saved?.url ?? '', token: saved?.token ?? '', headers: saved?.headers ?? [] };
   const last = await db.get<string>('meta', 'lastSync');
   setStatus(settings.url ? { state: 'idle', message: 'Ready', lastSync: last ?? null } : {});
   // Push local edits shortly after they happen, and poll for others' edits.
@@ -42,7 +58,11 @@ export async function initSync() {
 
 export async function saveSettings(s: SyncSettings) {
   const changedServer = s.url !== settings.url;
-  settings = { url: s.url.trim(), token: s.token.trim() };
+  settings = {
+    url: s.url.trim(),
+    token: s.token.trim(),
+    headers: s.headers.filter((h) => h.name.trim()).map((h) => ({ name: h.name.trim(), value: h.value.trim() })),
+  };
   await db.put('meta', settings, 'sync');
   if (changedServer) await db.put('meta', 0, 'cursor'); // new server: pull everything
   setStatus(settings.url ? { state: 'idle', message: 'Saved' } : { state: 'off', message: 'Sync isn’t set up yet' });
@@ -63,8 +83,7 @@ export async function syncNow(): Promise<void> {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ cursor, changes }),
       }));
-      if (res.status === 401) throw new Error('The server rejected the sync token. Check it in Settings.');
-      if (!res.ok) throw new Error(`The server answered ${res.status}.`);
+      check(res, 'Sync failed');
       const body = await res.json() as { cursor: number; changes: Rec[]; more: boolean };
       markSent(changes);
       applyRemote(body.changes);
@@ -78,7 +97,7 @@ export async function syncNow(): Promise<void> {
     setStatus({ state: 'idle', message: 'Up to date', lastSync: now });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    setStatus({ state: 'error', message: /fetch|network|connect|dns|refused/i.test(msg) ? `Can’t reach ${settings.url}. Is Tailscale connected?` : msg });
+    setStatus({ state: 'error', message: /fetch|network|connect|dns|refused|timed out/i.test(msg) ? `Can’t reach ${settings.url}. Check your internet connection and that the tunnel is running.` : msg });
   } finally {
     running = false;
     if (again) { again = false; void syncNow(); }
@@ -93,7 +112,7 @@ async function uploadFiles() {
     const f = await db.get<db.StoredFile>('files', sha);
     if (!f || f.uploaded) continue;
     const res = await http(`${base()}/files/${sha}`, authed({ method: 'PUT', body: new Uint8Array(f.bytes) }));
-    if (!res.ok) throw new Error(`Couldn’t upload ${f.name} (${res.status}).`);
+    check(res, `Couldn’t upload ${f.name}`);
     await db.put('files', { ...f, uploaded: true }, sha);
   }
 }
@@ -119,7 +138,8 @@ export async function loadFile(sha: string, name = '', mime = 'application/octet
   if (f) return new Blob([f.bytes], { type: f.mime });
   if (!settings.url) return null;
   const res = await http(`${base()}/files/${sha}`, authed());
-  if (!res.ok) return null;
+  // Never cache an Access login page as the file.
+  if (!res.ok || blockedByAccess(res.status, res.headers.get('content-type'), res.url)) return null;
   const bytes = await res.arrayBuffer();
   await db.put('files', { bytes, mime, name, uploaded: true } satisfies db.StoredFile, sha);
   return new Blob([bytes], { type: mime });
@@ -131,6 +151,6 @@ export async function fileLink(sha: string, name: string, mime: string): Promise
   const res = await http(`${base()}/files/${sha}/link`, authed({
     method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name, mime }),
   }));
-  if (!res.ok) throw new Error('Couldn’t open the file. Check that sync is working.');
+  check(res, 'Couldn’t open the file');
   return base() + (await res.json() as { url: string }).url;
 }

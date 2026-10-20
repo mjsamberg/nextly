@@ -28,17 +28,20 @@ Pushing a tag like `v0.1.0` also creates a draft GitHub release with all of them
 
 ## Run the sync server
 
-The host needs Docker and Tailscale. Copy `server/docker-compose.yml` and
-`server/.env.example` to the host, then:
+The server is reached through a Cloudflare Tunnel protected by Cloudflare
+Access, so the host needs Docker but no open ports. Set up the tunnel and
+Access first: [docs/cloudflare.md](docs/cloudflare.md). Then copy
+`server/docker-compose.yml` and `server/.env.example` to the host:
 
 ```bash
-cp .env.example .env    # set NEXTLY_BIND (tailscale ip -4) and NEXTLY_TOKEN
+cp .env.example .env    # set NEXTLY_TOKEN and CLOUDFLARE_TUNNEL_TOKEN
 docker compose up -d --build
 ```
 
-Compose builds the image from the `server/` folder of this repo's `main` branch.
-In each app, open **Settings** and enter `http://<host>.<tailnet>.ts.net:8080`
-and the token.
+Compose builds the server from the `server/` folder of this repo's `main`
+branch and runs `cloudflared` next to it. In each app, open **Settings** and
+enter `https://nextly.example.com` (your hostname), the sync token, and the
+Access service token under **Request headers** → **Add Cloudflare Access headers**.
 
 ## Develop
 
@@ -59,5 +62,9 @@ npm run dev         # frontend only, in a browser
   Sync runs 1.5 s after an edit, every 30 s, and when the window gets focus.
 - **Attachments** are stored by SHA-256, upload once, and download on demand.
   Files open in the system browser through a link that expires after 10 minutes.
-- **Requests go through Rust** (`tauri-plugin-http`), so plain `http://` on the
-  tailnet works on iOS without App Transport Security exceptions.
+- **Request headers.** Any headers set in Settings (such as
+  `CF-Access-Client-Id` and `CF-Access-Client-Secret`) go with every sync and
+  file request. If Cloudflare Access turns a request away, the app says so
+  instead of showing a generic error.
+- **Requests go through Rust** (`tauri-plugin-http`), so they aren't limited by
+  CORS in the webview.

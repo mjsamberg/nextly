@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { defer, normTask, openBlockers, orderBetween, parseDateWord, parseQuickAdd, wouldCycle } from './logic.ts';
+import { blockedByAccess, checkHeaders, defer, headerObject, normTask, openBlockers, orderBetween, parseDateWord, parseQuickAdd, wouldCycle } from './logic.ts';
 import type { TaskItem } from './types.ts';
 
 // Tuesday, Oct 20 2026
@@ -70,4 +70,25 @@ test('normTask accepts capture-page records with links', () => {
   assert.equal(t.flag, 'inbox');
   assert.equal(t.notes[0].type, 'paragraph');
   assert.equal(t.notes[1].type, 'email');
+});
+
+test('extra headers for Cloudflare Access', () => {
+  const rows = [
+    { name: 'CF-Access-Client-Id', value: ' abc.access ' },
+    { name: 'CF-Access-Client-Secret', value: 'xyz' },
+    { name: '', value: '' },
+  ];
+  assert.equal(checkHeaders(rows), null);
+  assert.deepEqual(headerObject(rows), { 'CF-Access-Client-Id': 'abc.access', 'CF-Access-Client-Secret': 'xyz' });
+  assert.match(checkHeaders([{ name: 'Authorization', value: 'x' }])!, /sets Authorization itself/);
+  assert.match(checkHeaders([{ name: 'bad name', value: 'x' }])!, /valid header name/);
+  assert.match(checkHeaders([{ name: 'X-A', value: '1' }, { name: 'x-a', value: '2' }])!, /twice/);
+  assert.match(checkHeaders([{ name: 'X-A', value: 'a\nb' }])!, /line breaks/);
+});
+
+test('detects Cloudflare Access blocking a request', () => {
+  assert.equal(blockedByAccess(200, 'text/html', 'https://team.cloudflareaccess.com/cdn-cgi/access/login'), true);
+  assert.equal(blockedByAccess(403, 'text/html', 'https://nextly.example.com/sync'), true);
+  assert.equal(blockedByAccess(200, 'application/json', 'https://nextly.example.com/sync'), false);
+  assert.equal(blockedByAccess(401, 'application/json', 'https://nextly.example.com/sync'), false);
 });

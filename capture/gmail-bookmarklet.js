@@ -1,11 +1,12 @@
 // "Email → Nextly" bookmarklet for Chrome and Safari (desktop).
-// Replace NEXTLY_HOST with your tailnet name, then minify into a bookmark:
+// Set NEXTLY_HOST to your Cloudflare Tunnel hostname, then minify into a bookmark.
+// The first use asks you to sign in with Cloudflare Access (see docs/cloudflare.md):
 //   javascript:(()=>{...})()
 //
 // Uses the open message's Gmail message id when it can find it, so the link
 // opens the same email from any device signed in to that Gmail account.
 (() => {
-  const NEXTLY_HOST = 'http://YOUR-MACHINE.YOUR-TAILNET.ts.net:8080';
+  const NEXTLY_HOST = 'https://nextly.example.com'; // your Cloudflare Tunnel hostname
   const subject = (document.querySelector('h2[data-thread-perm-id], h2.hP')?.textContent
     || document.title.replace(/ - .*?Gmail$/, '')).trim();
   const legacyId = document.querySelector('[data-legacy-message-id]')?.getAttribute('data-legacy-message-id');

@@ -64,7 +64,7 @@ function authorized(req) {
 // lets the app's frontend run in a plain browser during development.
 const CORS = {
   'access-control-allow-origin': '*',
-  'access-control-allow-headers': 'authorization, content-type',
+  'access-control-allow-headers': 'authorization, content-type, cf-access-client-id, cf-access-client-secret',
   'access-control-allow-methods': 'GET, POST, PUT, OPTIONS',
 };
 
