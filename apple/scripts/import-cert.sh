@@ -60,24 +60,31 @@ kc_pass="$(openssl rand -hex 16)"
 security create-keychain -p "$kc_pass" "$keychain"
 security set-keychain-settings -lut 21600 "$keychain"
 security unlock-keychain -p "$kc_pass" "$keychain"
+# Only counts from security's output are ever shown, e.g. "1 identity imported".
+counts() { printf '%s' "$1" | grep -Eo '[0-9]+ (identit(y|ies)|keys?|certificates?) imported' | tr '\n' ' '; }
+# What matters is whether the keychain now has a signing identity (a
+# certificate paired with its key). Untrusted ones count here; trust is
+# sorted out below once Apple's intermediate certificates are in.
+has_identity() { security find-identity -p codesigning "$keychain" | grep -q '"Developer ID Application: '; }
+
 imported="$(security import "$p12" -k "$keychain" -P "$P12_PASS" -A -f pkcs12 2>&1)" \
   || fail "macOS couldn't import the .p12" "The file and password are fine, but the keychain refused it. Re-export it from Keychain Access and update APPLE_CERTIFICATE."
-# Only counts, e.g. "1 identity imported." or "1 key imported. 1 certificate imported."
-echo "security import: $(printf '%s' "$imported" | grep -Eo '[0-9]+ (identit(y|ies)|keys?|certificates?) imported' | tr '\n' ' ')"
-if ! printf '%s' "$imported" | grep -Eq '[1-9][0-9]* (identit|key)'; then
-  # macOS can't read some .p12 encryptions (e.g. OpenSSL 3's default AES).
-  # Re-pack it with the widely supported legacy algorithms and try again.
+summary="import: $(counts "$imported")"
+if ! has_identity; then
+  # macOS can't read some .p12 encryptions (e.g. OpenSSL 3's default AES) and
+  # may import only the certificate. Re-pack with the widely supported
+  # legacy algorithms and try again.
   repacked="$dir/repacked.p12"
   pk -nodes | openssl pkcs12 -export -out "$repacked" -passout env:P12_PASS \
     -keypbe PBE-SHA1-3DES -certpbe PBE-SHA1-3DES 2>/dev/null \
     || pk -nodes | openssl pkcs12 -export -out "$repacked" -passout env:P12_PASS 2>/dev/null
   imported="$(security import "$repacked" -k "$keychain" -P "$P12_PASS" -A -f pkcs12 2>&1)" || true
   rm -f "$repacked"
-  echo "security import (re-packed): $(printf '%s' "$imported" | grep -Eo '[0-9]+ (identit(y|ies)|keys?|certificates?) imported' | tr '\n' ' ')"
-  printf '%s' "$imported" | grep -Eq '[1-9][0-9]* (identit|key)' \
-    || fail "macOS imported the certificate but not its private key" \
-      "Re-export from Keychain Access → My Certificates on a Mac (not with openssl), select the Developer ID Application certificate, and export as .p12."
+  summary="$summary; re-packed import: $(counts "$imported")"
+  has_identity || fail "macOS imported the certificate but not its private key" \
+    "($summary) Re-export from Keychain Access → My Certificates on a Mac, select the Developer ID Application certificate, and export as .p12."
 fi
+echo "::notice title=Developer ID certificate::$summary"
 security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$kc_pass" "$keychain" >/dev/null
 
 # Without Apple's Developer ID intermediate certificates the identity isn't
