@@ -59,5 +59,9 @@ policy includes the token.
 
 - The sync token still protects the server, so Access is a second lock, not the only one.
 - Cloudflare's free plan limits uploads to 100 MB per request; Nextly's limit is 50 MB.
+- Live updates use a WebSocket at `/events` on the same hostname. Cloudflare
+  Tunnels pass WebSockets through with no extra setup, and the apps send the
+  Access headers on it too. The server sends a heartbeat every 25 s so
+  Cloudflare doesn't close the connection when nothing is changing.
 - Rotate the service token in Zero Trust if a device is lost, then update the
   headers on the other devices.

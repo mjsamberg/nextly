@@ -14,12 +14,15 @@
 //   GET  /status        record and file counts, for the app's connection check
 //   GET  /capture       page used by the Gmail bookmarklet / share sheet
 //   GET  /health
+//   WS   /events        live updates: {"type":"changed"} after another device syncs (live.js)
+//   POST /events/ticket one-minute WebSocket ticket, for browsers that can't send headers
 
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
+import { createLive } from './live.js';
 
 const TOKEN = process.env.NEXTLY_TOKEN;
 const DATA = process.env.NEXTLY_DATA || './data';
@@ -106,7 +109,12 @@ function readBody(req, limit) {
   });
 }
 
+const lastSeq = () => db.prepare('SELECT COALESCE(MAX(seq), 0) AS s FROM records').get().s;
+const live = createLive({ token: TOKEN, authorized, lastSeq });
+
+/** Returns how many changes were newer than what the server had. */
 function applyChanges(changes) {
+  let stored = 0;
   db.exec('BEGIN');
   try {
     for (const c of changes) {
@@ -114,8 +122,10 @@ function applyChanges(changes) {
       const existing = getRow.get(c.id);
       if (existing && existing.hlc >= c.hlc) continue; // older write loses
       upsert.run(c.id, c.kind, c.hlc, c.deleted ? 1 : 0, JSON.stringify(c.data ?? {}), nextSeq());
+      stored++;
     }
     db.exec('COMMIT');
+    return stored;
   } catch (e) {
     db.exec('ROLLBACK');
     throw e;
@@ -153,16 +163,19 @@ const server = http.createServer(async (req, res) => {
       const r = db.prepare(`SELECT COUNT(*) AS records, COALESCE(SUM(deleted), 0) AS deleted, COALESCE(MAX(seq), 0) AS lastSeq,
         COALESCE(SUM(kind = 'task' AND deleted = 0), 0) AS tasks FROM records`).get();
       const files = fs.readdirSync(path.join(DATA, 'files')).length;
-      return send(res, 200, { ok: true, serverId: SERVER_ID, ...r, files });
+      return send(res, 200, { ok: true, serverId: SERVER_ID, ...r, files, liveDevices: live.count() });
+    }
+
+    if (url.pathname === '/events/ticket' && req.method === 'POST') {
+      return send(res, 200, { ticket: live.ticket() });
     }
 
     if (url.pathname === '/sync' && req.method === 'POST') {
-      const { cursor = 0, changes = [] } = JSON.parse((await readBody(req, 10 * 1024 * 1024)).toString() || '{}');
-      applyChanges(changes);
+      const { cursor = 0, changes = [], deviceId = '' } = JSON.parse((await readBody(req, 10 * 1024 * 1024)).toString() || '{}');
+      if (applyChanges(changes) > 0) live.changed(String(deviceId));
       const rows = since.all(Number(cursor)).map((r) => ({ ...r, deleted: !!r.deleted, data: JSON.parse(r.data) }));
       const newCursor = rows.length ? rows[rows.length - 1].seq : Number(cursor);
-      const lastSeq = db.prepare('SELECT COALESCE(MAX(seq), 0) AS s FROM records').get().s;
-      return send(res, 200, { serverId: SERVER_ID, lastSeq, cursor: newCursor, changes: rows, more: rows.length === 5000 });
+      return send(res, 200, { serverId: SERVER_ID, lastSeq: lastSeq(), cursor: newCursor, changes: rows, more: rows.length === 5000 });
     }
 
     const link = url.pathname.match(/^\/files\/([a-f0-9]{64})\/link$/);
@@ -194,6 +207,11 @@ const server = http.createServer(async (req, res) => {
   } catch (e) {
     send(res, e.message === 'too large' ? 413 : 400, { error: e.message });
   }
+});
+
+server.on('upgrade', (req, socket) => {
+  socket.on('error', () => socket.destroy());
+  if (!live.upgrade(req, socket)) socket.destroy();
 });
 
 server.listen(PORT, () => console.log(`Nextly sync listening on :${PORT}`));

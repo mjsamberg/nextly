@@ -5,6 +5,13 @@ import { checkConnection, getSettings, saveSettings, syncNow, useSyncStatus } fr
 import { checkHeaders, type HeaderRow } from './logic';
 import { mod } from './net';
 
+const LIVE_LABEL = {
+  off: 'Live updates off',
+  connecting: 'Connecting live updates…',
+  live: 'Live updates on: changes from other devices appear right away',
+  retrying: 'Live updates disconnected',
+} as const;
+
 export default function Settings({ onBack }: { onBack: () => void }) {
   const v = useStore();
   const sync = useSyncStatus();
@@ -66,6 +73,10 @@ export default function Settings({ onBack }: { onBack: () => void }) {
           </div>
         )}
         <p className={`sync-line ${sync.state}`}><span className={`sync-dot ${sync.state}`} />{sync.message}{sync.lastSync ? ` · last synced ${new Date(sync.lastSync).toLocaleString()}` : ''}</p>
+        <p className={`sync-line live-${sync.live}`}>
+          <span className={`sync-dot ${sync.live === 'live' ? 'idle' : sync.live === 'retrying' ? 'error' : sync.live === 'connecting' ? 'syncing' : 'off'}`} />
+          {LIVE_LABEL[sync.live]}{sync.liveDetail ? ` · ${sync.liveDetail}` : ''}
+        </p>
         <p className="muted small">This device: <code>{deviceId}</code></p>
       </section>
 

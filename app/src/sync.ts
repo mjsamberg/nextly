@@ -5,8 +5,9 @@
 import { useSyncExternalStore } from 'react';
 import * as db from './db';
 import { http } from './net';
-import { applyRemote, localCounts, markSent, pendingChanges, requeueAll, setOnLocalChange } from './store';
+import { applyRemote, deviceId, localCounts, markSent, pendingChanges, requeueAll, setOnLocalChange } from './store';
 import { blockedByAccess, headerObject, type HeaderRow } from './logic';
+import { startLive, stopLive, type LiveState } from './live';
 import type { Rec } from './types';
 
 /** headers: sent with every request, e.g. a Cloudflare Access service token. */
@@ -18,10 +19,16 @@ export interface SyncStatus {
   lastSync: string | null;
   sent: number | null;
   received: number | null;
+  live: LiveState;
+  liveDetail: string;
 }
 
 let settings: SyncSettings = { url: '', token: '', headers: [] };
-let status: SyncStatus = { state: 'off', message: 'Sync isn’t set up yet', lastSync: null, sent: null, received: null };
+let status: SyncStatus = { state: 'off', message: 'Sync isn’t set up yet', lastSync: null, sent: null, received: null, live: 'off', liveDetail: '' };
+let lastSyncAt = 0;
+// With live updates connected, polling is only a safety net.
+const POLL_LIVE = 5 * 60_000;
+const POLL_OFFLINE = 30_000;
 const listeners = new Set<() => void>();
 let running = false;
 let again = false;
@@ -73,12 +80,34 @@ export async function initSync() {
   const last = await db.get<string>('meta', 'lastSync');
   const problem = notReady();
   setStatus({ state: problem ? (settings.url ? 'error' : 'off') : 'off', message: problem ?? 'Not synced yet', lastSync: last ?? null });
-  // Push local edits shortly after they happen, and poll for others' edits.
-  setOnLocalChange(() => { clearTimeout(timer); timer = setTimeout(syncNow, 1500); });
-  setInterval(syncNow, 30_000);
+  // Push local edits shortly after they happen. Other devices' edits arrive
+  // through live updates; polling covers the times that isn't connected.
+  setOnLocalChange(() => { clearTimeout(timer); timer = setTimeout(syncNow, 800); });
+  setInterval(() => {
+    const every = status.live === 'live' ? POLL_LIVE : POLL_OFFLINE;
+    if (Date.now() - lastSyncAt >= every - 1000) void syncNow();
+  }, POLL_OFFLINE);
   window.addEventListener('focus', () => void syncNow());
-  window.addEventListener('online', () => void syncNow());
+  window.addEventListener('online', () => { void syncNow(); restartLive(); });
+  restartLive();
   void syncNow();
+}
+
+function restartLive() {
+  if (notReady()) { stopLive(); setStatus({ live: 'off', liveDetail: '' }); return; }
+  startLive({
+    url: base(),
+    headers: authed().headers as Record<string, string>,
+    deviceId,
+    getTicket: async () => {
+      const res = await request(`${base()}/events/ticket`, { method: 'POST' }, 15_000);
+      check(res, 'Live updates');
+      return (await res.json() as { ticket: string }).ticket;
+    },
+    onChanged: () => void syncNow(),
+    onConnected: () => void syncNow(),
+    onState: (live, liveDetail = '') => setStatus({ live, liveDetail }),
+  });
 }
 
 export async function saveSettings(s: SyncSettings) {
@@ -90,6 +119,7 @@ export async function saveSettings(s: SyncSettings) {
   };
   await db.put('meta', settings, 'sync');
   if (changedServer) await db.put('meta', 0, 'cursor'); // new server: pull everything
+  restartLive();
   await syncNow();
 }
 
@@ -109,7 +139,7 @@ export async function syncNow(): Promise<void> {
       const res = await request(`${base()}/sync`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ cursor, changes }),
+        body: JSON.stringify({ cursor, changes, deviceId }), // so the server doesn't wake us for our own change
       });
       check(res, 'Sync failed');
       const body = await res.json().catch(() => ({})) as { serverId?: string; lastSeq?: number; cursor?: number; changes?: Rec[]; more?: boolean };
@@ -141,6 +171,7 @@ export async function syncNow(): Promise<void> {
     }
     await uploadFiles();
     const now = new Date().toISOString();
+    lastSyncAt = Date.now();
     await db.put('meta', now, 'lastSync');
     setStatus({
       state: 'idle',
@@ -182,7 +213,7 @@ export async function checkConnection(): Promise<{ ok: boolean; lines: string[] 
       return { ok: false, lines: ['The server answered but is an older version without the connection check. Rebuild it with docker compose build --pull --no-cache && docker compose up -d.'] };
     }
     check(res, 'Connection check failed');
-    const s = await res.json().catch(() => null) as { serverId?: string; tasks: number; records: number; lastSeq: number; files: number } | null;
+    const s = await res.json().catch(() => null) as { serverId?: string; tasks: number; records: number; lastSeq: number; files: number; liveDevices?: number } | null;
     const knownId = await db.get<string>('meta', 'serverId');
     const startedOver = (!!s?.serverId && !!knownId && s.serverId !== knownId) || (!!s && cursor > s.lastSeq);
     if (!s || typeof s.records !== 'number') return { ok: false, lines: [`${base()} answered, but not like a Nextly server. Check the server address.`] };
@@ -191,6 +222,9 @@ export async function checkConnection(): Promise<{ ok: boolean; lines: string[] 
       `Server: ${s.tasks} tasks (${s.records} records, latest change #${s.lastSeq}, ${s.files} files).`,
       `This device: ${here.tasks} tasks (${here.records} records), has seen up to change #${cursor}, ${here.unsent} not sent yet.`,
     ];
+    if (typeof s.liveDevices === 'number') {
+      lines.push(`Live updates: ${s.liveDevices} device${s.liveDevices === 1 ? '' : 's'} connected to the server${status.live === 'live' ? ', including this one' : '; this one isn’t'}.`);
+    }
     if (startedOver) lines.push('The server has started over since this device last synced (for example, its data volume was recreated). Tap Sync now and this device will send everything it has again.');
     else if (here.unsent > 0) lines.push('Some changes here haven’t reached the server yet. Tap Sync now.');
     else if (cursor < s.lastSeq) lines.push('The server has changes this device hasn’t pulled yet. Tap Sync now.');

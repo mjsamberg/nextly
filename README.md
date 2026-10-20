@@ -59,7 +59,12 @@ npm run dev         # frontend only, in a browser
   works offline. Edits queue up and sync when the server is reachable.
 - **Sync.** Every task, project and area is one record with a hybrid logical
   clock timestamp. If two devices edit the same record, the newer edit wins.
-  Sync runs 1.5 s after an edit, every 30 s, and when the window gets focus.
+  Sync runs right after an edit and when the window gets focus.
+- **Live updates.** Each device keeps a WebSocket open to `/events`. When one
+  device syncs a change, the server tells the others and they sync at once, so
+  edits show up on other devices in a second or two. If live updates are
+  disconnected, devices check every 30 s instead (every 5 minutes while
+  connected, as a safety net). Settings shows whether live updates are on.
 - **Attachments** are stored by SHA-256, upload once, and download on demand.
   Files open in the system browser through a link that expires after 10 minutes.
 - **Request headers.** Any headers set in Settings (such as
