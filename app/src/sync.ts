@@ -5,16 +5,23 @@
 import { useSyncExternalStore } from 'react';
 import * as db from './db';
 import { http } from './net';
-import { applyRemote, markSent, pendingChanges, setOnLocalChange } from './store';
+import { applyRemote, localCounts, markSent, pendingChanges, requeueAll, setOnLocalChange } from './store';
 import { blockedByAccess, headerObject, type HeaderRow } from './logic';
 import type { Rec } from './types';
 
 /** headers: sent with every request, e.g. a Cloudflare Access service token. */
 export interface SyncSettings { url: string; token: string; headers: HeaderRow[] }
-export interface SyncStatus { state: 'off' | 'idle' | 'syncing' | 'error'; message: string; lastSync: string | null }
+/** 'idle' (green) only ever means the last sync actually completed. */
+export interface SyncStatus {
+  state: 'off' | 'idle' | 'syncing' | 'error';
+  message: string;
+  lastSync: string | null;
+  sent: number | null;
+  received: number | null;
+}
 
 let settings: SyncSettings = { url: '', token: '', headers: [] };
-let status: SyncStatus = { state: 'off', message: 'Sync isn’t set up yet', lastSync: null };
+let status: SyncStatus = { state: 'off', message: 'Sync isn’t set up yet', lastSync: null, sent: null, received: null };
 const listeners = new Set<() => void>();
 let running = false;
 let again = false;
@@ -34,6 +41,23 @@ const authed = (init: RequestInit = {}): RequestInit => ({
   },
 });
 
+/** A request that hangs would otherwise block every later sync. */
+async function request(url: string, init: RequestInit, ms = 30_000): Promise<Response> {
+  const ctl = new AbortController();
+  const t = setTimeout(() => ctl.abort(), ms);
+  try {
+    return await http(url, { ...authed(init), signal: ctl.signal });
+  } catch (e) {
+    if (ctl.signal.aborted) throw new Error(`${new URL(url).host} didn’t answer within ${ms / 1000} seconds.`);
+    throw e;
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+const notReady = (): string | null =>
+  !settings.url ? 'Sync isn’t set up yet' : !settings.token ? 'Add the sync token in Settings to start syncing.' : null;
+
 const ACCESS_HELP = 'Cloudflare Access blocked the request. Check the CF-Access-Client-Id and CF-Access-Client-Secret headers in Settings.';
 
 /** Throws a readable error for anything but a real answer from the Nextly server. */
@@ -47,7 +71,8 @@ export async function initSync() {
   const saved = await db.get<Partial<SyncSettings>>('meta', 'sync');
   settings = { url: saved?.url ?? '', token: saved?.token ?? '', headers: saved?.headers ?? [] };
   const last = await db.get<string>('meta', 'lastSync');
-  setStatus(settings.url ? { state: 'idle', message: 'Ready', lastSync: last ?? null } : {});
+  const problem = notReady();
+  setStatus({ state: problem ? (settings.url ? 'error' : 'off') : 'off', message: problem ?? 'Not synced yet', lastSync: last ?? null });
   // Push local edits shortly after they happen, and poll for others' edits.
   setOnLocalChange(() => { clearTimeout(timer); timer = setTimeout(syncNow, 1500); });
   setInterval(syncNow, 30_000);
@@ -65,28 +90,51 @@ export async function saveSettings(s: SyncSettings) {
   };
   await db.put('meta', settings, 'sync');
   if (changedServer) await db.put('meta', 0, 'cursor'); // new server: pull everything
-  setStatus(settings.url ? { state: 'idle', message: 'Saved' } : { state: 'off', message: 'Sync isn’t set up yet' });
   await syncNow();
 }
 
 export async function syncNow(): Promise<void> {
-  if (!settings.url || !settings.token) return;
+  const problem = notReady();
+  if (problem) { setStatus({ state: settings.url ? 'error' : 'off', message: problem }); return; }
   if (running) { again = true; return; }
   running = true;
   setStatus({ state: 'syncing', message: 'Syncing…' });
   try {
     let cursor = (await db.get<number>('meta', 'cursor')) ?? 0;
+    let sent = 0;
+    let received = 0;
+    let resets = 0;
     for (;;) {
       const changes = pendingChanges();
-      const res = await http(`${base()}/sync`, authed({
+      const res = await request(`${base()}/sync`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ cursor, changes }),
-      }));
+      });
       check(res, 'Sync failed');
-      const body = await res.json() as { cursor: number; changes: Rec[]; more: boolean };
+      const body = await res.json().catch(() => ({})) as { serverId?: string; lastSeq?: number; cursor?: number; changes?: Rec[]; more?: boolean };
+      if (typeof body.cursor !== 'number' || !Array.isArray(body.changes)) {
+        throw new Error(`${base()} answered, but not like a Nextly server. Check the server address.`);
+      }
       markSent(changes);
-      applyRemote(body.changes);
+      sent += changes.length;
+
+      // A different server, or one that's behind us, has lost or never had our
+      // data: start from the beginning and send everything again.
+      const knownId = await db.get<string>('meta', 'serverId');
+      const isNewServer = !!body.serverId && body.serverId !== knownId;
+      const isBehind = typeof body.lastSeq === 'number' && body.lastSeq < cursor;
+      if (body.serverId) await db.put('meta', body.serverId, 'serverId');
+      if ((isNewServer && (knownId || cursor > 0)) || isBehind) {
+        await resetForNewServer();
+        cursor = 0;
+        resets++;
+        if (resets > 2) throw new Error('The server keeps starting over. Check that its data volume is kept between restarts.');
+        continue;
+      }
+
+      // The server echoes our own changes back; count only ones that were new here.
+      received += applyRemote(body.changes);
       cursor = body.cursor;
       await db.put('meta', cursor, 'cursor');
       if (!body.more) break;
@@ -94,13 +142,63 @@ export async function syncNow(): Promise<void> {
     await uploadFiles();
     const now = new Date().toISOString();
     await db.put('meta', now, 'lastSync');
-    setStatus({ state: 'idle', message: 'Up to date', lastSync: now });
+    setStatus({
+      state: 'idle',
+      message: sent || received ? `Synced · sent ${sent}, received ${received}` : 'Up to date · nothing new',
+      lastSync: now, sent, received,
+    });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     setStatus({ state: 'error', message: /fetch|network|connect|dns|refused|timed out/i.test(msg) ? `Can’t reach ${settings.url}. Check your internet connection and that the tunnel is running.` : msg });
   } finally {
     running = false;
     if (again) { again = false; void syncNow(); }
+  }
+}
+
+async function resetForNewServer() {
+  requeueAll();
+  await db.put('meta', 0, 'cursor');
+  for (const key of await db.keys('files')) {
+    const f = await db.get<db.StoredFile>('files', String(key));
+    if (f?.uploaded) await db.put('files', { ...f, uploaded: false }, String(key));
+  }
+}
+
+/**
+ * Compares what the server holds with this device, in plain words.
+ * If two devices agree with each other but not with the server, their
+ * changes aren't arriving; if the server count grows but a device's
+ * doesn't, that device isn't pulling.
+ */
+export async function checkConnection(): Promise<{ ok: boolean; lines: string[] }> {
+  const problem = notReady();
+  if (problem) return { ok: false, lines: [problem] };
+  const here = localCounts();
+  const cursor = (await db.get<number>('meta', 'cursor')) ?? 0;
+  try {
+    const res = await request(`${base()}/status`, {}, 15_000);
+    if (res.status === 404) {
+      return { ok: false, lines: ['The server answered but is an older version without the connection check. Rebuild it with docker compose build --pull --no-cache && docker compose up -d.'] };
+    }
+    check(res, 'Connection check failed');
+    const s = await res.json().catch(() => null) as { serverId?: string; tasks: number; records: number; lastSeq: number; files: number } | null;
+    const knownId = await db.get<string>('meta', 'serverId');
+    const startedOver = (!!s?.serverId && !!knownId && s.serverId !== knownId) || (!!s && cursor > s.lastSeq);
+    if (!s || typeof s.records !== 'number') return { ok: false, lines: [`${base()} answered, but not like a Nextly server. Check the server address.`] };
+    const lines = [
+      `Connected to ${new URL(base()).host}.`,
+      `Server: ${s.tasks} tasks (${s.records} records, latest change #${s.lastSeq}, ${s.files} files).`,
+      `This device: ${here.tasks} tasks (${here.records} records), has seen up to change #${cursor}, ${here.unsent} not sent yet.`,
+    ];
+    if (startedOver) lines.push('The server has started over since this device last synced (for example, its data volume was recreated). Tap Sync now and this device will send everything it has again.');
+    else if (here.unsent > 0) lines.push('Some changes here haven’t reached the server yet. Tap Sync now.');
+    else if (cursor < s.lastSeq) lines.push('The server has changes this device hasn’t pulled yet. Tap Sync now.');
+    else lines.push('This device is fully in step with the server.');
+    return { ok: true, lines };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return { ok: false, lines: [/fetch|network|connect|dns|refused/i.test(msg) ? `Can’t reach ${settings.url}. ${msg}` : msg] };
   }
 }
 
@@ -111,7 +209,7 @@ async function uploadFiles() {
     const sha = String(key);
     const f = await db.get<db.StoredFile>('files', sha);
     if (!f || f.uploaded) continue;
-    const res = await http(`${base()}/files/${sha}`, authed({ method: 'PUT', body: new Uint8Array(f.bytes) }));
+    const res = await request(`${base()}/files/${sha}`, { method: 'PUT', body: new Uint8Array(f.bytes) }, 120_000);
     check(res, `Couldn’t upload ${f.name}`);
     await db.put('files', { ...f, uploaded: true }, sha);
   }
@@ -137,7 +235,7 @@ export async function loadFile(sha: string, name = '', mime = 'application/octet
   const f = await db.get<db.StoredFile>('files', sha);
   if (f) return new Blob([f.bytes], { type: f.mime });
   if (!settings.url) return null;
-  const res = await http(`${base()}/files/${sha}`, authed());
+  const res = await request(`${base()}/files/${sha}`, {}, 120_000);
   // Never cache an Access login page as the file.
   if (!res.ok || blockedByAccess(res.status, res.headers.get('content-type'), res.url)) return null;
   const bytes = await res.arrayBuffer();
@@ -148,9 +246,9 @@ export async function loadFile(sha: string, name = '', mime = 'application/octet
 /** Short-lived link the system browser can open without the token. */
 export async function fileLink(sha: string, name: string, mime: string): Promise<string> {
   await uploadFiles();
-  const res = await http(`${base()}/files/${sha}/link`, authed({
+  const res = await request(`${base()}/files/${sha}/link`, {
     method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name, mime }),
-  }));
+  });
   check(res, 'Couldn’t open the file');
   return base() + (await res.json() as { url: string }).url;
 }

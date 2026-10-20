@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import * as I from './icons';
 import { createArea, deleteArea, deleteProject, deviceId, updateArea, updateProject, useStore } from './store';
-import { getSettings, saveSettings, syncNow, useSyncStatus } from './sync';
+import { checkConnection, getSettings, saveSettings, syncNow, useSyncStatus } from './sync';
 import { checkHeaders, type HeaderRow } from './logic';
 import { mod } from './net';
 
@@ -12,6 +12,9 @@ export default function Settings({ onBack }: { onBack: () => void }) {
   const [token, setToken] = useState(getSettings().token);
   const [headers, setHeaders] = useState<HeaderRow[]>(getSettings().headers);
   const [area, setArea] = useState('');
+  const [diag, setDiag] = useState<{ ok: boolean; lines: string[] } | null>(null);
+  const [checking, setChecking] = useState(false);
+  const runCheck = async () => { setChecking(true); setDiag(await checkConnection()); setChecking(false); };
   const urlOk = !url || /^https?:\/\/[^\s/]+/.test(url.trim());
   const headerError = checkHeaders(headers);
   const hasAccess = headers.some((h) => /^cf-access-client-/i.test(h.name));
@@ -54,8 +57,14 @@ export default function Settings({ onBack }: { onBack: () => void }) {
           <div className="row-btns">
             <button type="submit" className="pri" disabled={!urlOk || !!headerError}>Save and sync</button>
             <button type="button" onClick={() => void syncNow()} disabled={!getSettings().url}>Sync now</button>
+            <button type="button" onClick={() => void runCheck()} disabled={!getSettings().url || checking}>{checking ? 'Checking…' : 'Check connection'}</button>
           </div>
         </form>
+        {diag && (
+          <div className={`diag ${diag.ok ? 'ok' : 'bad'}`} role="status">
+            {diag.lines.map((l, i) => <p key={i}>{l}</p>)}
+          </div>
+        )}
         <p className={`sync-line ${sync.state}`}><span className={`sync-dot ${sync.state}`} />{sync.message}{sync.lastSync ? ` · last synced ${new Date(sync.lastSync).toLocaleString()}` : ''}</p>
         <p className="muted small">This device: <code>{deviceId}</code></p>
       </section>

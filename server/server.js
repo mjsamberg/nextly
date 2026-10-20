@@ -11,6 +11,7 @@
 //   GET  /files/:sha256 bearer token, or a signed link from:
 //   POST /files/:sha256/link { name, mime } -> { url }  (valid 10 minutes, so
 //                       an attachment can open in the system browser)
+//   GET  /status        record and file counts, for the app's connection check
 //   GET  /capture       page used by the Gmail bookmarklet / share sheet
 //   GET  /health
 
@@ -43,7 +44,13 @@ db.exec(`
     seq     INTEGER NOT NULL
   );
   CREATE INDEX IF NOT EXISTS records_seq ON records(seq);
+  CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
 `);
+
+// Created once per database. If the data volume is ever recreated, clients see
+// a new id, start over from the beginning and re-send what they have.
+db.prepare('INSERT OR IGNORE INTO meta (key, value) VALUES (?, ?)').run('serverId', crypto.randomUUID());
+const SERVER_ID = db.prepare("SELECT value FROM meta WHERE key = 'serverId'").get().value;
 
 const nextSeq = () => (db.prepare('SELECT COALESCE(MAX(seq), 0) + 1 AS s FROM records').get().s);
 const getRow = db.prepare('SELECT hlc FROM records WHERE id = ?');
@@ -141,12 +148,21 @@ const server = http.createServer(async (req, res) => {
 
     if (!authorized(req)) return send(res, 401, { error: 'Missing or wrong token' });
 
+    // What the server holds, so a device can tell whether its changes arrived.
+    if (url.pathname === '/status' && req.method === 'GET') {
+      const r = db.prepare(`SELECT COUNT(*) AS records, COALESCE(SUM(deleted), 0) AS deleted, COALESCE(MAX(seq), 0) AS lastSeq,
+        COALESCE(SUM(kind = 'task' AND deleted = 0), 0) AS tasks FROM records`).get();
+      const files = fs.readdirSync(path.join(DATA, 'files')).length;
+      return send(res, 200, { ok: true, serverId: SERVER_ID, ...r, files });
+    }
+
     if (url.pathname === '/sync' && req.method === 'POST') {
       const { cursor = 0, changes = [] } = JSON.parse((await readBody(req, 10 * 1024 * 1024)).toString() || '{}');
       applyChanges(changes);
       const rows = since.all(Number(cursor)).map((r) => ({ ...r, deleted: !!r.deleted, data: JSON.parse(r.data) }));
       const newCursor = rows.length ? rows[rows.length - 1].seq : Number(cursor);
-      return send(res, 200, { cursor: newCursor, changes: rows, more: rows.length === 5000 });
+      const lastSeq = db.prepare('SELECT COALESCE(MAX(seq), 0) AS s FROM records').get().s;
+      return send(res, 200, { serverId: SERVER_ID, lastSeq, cursor: newCursor, changes: rows, more: rows.length === 5000 });
     }
 
     const link = url.pathname.match(/^\/files\/([a-f0-9]{64})\/link$/);

@@ -46,19 +46,33 @@ function write(kind: Kind, id: string, data: unknown, deleted = false) {
   onLocalChange();
 }
 
-/** Applies rows from the server. Returns true if anything changed. */
-export function applyRemote(rows: Rec[]): boolean {
-  let changed = false;
+/** Applies rows from the server. Returns how many were newer than ours. */
+export function applyRemote(rows: Rec[]): number {
+  let changed = 0;
   for (const rec of rows) {
     hlc.observe(rec.hlc);
     const cur = records.get(rec.id);
     if (cur && cur.hlc >= rec.hlc) continue;
     records.set(rec.id, rec);
     void db.put('records', rec);
-    changed = true;
+    changed++;
   }
   if (changed) bump();
   return changed;
+}
+
+/** Queues every local record to be sent again, for a server that lost its data. */
+export function requeueAll() {
+  for (const id of records.keys()) {
+    outbox.add(id);
+    void db.put('outbox', true, id);
+  }
+}
+
+export function localCounts() {
+  let tasks = 0;
+  for (const r of records.values()) if (r.kind === 'task' && !r.deleted) tasks++;
+  return { records: records.size, tasks, unsent: outbox.size };
 }
 
 export const pendingChanges = (): Rec[] => [...outbox].map((id) => records.get(id)).filter((r): r is Rec => !!r);
