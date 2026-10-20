@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+# CI: imports the Developer ID certificate (.p12) into a temporary keychain,
+# checking each thing that commonly goes wrong and saying which one it is.
+# The repository is public, so messages never include anything from the
+# certificate itself (names, Team ID) or the secrets.
+#
+# Needs APPLE_CERTIFICATE (base64 of the .p12), APPLE_CERTIFICATE_PASSWORD,
+# APPLE_SIGNING_IDENTITY.
+set -uo pipefail
+
+fail() { echo "::error title=$1::$2"; exit 1; }
+
+[ -n "${APPLE_CERTIFICATE:-}" ] || fail "APPLE_CERTIFICATE is empty" "Add the secret as described in docs/apple-signing.md."
+[ -n "${APPLE_SIGNING_IDENTITY:-}" ] || fail "APPLE_SIGNING_IDENTITY is empty" "Add the certificate's full name, for example: Developer ID Application: Your Name (TEAMID1234)."
+
+dir="${RUNNER_TEMP:-$(mktemp -d)}"
+p12="$dir/developer-id.p12"
+printf '%s' "$APPLE_CERTIFICATE" | tr -d '\r\n\t ' | base64 --decode > "$p12" 2>/dev/null
+[ -s "$p12" ] || fail "APPLE_CERTIFICATE isn't valid base64" "On a Mac run: base64 -i Certificates.p12 | pbcopy, then paste the whole output as the secret."
+
+if head -c 64 "$p12" | grep -q -- '-----BEGIN'; then
+  fail "APPLE_CERTIFICATE is a text certificate, not a .p12" "Export from Keychain Access as Personal Information Exchange (.p12), then base64 that file."
+fi
+
+export P12_PASS="${APPLE_CERTIFICATE_PASSWORD:-}"
+pk() { openssl pkcs12 -in "$p12" -passin env:P12_PASS "$@" 2>/dev/null || openssl pkcs12 -legacy -in "$p12" -passin env:P12_PASS "$@" 2>/dev/null; }
+
+if ! pk -noout; then
+  if openssl x509 -inform DER -in "$p12" -noout 2>/dev/null; then
+    fail "APPLE_CERTIFICATE is the .cer, not a .p12" "The .cer from Apple's website has no private key. Install it, then export it from Keychain Access → My Certificates as .p12 and base64 that."
+  fi
+  if [ "$(head -c 1 "$p12" | od -An -tx1 | tr -d ' ')" != "30" ]; then
+    fail "APPLE_CERTIFICATE isn't a .p12 file" "It decoded, but not to a certificate bundle. Base64 the .p12 you exported from Keychain Access (not the .cer you downloaded)."
+  fi
+  fail "The .p12 password doesn't match" "APPLE_CERTIFICATE_PASSWORD must be the password you typed when exporting the .p12."
+fi
+
+pk -nocerts -nodes | grep -q 'PRIVATE KEY' || fail "The .p12 has no private key" \
+  "Export it from Keychain Access → My Certificates (not Certificates), so the key is included. The .cer from Apple's website has no key."
+
+subject="$(pk -nokeys -clcerts | openssl x509 -noout -subject 2>/dev/null)"
+case "$subject" in
+  *"Developer ID Application"*) ;;
+  *"Apple Development"*|*"Apple Distribution"*|*"iPhone"*|*"Mac Developer"*|*"3rd Party Mac"*)
+    fail "Wrong kind of certificate" "This is a development or App Store certificate. The Mac build needs a Developer ID Application certificate (see docs/apple-signing.md)." ;;
+  *) fail "Wrong kind of certificate" "The .p12 doesn't contain a Developer ID Application certificate." ;;
+esac
+
+keychain="$dir/signing.keychain-db"
+kc_pass="$(openssl rand -hex 16)"
+security create-keychain -p "$kc_pass" "$keychain"
+security set-keychain-settings -lut 21600 "$keychain"
+security unlock-keychain -p "$kc_pass" "$keychain"
+security import "$p12" -k "$keychain" -P "$P12_PASS" -A -f pkcs12 >/dev/null \
+  || fail "macOS couldn't import the .p12" "The file and password are fine, but the keychain refused it. Re-export it from Keychain Access and update APPLE_CERTIFICATE."
+security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$kc_pass" "$keychain" >/dev/null
+security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
+rm -f "$p12"
+
+if ! security find-identity -v -p codesigning "$keychain" | grep -qF "\"$APPLE_SIGNING_IDENTITY\""; then
+  fail "APPLE_SIGNING_IDENTITY doesn't match the certificate" \
+    "The certificate imported, but its name differs from the secret. Copy the exact name from Keychain Access, for example: Developer ID Application: Your Name (TEAMID1234)."
+fi
+echo "Developer ID certificate imported."
