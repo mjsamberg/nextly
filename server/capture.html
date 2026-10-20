@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Add to Nextly</title>
+<style>
+  :root { --plum:#7a3c59; --navy:#134169; --gold:#ffb600; --mist:#d2d8e6; --bg:#fff; --fg:#1b2333; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#141a26; --fg:#e8ecf4; color-scheme: dark; } }
+  body { font: 15px/1.5 Mulish, Arial, sans-serif; background: var(--bg); color: var(--fg); margin: 0; padding: 20px; }
+  h1 { font-size: 18px; color: var(--plum); margin: 0 0 12px; }
+  label { display: block; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; margin: 12px 0 4px; }
+  input, textarea { width: 100%; box-sizing: border-box; padding: 8px; border: 1px solid var(--mist); border-radius: 6px; font: inherit; background: transparent; color: inherit; }
+  .flags { display: flex; gap: 8px; margin-top: 12px; }
+  .flags label { display: flex; gap: 6px; align-items: center; text-transform: none; letter-spacing: 0; font-size: 14px; margin: 0; }
+  button { margin-top: 16px; background: var(--navy); color: #fff; border: 0; padding: 10px 16px; border-radius: 6px; font: inherit; cursor: pointer; }
+  #msg { margin-top: 12px; }
+</style>
+</head>
+<body>
+<h1>Add to Nextly</h1>
+<form id="f">
+  <label for="title">Task</label>
+  <input id="title" required>
+  <label for="link">Email link</label>
+  <input id="link" readonly>
+  <label for="note">Note</label>
+  <textarea id="note" rows="3"></textarea>
+  <div class="flags">
+    <label><input type="radio" name="when" value="today"> Today</label>
+    <label><input type="radio" name="when" value="next" checked> Next</label>
+    <label><input type="radio" name="when" value="inbox"> Inbox</label>
+  </div>
+  <label for="token">Sync token (saved on this device)</label>
+  <input id="token" type="password" autocomplete="off">
+  <button type="submit">Add task</button>
+  <div id="msg" role="status"></div>
+</form>
+<script>
+  const q = new URLSearchParams(location.search);
+  const $ = (id) => document.getElementById(id);
+  $('title').value = q.get('title') || '';
+  $('link').value = q.get('url') || '';
+  try { $('token').value = localStorage.getItem('nextlyToken') || ''; } catch {}
+
+  $('f').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const token = $('token').value.trim();
+    try { localStorage.setItem('nextlyToken', token); } catch {}
+    // randomUUID needs HTTPS; getRandomValues works over plain http on the tailnet.
+    const id = crypto.randomUUID?.() ?? ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, (c) => (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16));
+    const hlc = `${String(Date.now()).padStart(15, '0')}-0000-capture`;
+    const when = document.querySelector('input[name=when]:checked').value;
+    const task = {
+      id, kind: 'task', hlc, deleted: false,
+      data: {
+        title: $('title').value,
+        list: when === 'inbox' ? 'inbox' : null,
+        flag: when === 'inbox' ? null : when,
+        notes: [{ type: 'text', text: $('note').value }],
+        links: $('link').value ? [{ type: 'gmail', url: $('link').value, subject: $('title').value }] : [],
+        createdAt: new Date().toISOString(),
+      },
+    };
+    const r = await fetch('/sync', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+      body: JSON.stringify({ cursor: Number.MAX_SAFE_INTEGER, changes: [task] }),
+    });
+    $('msg').textContent = r.ok ? 'Added. You can close this window.' : 'Could not add the task. Check the sync token.';
+    if (r.ok) setTimeout(() => window.close(), 900);
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,31 @@
+# Nextly sync server for a host that already runs Tailscale.
+#
+#   1. cp .env.example .env   and fill in NEXTLY_TOKEN + NEXTLY_BIND
+#   2. docker compose up -d --build
+#   3. Clients point at http://<this-machine>.<your-tailnet>.ts.net:8080
+#
+# The image builds straight from GitHub (the server/ folder of main), so this
+# file and .env are all the host needs. To pick up new commits:
+#   docker compose build --pull --no-cache && docker compose up -d
+#
+# NEXTLY_BIND is this host's Tailscale IP (`tailscale ip -4`), so the port is
+# only reachable over the tailnet, not the LAN. If Docker starts before
+# Tailscale is up, the bind fails and `restart` retries until it succeeds.
+
+services:
+  nextly:
+    build:
+      context: https://github.com/mjsamberg/nextly.git#main:server
+    image: nextly-sync:latest
+    environment:
+      NEXTLY_TOKEN: ${NEXTLY_TOKEN}
+      NEXTLY_DATA: /data
+      PORT: "8080"
+    ports:
+      - "${NEXTLY_BIND:?set NEXTLY_BIND to this host's Tailscale IP}:8080:8080"
+    volumes:
+      - nextly-data:/data
+    restart: unless-stopped
+
+volumes:
+  nextly-data:

@@ -1,0 +1,138 @@
+// Nextly sync server: zero dependencies (Node 24, built-in node:sqlite).
+//
+// Model: every record (task, project, area, note block, ...) is a row
+// { id, kind, hlc, deleted, data }. Clients push changed rows and pull
+// everything newer than their cursor. Conflicts resolve last-writer-wins
+// per record using a hybrid logical clock string "<ms>-<counter>-<deviceId>",
+// which sorts correctly as text.
+//
+//   POST /sync          { cursor, changes: [row] } -> { cursor, changes: [row] }
+//   PUT  /files/:sha256 raw bytes (attachments, content-addressed)
+//   GET  /files/:sha256
+//   GET  /capture       page used by the Gmail bookmarklet / share sheet
+//   GET  /health
+
+import http from 'node:http';
+import fs from 'node:fs';
+import path from 'node:path';
+import crypto from 'node:crypto';
+import { DatabaseSync } from 'node:sqlite';
+
+const TOKEN = process.env.NEXTLY_TOKEN;
+const DATA = process.env.NEXTLY_DATA || './data';
+const PORT = Number(process.env.PORT || 8080);
+const MAX_FILE = 50 * 1024 * 1024;
+
+if (!TOKEN || TOKEN === 'REPLACE_ME') {
+  console.error('NEXTLY_TOKEN is not set. See .env.example.');
+  process.exit(1);
+}
+
+fs.mkdirSync(path.join(DATA, 'files'), { recursive: true });
+const db = new DatabaseSync(path.join(DATA, 'nextly.db'));
+db.exec(`
+  PRAGMA journal_mode = WAL;
+  CREATE TABLE IF NOT EXISTS records (
+    id      TEXT PRIMARY KEY,
+    kind    TEXT NOT NULL,
+    hlc     TEXT NOT NULL,
+    deleted INTEGER NOT NULL DEFAULT 0,
+    data    TEXT NOT NULL,
+    seq     INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS records_seq ON records(seq);
+`);
+
+const nextSeq = () => (db.prepare('SELECT COALESCE(MAX(seq), 0) + 1 AS s FROM records').get().s);
+const getRow = db.prepare('SELECT hlc FROM records WHERE id = ?');
+const upsert = db.prepare(`
+  INSERT INTO records (id, kind, hlc, deleted, data, seq) VALUES (?, ?, ?, ?, ?, ?)
+  ON CONFLICT(id) DO UPDATE SET kind = excluded.kind, hlc = excluded.hlc,
+    deleted = excluded.deleted, data = excluded.data, seq = excluded.seq
+`);
+const since = db.prepare('SELECT id, kind, hlc, deleted, data, seq FROM records WHERE seq > ? ORDER BY seq LIMIT 5000');
+
+function authorized(req) {
+  const given = Buffer.from(req.headers.authorization || '');
+  const want = Buffer.from(`Bearer ${TOKEN}`);
+  return given.length === want.length && crypto.timingSafeEqual(given, want);
+}
+
+function send(res, status, body, type = 'application/json') {
+  res.writeHead(status, { 'content-type': type });
+  res.end(type === 'application/json' ? JSON.stringify(body) : body);
+}
+
+function readBody(req, limit) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    let size = 0;
+    req.on('data', (c) => {
+      size += c.length;
+      if (size > limit) { reject(new Error('too large')); req.destroy(); }
+      else chunks.push(c);
+    });
+    req.on('end', () => resolve(Buffer.concat(chunks)));
+    req.on('error', reject);
+  });
+}
+
+function applyChanges(changes) {
+  db.exec('BEGIN');
+  try {
+    for (const c of changes) {
+      if (!c.id || !c.kind || !c.hlc) continue;
+      const existing = getRow.get(c.id);
+      if (existing && existing.hlc >= c.hlc) continue; // older write loses
+      upsert.run(c.id, c.kind, c.hlc, c.deleted ? 1 : 0, JSON.stringify(c.data ?? {}), nextSeq());
+    }
+    db.exec('COMMIT');
+  } catch (e) {
+    db.exec('ROLLBACK');
+    throw e;
+  }
+}
+
+const server = http.createServer(async (req, res) => {
+  const url = new URL(req.url, 'http://x');
+  try {
+    if (url.pathname === '/health') return send(res, 200, { ok: true });
+
+    if (url.pathname === '/capture' && req.method === 'GET') {
+      return send(res, 200, fs.readFileSync(new URL('./capture.html', import.meta.url)), 'text/html; charset=utf-8');
+    }
+
+    if (!authorized(req)) return send(res, 401, { error: 'Missing or wrong token' });
+
+    if (url.pathname === '/sync' && req.method === 'POST') {
+      const { cursor = 0, changes = [] } = JSON.parse((await readBody(req, 10 * 1024 * 1024)).toString() || '{}');
+      applyChanges(changes);
+      const rows = since.all(Number(cursor)).map((r) => ({ ...r, deleted: !!r.deleted, data: JSON.parse(r.data) }));
+      const newCursor = rows.length ? rows[rows.length - 1].seq : Number(cursor);
+      return send(res, 200, { cursor: newCursor, changes: rows, more: rows.length === 5000 });
+    }
+
+    const file = url.pathname.match(/^\/files\/([a-f0-9]{64})$/);
+    if (file) {
+      const p = path.join(DATA, 'files', file[1]);
+      if (req.method === 'PUT') {
+        const buf = await readBody(req, MAX_FILE);
+        const hash = crypto.createHash('sha256').update(buf).digest('hex');
+        if (hash !== file[1]) return send(res, 400, { error: 'Hash does not match file contents' });
+        fs.writeFileSync(p, buf);
+        return send(res, 201, { ok: true });
+      }
+      if (req.method === 'GET') {
+        if (!fs.existsSync(p)) return send(res, 404, { error: 'No such file' });
+        res.writeHead(200, { 'content-type': 'application/octet-stream' });
+        return fs.createReadStream(p).pipe(res);
+      }
+    }
+
+    send(res, 404, { error: 'Not found' });
+  } catch (e) {
+    send(res, e.message === 'too large' ? 413 : 400, { error: e.message });
+  }
+});
+
+server.listen(PORT, () => console.log(`Nextly sync listening on :${PORT}`));

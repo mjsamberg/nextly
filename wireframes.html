@@ -1,0 +1,620 @@
+<title>Nextly Wireframes</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600&family=Mulish:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a working spec sheet. Brand band on top, platform tabs, wireframes drawn in
+   greyscale "ink" with brand colors used only for the things that carry meaning
+   (Today = gold, Next = navy, blocked = plum). Annotations sit beside each frame. */
+:root{
+  --plum:#7a3c59; --navy:#134169; --gold:#ffb600; --mist:#d2d8e6;
+  --bg:#f6f7fb; --paper:#ffffff; --ink:#1d2433; --ink-2:#56607a; --ink-3:#8e97ad;
+  --line:#c9d0e0; --wire:#eef1f7; --wire-2:#e1e6f0; --band:#7a3c59; --band-fg:#fff;
+  --today:#b07d00; --today-bg:#fff4d6; --next:#134169; --next-bg:#e3ebf5; --blocked:#7a3c59; --blocked-bg:#f3e6ec;
+  --display:"Zing Rust Base","Oswald","Arial Narrow",Arial,sans-serif;
+  --body:"Muli","Mulish",Arial,sans-serif;
+  --mono:"JetBrains Mono",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#11151f; --paper:#181e2b; --ink:#e7ebf3; --ink-2:#a9b2c7; --ink-3:#737d95;
+  --line:#2f3850; --wire:#1f2738; --wire-2:#283147; --band:#5e2c44; --band-fg:#fff;
+  --today:#ffc633; --today-bg:#3a2f12; --next:#8fb4e0; --next-bg:#1a2b42; --blocked:#d898b6; --blocked-bg:#3a2130; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#11151f; --paper:#181e2b; --ink:#e7ebf3; --ink-2:#a9b2c7; --ink-3:#737d95;
+  --line:#2f3850; --wire:#1f2738; --wire-2:#283147; --band:#5e2c44; --band-fg:#fff;
+  --today:#ffc633; --today-bg:#3a2f12; --next:#8fb4e0; --next-bg:#1a2b42; --blocked:#d898b6; --blocked-bg:#3a2130; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15px/1.55 var(--body);margin:0}
+.wrap{max-width:1240px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1,h2,h3{font-family:var(--display);font-weight:600;letter-spacing:.01em;text-wrap:balance;margin:0}
+h2{font-size:30px;text-transform:uppercase}
+h3{font-size:19px;text-transform:uppercase;letter-spacing:.03em}
+p{margin:0;max-width:68ch}
+.eyebrow{font:700 11px/1 var(--body);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3)}
+code,.mono{font-family:var(--mono);font-size:.88em}
+
+/* brand band */
+.band{background:var(--band);color:var(--band-fg);border-bottom:6px solid var(--gold)}
+.band .wrap{padding-block:28px 26px;display:flex;flex-wrap:wrap;gap:20px 40px;align-items:flex-end;justify-content:space-between}
+.band h1{font-size:clamp(40px,7vw,64px);line-height:.95;text-transform:uppercase}
+.band p{color:#f2e7ec;margin-top:10px}
+.band .meta{font:600 12px/1.6 var(--mono);color:#f2e7ec;text-align:right}
+
+section{padding-block:40px;border-bottom:1px solid var(--line)}
+section > .wrap{display:grid;gap:22px}
+.lede{color:var(--ink-2)}
+
+/* concept chips */
+.concepts{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.concept{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:16px;display:grid;gap:8px;align-content:start}
+.concept p{font-size:14px;color:var(--ink-2)}
+.flag{display:inline-flex;align-items:center;gap:5px;font:800 11px/1 var(--body);letter-spacing:.06em;text-transform:uppercase;padding:5px 8px;border-radius:999px;width:max-content}
+.f-today{background:var(--today-bg);color:var(--today)}
+.f-next{background:var(--next-bg);color:var(--next)}
+.f-blocked{background:var(--blocked-bg);color:var(--blocked)}
+.f-date{background:var(--wire-2);color:var(--ink-2)}
+
+/* tabs */
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tab{font:700 14px/1 var(--body);padding:10px 16px;border-radius:6px;border:1px solid var(--line);background:var(--paper);color:var(--ink);cursor:pointer}
+.tab[aria-selected="true"]{background:var(--navy);border-color:var(--navy);color:#fff}
+.tab:focus-visible,button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+
+/* frame + notes layout */
+.frame-row{display:grid;grid-template-columns:minmax(0,1fr) 270px;gap:24px;align-items:start}
+@media (max-width:980px){.frame-row{grid-template-columns:minmax(0,1fr)}}
+.scroller{overflow-x:auto;padding-bottom:6px}
+.notes{display:grid;gap:12px;counter-reset:n}
+.note{display:grid;grid-template-columns:24px 1fr;gap:10px;font-size:13.5px;color:var(--ink-2)}
+.note b{color:var(--ink)}
+.pin{width:22px;height:22px;border-radius:50%;background:var(--plum);color:#fff;font:800 11px/22px var(--body);text-align:center;flex:none}
+.pin.inline{display:inline-block;vertical-align:middle;margin-right:4px;width:18px;height:18px;line-height:18px;font-size:10px}
+
+/* ---------- wireframe primitives ---------- */
+.win{min-width:980px;background:var(--paper);border:1.5px solid var(--ink-3);border-radius:10px;overflow:hidden;font-size:13px;box-shadow:0 10px 30px -18px rgba(20,30,60,.45)}
+.titlebar{height:34px;display:flex;align-items:center;justify-content:space-between;padding:0 10px;background:var(--wire);border-bottom:1px solid var(--line);color:var(--ink-2);font-size:12px}
+.winctl{display:flex;gap:18px;font-family:var(--mono);color:var(--ink-2)}
+.lights{display:flex;gap:7px}.lights i{width:12px;height:12px;border-radius:50%;background:var(--ink-3);opacity:.55;display:block}
+.panes{display:grid;grid-template-columns:210px minmax(0,1fr) 340px;min-height:560px}
+.side{background:var(--wire);border-right:1px solid var(--line);padding:12px 10px;display:grid;gap:2px;align-content:start}
+.side.mac{background:linear-gradient(var(--wire),var(--wire-2))}
+.search{height:28px;border:1px solid var(--line);border-radius:6px;background:var(--paper);color:var(--ink-3);display:flex;align-items:center;padding:0 8px;margin-bottom:10px;font-size:12px}
+.nav{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;color:var(--ink)}
+.nav .ct{margin-left:auto;color:var(--ink-3);font-variant-numeric:tabular-nums;font-size:12px}
+.nav.on{background:var(--paper);box-shadow:inset 0 0 0 1px var(--line);font-weight:700}
+.nav svg{width:15px;height:15px;flex:none}
+.side .grp{font:800 10px/1 var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);padding:14px 8px 6px}
+.side .proj{padding-left:30px;color:var(--ink-2)}
+.side .newlist{margin-top:auto;color:var(--ink-3);padding:14px 8px 0}
+
+.main{padding:18px 22px;display:grid;gap:10px;align-content:start;min-width:0}
+.main-h{display:flex;align-items:center;gap:10px}
+.main-h h4{margin:0;font:600 24px/1 var(--display);text-transform:uppercase}
+.main-h .sub{color:var(--ink-3);font-size:12px}
+.main-h .tools{margin-left:auto;display:flex;gap:8px}
+.btn{border:1px solid var(--line);border-radius:6px;padding:5px 9px;color:var(--ink-2);font-size:12px;background:var(--paper)}
+.btn.pri{background:var(--navy);border-color:var(--navy);color:#fff}
+.quick{border:1.5px dashed var(--line);border-radius:6px;padding:8px 10px;color:var(--ink-3)}
+.sec{font:800 10px/1 var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);padding:10px 0 2px;display:flex;gap:8px;align-items:center}
+.sec::after{content:"";flex:1;height:1px;background:var(--line)}
+.row{display:flex;align-items:center;gap:10px;padding:7px 8px;border-radius:6px}
+.row.sel{background:var(--next-bg)}
+.row.dim{opacity:.55}
+.cb{width:15px;height:15px;border:1.5px solid var(--ink-3);border-radius:4px;flex:none}
+.cb.done{background:var(--ink-3)}
+.row .t{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .proj-tag{color:var(--ink-3);font-size:11.5px}
+.chips{display:flex;gap:6px;align-items:center;color:var(--ink-3);font-size:11.5px;font-variant-numeric:tabular-nums}
+.chips svg{width:13px;height:13px}
+.chips .flag{padding:3px 6px;font-size:10px}
+
+/* detail pane */
+.detail{border-left:1px solid var(--line);padding:16px 18px;display:grid;gap:14px;align-content:start;background:var(--paper);min-width:0}
+.d-title{font:700 17px/1.3 var(--body)}
+.seg{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--line);border-radius:7px;overflow:hidden;font-size:11.5px;font-weight:700;text-align:center}
+.seg span{padding:6px 0;color:var(--ink-2);border-right:1px solid var(--line)}
+.seg span:last-child{border-right:0}
+.seg .on-today{background:var(--today-bg);color:var(--today)}
+.seg .on-next{background:var(--next-bg);color:var(--next)}
+.field{display:flex;gap:8px;align-items:center;color:var(--ink-3);font-size:12px}
+.field svg{width:14px;height:14px}
+.lbl{font:800 10px/1 var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);margin-bottom:6px}
+.sub-row{display:flex;gap:8px;align-items:center;padding:3px 0;font-size:12.5px}
+.sub-row .cb{width:13px;height:13px}
+.dep{display:flex;gap:8px;align-items:center;border:1px solid var(--line);border-radius:6px;padding:6px 8px;font-size:12px;margin-bottom:5px}
+.dep .st{margin-left:auto}
+.notesbox{border-top:1px solid var(--line);padding-top:12px;display:grid;gap:9px}
+.nb-h{font:700 14px/1.2 var(--body)}
+.line{height:7px;border-radius:4px;background:var(--wire-2)}
+.img{height:84px;border-radius:6px;background:repeating-linear-gradient(45deg,var(--wire),var(--wire) 8px,var(--wire-2) 8px,var(--wire-2) 16px);display:grid;place-items:center;color:var(--ink-3);font-size:11px}
+.filecard,.mailcard{display:flex;gap:10px;align-items:center;border:1px solid var(--line);border-radius:7px;padding:8px 10px;font-size:12px}
+.filecard svg,.mailcard svg{width:18px;height:18px;flex:none;color:var(--ink-2)}
+.mailcard{border-left:3px solid var(--navy)}
+.mailcard .m{min-width:0;flex:1}
+.mailcard .m div:first-child{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mailcard .m div:last-child{color:var(--ink-3);font-size:11px}
+.slash{border:1px dashed var(--line);border-radius:6px;padding:6px 8px;color:var(--ink-3);font-size:12px}
+
+/* mac sheet overlay */
+.stage{position:relative}
+.sheet{position:absolute;left:50%;top:34px;transform:translateX(-40%);width:470px;background:var(--paper);border:1.5px solid var(--ink-3);border-top:0;border-radius:0 0 10px 10px;box-shadow:0 20px 40px -16px rgba(10,20,40,.55);padding:16px;display:grid;gap:10px;font-size:12.5px}
+.scrim{position:absolute;inset:34px 0 0 0;background:rgba(20,26,40,.18)}
+.sheet .msg{display:grid;grid-template-columns:16px 120px 1fr 50px;gap:8px;align-items:center;padding:6px 6px;border-radius:5px}
+.sheet .msg.sel{background:var(--next-bg)}
+.sheet .msg .from{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sheet .msg .subj{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink-2)}
+.sheet .msg .dt{color:var(--ink-3);text-align:right;font-variant-numeric:tabular-nums}
+.sheet .foot{display:flex;gap:8px;justify-content:flex-end;align-items:center;border-top:1px solid var(--line);padding-top:10px}
+.sheet .foot .opt{margin-right:auto;color:var(--ink-2);display:flex;gap:6px;align-items:center}
+
+/* iOS phones */
+.phones{display:flex;gap:26px;min-width:max-content;padding:4px 2px}
+.phone{width:270px;height:560px;border:1.5px solid var(--ink-3);border-radius:38px;background:var(--paper);padding:12px 12px 10px;display:flex;flex-direction:column;position:relative;font-size:12.5px;box-shadow:0 10px 30px -18px rgba(20,30,60,.45)}
+.phone .cap{font:700 11px/1 var(--body);color:var(--ink-3);text-align:center;margin-top:12px}
+.status{display:flex;justify-content:space-between;padding:4px 14px 8px;font:700 11px/1 var(--body);color:var(--ink-2)}
+.island{position:absolute;top:14px;left:50%;transform:translateX(-50%);width:76px;height:20px;border-radius:12px;background:var(--ink-3);opacity:.5}
+.ph-body{flex:1;display:flex;flex-direction:column;gap:6px;padding:4px 6px;overflow:hidden;min-height:0}
+.ph-title{font:600 26px/1 var(--display);text-transform:uppercase;padding:6px 2px}
+.ph-nav{display:flex;gap:10px;align-items:center;padding:9px 4px;border-bottom:1px solid var(--wire-2)}
+.ph-nav svg{width:16px;height:16px}
+.ph-nav .ct{margin-left:auto;color:var(--ink-3)}
+.ph-row{display:flex;gap:9px;align-items:center;padding:8px 4px;border-bottom:1px solid var(--wire-2);position:relative}
+.ph-row .t{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.swipe{display:flex;margin:0 -6px;overflow:hidden;border-bottom:1px solid var(--wire-2)}
+.swipe .ph-row{flex:1;transform:none;border:0;padding-left:10px;min-width:0}
+.swipe .act{width:58px;display:grid;place-items:center;font:800 10px/1.1 var(--body);text-transform:uppercase;text-align:center}
+.swipe .a-today{background:var(--gold);color:#3a2a00}
+.swipe .a-next{background:var(--navy);color:#fff}
+.fab{position:absolute;right:20px;bottom:46px;width:44px;height:44px;border-radius:50%;background:var(--navy);color:#fff;display:grid;place-items:center;font:400 26px/1 var(--body)}
+.home-ind{width:100px;height:4px;border-radius:2px;background:var(--ink-3);margin:6px auto 0;opacity:.6}
+.kbbar{display:flex;justify-content:space-around;border-top:1px solid var(--line);padding:8px 0;color:var(--ink-2);font:700 12px/1 var(--mono)}
+.kb{height:120px;background:var(--wire);border-radius:0 0 26px 26px;margin:0 -12px -10px;display:grid;place-items:center;color:var(--ink-3);font-size:11px}
+.share{margin-top:auto;background:var(--wire);border-radius:16px 16px 26px 26px;margin:auto -12px -10px;padding:12px;display:grid;gap:8px}
+.share .apps{display:flex;gap:12px;justify-content:center}
+.share .apps div{width:42px;height:42px;border-radius:10px;background:var(--wire-2);display:grid;place-items:center;font-size:9px;color:var(--ink-3);text-align:center}
+.share .apps .me{background:var(--plum);color:#fff;font-weight:800}
+.share .card{background:var(--paper);border-radius:10px;padding:10px;display:grid;gap:6px}
+
+/* shared anatomy + capture + sync */
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px}
+.panel{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:18px;display:grid;gap:10px;align-content:start;min-width:0}
+.panel p,.panel li{font-size:14px;color:var(--ink-2)}
+.panel ul{margin:0;padding-left:18px;display:grid;gap:4px}
+.verdict{border-left:4px solid var(--gold);background:var(--paper);padding:16px 18px;border-radius:0 8px 8px 0;display:grid;gap:6px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;min-width:640px}
+th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:800 11px/1.2 var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+td:first-child{font-weight:700;white-space:nowrap}
+.yes{color:var(--next);font-weight:700}.no{color:var(--blocked);font-weight:700}
+.diagram{overflow-x:auto}
+.diagram svg{min-width:760px;width:100%;height:auto;display:block}
+.files{display:grid;gap:4px;font:13px/1.5 var(--mono)}
+.files span{color:var(--ink-3)}
+.warn{border:1px solid var(--plum);background:var(--blocked-bg);border-radius:8px;padding:14px 16px;display:grid;gap:4px;font-size:14px}
+.warn strong{color:var(--blocked)}
+pre{margin:0;background:var(--wire);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;font:12.5px/1.5 var(--mono);color:var(--ink)}
+footer .wrap{padding-block:26px;color:var(--ink-3);font-size:12.5px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-star" viewBox="0 0 16 16"><path fill="currentColor" d="M8 1.5l1.9 4 4.4.5-3.3 3 .9 4.4L8 11.2l-3.9 2.2.9-4.4-3.3-3 4.4-.5z"/></symbol>
+    <symbol id="i-next" viewBox="0 0 16 16"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M2.5 8h9M8.5 4l4 4-4 4"/></symbol>
+    <symbol id="i-inbox" viewBox="0 0 16 16"><path fill="none" stroke="currentColor" stroke-width="1.5" d="M2 9.5l1.8-6h8.4L14 9.5V13H2zM2 9.5h3.5l1 1.5h3l1-1.5H14"/></symbol>
+    <symbol id="i-cal" viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="11" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path stroke="currentColor" stroke-width="1.5" d="M2 6.5h12M5 1.5v3M11 1.5v3"/></symbol>
+    <symbol id="i-box" viewBox="0 0 16 16"><path fill="none" stroke="currentColor" stroke-width="1.5" d="M2 4h12v3H2zM3 7v7h10V7M6.5 9.5h3"/></symbol>
+    <symbol id="i-log" viewBox="0 0 16 16"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" d="M3 8.5l3 3 7-7"/></symbol>
+    <symbol id="i-mail" viewBox="0 0 16 16"><rect x="1.5" y="3" width="13" height="10" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.4"/><path fill="none" stroke="currentColor" stroke-width="1.4" d="M2 4l6 5 6-5"/></symbol>
+    <symbol id="i-clip" viewBox="0 0 16 16"><path fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" d="M10.5 4.5l-5 5a1.6 1.6 0 002.3 2.3l5.4-5.4a3 3 0 00-4.3-4.3L3.5 7.5a4.3 4.3 0 006.1 6.1l4-4"/></symbol>
+    <symbol id="i-sub" viewBox="0 0 16 16"><path fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" d="M3 3v5a2 2 0 002 2h7M9.5 7.5L12 10l-2.5 2.5"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 16 16"><rect x="3" y="7" width="10" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path fill="none" stroke="currentColor" stroke-width="1.5" d="M5.5 7V5a2.5 2.5 0 015 0v2"/></symbol>
+    <symbol id="i-flag" viewBox="0 0 16 16"><path fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" d="M3.5 14V2.5h8l-1.5 3 1.5 3h-8"/></symbol>
+    <symbol id="i-file" viewBox="0 0 16 16"><path fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" d="M4 1.5h5l3.5 3.5v9.5H4zM9 1.5V5h3.5"/></symbol>
+  </defs>
+</svg>
+
+<header class="band">
+  <div class="wrap">
+    <div>
+      <div class="eyebrow" style="color:#f2e7ec">Low-fidelity wireframes · v0.1</div>
+      <h1>Nextly</h1>
+      <p>A Things-style task manager for Windows, macOS and iOS. Work is organized by what you'll do <b>Today</b> and what comes <b>Next</b>, with dates kept optional.</p>
+    </div>
+    <div class="meta">Windows 11 · macOS 15 · iOS 18<br>Self-hosted sync over Tailscale</div>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <div class="eyebrow">How work gets organized</div>
+    <div class="concepts">
+      <div class="concept"><span class="flag f-today"><svg width="11" height="11"><use href="#i-star"/></svg>Today</span><p>Your list for today. Anything still open tonight stays here tomorrow. It doesn't turn red or count as overdue.</p></div>
+      <div class="concept"><span class="flag f-next"><svg width="11" height="11"><use href="#i-next"/></svg>Next</span><p>The short queue you pull from when Today is clear. You set the order by dragging. One keystroke promotes a task to Today.</p></div>
+      <div class="concept"><span class="flag f-blocked"><svg width="11" height="11"><use href="#i-lock"/></svg>Waiting on</span><p>A task that depends on other open tasks is greyed out until those are finished. Then it moves to Next on its own.</p></div>
+      <div class="concept"><span class="flag f-date"><svg width="11" height="11"><use href="#i-cal"/></svg>Deadline · optional</span><p>A small chip, not a way of sorting. Tasks with deadlines show up in Scheduled. Today and Next never depend on a date.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="platforms">
+  <div class="wrap">
+    <div style="display:flex;flex-wrap:wrap;gap:14px;align-items:end;justify-content:space-between">
+      <div style="display:grid;gap:6px"><div class="eyebrow">Platform wireframes</div><h2>Same model, native shells</h2></div>
+      <div class="tabs" role="tablist" aria-label="Platform">
+        <button class="tab" role="tab" id="tab-win" aria-controls="p-win" aria-selected="true">Windows</button>
+        <button class="tab" role="tab" id="tab-mac" aria-controls="p-mac" aria-selected="false">macOS</button>
+        <button class="tab" role="tab" id="tab-ios" aria-controls="p-ios" aria-selected="false">iOS</button>
+      </div>
+    </div>
+
+    <!-- WINDOWS -->
+    <div id="p-win" role="tabpanel" aria-labelledby="tab-win" class="frame-row">
+      <div class="scroller">
+        <div class="win">
+          <div class="titlebar"><span>Nextly</span><span class="winctl"><span>—</span><span>▢</span><span>✕</span></span></div>
+          <div class="panes">
+            <nav class="side">
+              <div class="search">Search  (Ctrl+K)</div>
+              <div class="nav"><svg><use href="#i-inbox"/></svg>Inbox<span class="ct">3</span></div>
+              <div class="nav on" style="color:var(--today)"><svg><use href="#i-star"/></svg><span style="color:var(--ink)">Today</span><span class="ct">5</span></div>
+              <div class="nav" style="color:var(--next)"><svg><use href="#i-next"/></svg><span style="color:var(--ink)">Next</span><span class="ct">8</span></div>
+              <div class="nav"><svg><use href="#i-cal"/></svg>Scheduled</div>
+              <div class="nav"><svg><use href="#i-box"/></svg>Someday</div>
+              <div class="nav"><svg><use href="#i-log"/></svg>Logbook</div>
+              <div class="grp">Areas</div>
+              <div class="nav">Classroom</div>
+              <div class="nav proj">Unit 3 · Fractions</div>
+              <div class="nav proj">Parent conferences</div>
+              <div class="nav">Tech committee</div>
+              <div class="nav proj">Chromebook refresh</div>
+              <div class="newlist">+ New list</div>
+            </nav>
+            <div class="main">
+              <div class="main-h"><h4>Today</h4><span class="sub">Tue, Oct 20 · 5 open</span><div class="tools"><span class="btn">Group: Area</span><span class="btn pri">+ Task</span></div></div>
+              <div class="quick">New task… <span class="mono">Ctrl+N</span> &nbsp;·&nbsp; type <span class="mono">!t</span> Today, <span class="mono">!n</span> Next, <span class="mono">^fri</span> deadline</div>
+              <div class="sec">Classroom</div>
+              <div class="row"><span class="cb"></span><span class="t">Grade fraction exit tickets</span><span class="chips"><svg><use href="#i-sub"/></svg>1/3</span></div>
+              <div class="row sel"><span class="cb"></span><span class="t">Reply to Ms. Ortiz about conference time</span><span class="chips"><svg><use href="#i-mail"/></svg><svg><use href="#i-clip"/></svg>2<span class="flag f-date">Fri</span></span></div>
+              <div class="row"><span class="cb"></span><span class="t">Print Unit 3 vocabulary cards</span><span class="chips"></span></div>
+              <div class="sec">Tech committee</div>
+              <div class="row"><span class="cb"></span><span class="t">Collect cart counts from each grade level</span><span class="chips"><svg><use href="#i-sub"/></svg>2/5</span></div>
+              <div class="row dim"><span class="cb"></span><span class="t">Submit Chromebook refresh order</span><span class="chips"><span class="flag f-blocked"><svg width="10" height="10"><use href="#i-lock"/></svg>Waiting on 1</span></span></div>
+              <div class="sec">Up next · 8</div>
+              <div class="row"><span class="cb"></span><span class="t">Draft newsletter blurb</span><span class="chips"><span class="flag f-next">Next</span></span></div>
+              <div class="row"><span class="cb"></span><span class="t">Book library for research day</span><span class="chips"><span class="flag f-next">Next</span></span></div>
+              <div class="row" style="color:var(--ink-3)">Show 6 more…</div>
+            </div>
+            <aside class="detail">
+              <div class="d-title">Reply to Ms. Ortiz about conference time</div>
+              <div class="seg"><span>Inbox</span><span class="on-today">★ Today</span><span>Next</span><span>Someday</span></div>
+              <div class="field"><svg><use href="#i-cal"/></svg>Deadline: Fri, Oct 23 &nbsp;<span style="color:var(--ink-3)">(optional · clear)</span></div>
+              <div class="field"><svg><use href="#i-flag"/></svg>Classroom › Parent conferences</div>
+              <div>
+                <div class="lbl">Subtasks · 1 of 3</div>
+                <div class="sub-row"><span class="cb done"></span><s style="color:var(--ink-3)">Check open slots</s></div>
+                <div class="sub-row"><span class="cb"></span>Propose Thu 3:30 or Fri 8:00</div>
+                <div class="sub-row"><span class="cb"></span>Add to calendar once confirmed</div>
+                <div class="sub-row" style="color:var(--ink-3)">+ Subtask</div>
+              </div>
+              <div>
+                <div class="lbl">Depends on</div>
+                <div class="dep"><svg width="13" height="13"><use href="#i-log"/></svg>Publish conference sign-up sheet<span class="st flag f-date">Done</span></div>
+                <div class="lbl" style="margin-top:8px">Blocks</div>
+                <div class="dep"><svg width="13" height="13"><use href="#i-lock"/></svg>Send conference reminders<span class="st flag f-blocked">Waiting</span></div>
+              </div>
+              <div class="notesbox">
+                <div class="lbl">Notes</div>
+                <div class="nb-h">What she asked</div>
+                <div class="line" style="width:94%"></div><div class="line" style="width:80%"></div>
+                <div class="mailcard"><svg><use href="#i-mail"/></svg><div class="m"><div>Re: Conference times next week</div><div>Gmail · Oct 19, 4:12 PM · Open in Gmail ↗</div></div></div>
+                <div class="filecard"><svg><use href="#i-file"/></svg>conference-slots.pdf · 84 KB</div>
+                <div class="slash">Type <span class="mono">/</span> for heading, checklist, image, file, email…</div>
+              </div>
+            </aside>
+          </div>
+        </div>
+      </div>
+      <div class="notes">
+        <div class="note"><span class="pin">1</span><div><b>Three panes, Fluent style.</b> The sidebar collapses below 1100 px wide. The detail pane opens on Enter and closes on Esc, the same as Things on Mac.</div></div>
+        <div class="note"><span class="pin">2</span><div><b>Quick add with tokens.</b> Typing <span class="mono">!t</span>, <span class="mono">!n</span> or <span class="mono">^fri</span> sets the flag or deadline while you type. A global <span class="mono">Win+Alt+Space</span> hotkey opens quick add from anywhere.</div></div>
+        <div class="note"><span class="pin">3</span><div><b>Up next goes under Today.</b> When Today is finished, the next item is already in view. <span class="mono">Ctrl+T</span> promotes it.</div></div>
+        <div class="note"><span class="pin">4</span><div><b>Blocked tasks stay where they are</b> but are greyed out, with a count of what they're waiting on. Clicking the chip jumps to the blocking task.</div></div>
+        <div class="note"><span class="pin">5</span><div><b>Flag picker.</b> A task has one flag at a time: Inbox, Today, Next or Someday. A deadline is separate and never required.</div></div>
+      </div>
+    </div>
+
+    <!-- MAC -->
+    <div id="p-mac" role="tabpanel" aria-labelledby="tab-mac" class="frame-row" hidden>
+      <div class="scroller">
+        <div class="win stage">
+          <div class="titlebar"><span class="lights"><i></i><i></i><i></i></span><span>Next</span><span style="width:52px"></span></div>
+          <div class="panes">
+            <nav class="side mac">
+              <div class="search">Search  (⌘K)</div>
+              <div class="nav"><svg><use href="#i-inbox"/></svg>Inbox<span class="ct">3</span></div>
+              <div class="nav" style="color:var(--today)"><svg><use href="#i-star"/></svg><span style="color:var(--ink)">Today</span><span class="ct">5</span></div>
+              <div class="nav on" style="color:var(--next)"><svg><use href="#i-next"/></svg><span style="color:var(--ink)">Next</span><span class="ct">8</span></div>
+              <div class="nav"><svg><use href="#i-cal"/></svg>Scheduled</div>
+              <div class="nav"><svg><use href="#i-box"/></svg>Someday</div>
+              <div class="nav"><svg><use href="#i-log"/></svg>Logbook</div>
+              <div class="grp">Areas</div>
+              <div class="nav">Classroom</div>
+              <div class="nav">Tech committee</div>
+            </nav>
+            <div class="main">
+              <div class="main-h"><h4>Next</h4><span class="sub">8 · drag to reorder</span><div class="tools"><span class="btn">✉ From Gmail</span><span class="btn pri">+ Task</span></div></div>
+              <div class="row"><span class="cb"></span><span class="t">Draft newsletter blurb</span></div>
+              <div class="row"><span class="cb"></span><span class="t">Book library for research day</span><span class="chips"><svg><use href="#i-mail"/></svg></span></div>
+              <div class="row"><span class="cb"></span><span class="t">Send conference reminders</span><span class="chips"><span class="flag f-blocked">Waiting on 1</span></span></div>
+              <div class="row"><span class="cb"></span><span class="t">Order replacement chargers</span></div>
+              <div class="row"><span class="cb"></span><span class="t">Update seating chart</span></div>
+            </div>
+            <aside class="detail"><div class="d-title">Draft newsletter blurb</div><div class="line"></div><div class="line" style="width:70%"></div></aside>
+          </div>
+          <div class="scrim"></div>
+          <div class="sheet">
+            <div style="display:flex;justify-content:space-between;align-items:center"><b>Add from Gmail</b><span class="search" style="margin:0;width:200px">Search mail…</span></div>
+            <div class="eyebrow">Inbox · msamberg@… </div>
+            <div class="msg sel"><span class="cb done"></span><span class="from">Library Media Ctr</span><span class="subj">Research day room request</span><span class="dt">9:41</span></div>
+            <div class="msg"><span class="cb"></span><span class="from">J. Ortiz</span><span class="subj">Re: Conference times next week</span><span class="dt">Mon</span></div>
+            <div class="msg"><span class="cb done"></span><span class="from">Tech Services</span><span class="subj">Chromebook refresh: counts due</span><span class="dt">Mon</span></div>
+            <div class="msg"><span class="cb"></span><span class="from">PTA</span><span class="subj">Newsletter submissions</span><span class="dt">Oct 16</span></div>
+            <div class="foot"><span class="opt">Add as <span class="flag f-next">Next</span>▾ · one task per email</span><span class="btn">Cancel</span><span class="btn pri">Add 2 tasks</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="notes">
+        <div class="note"><span class="pin">1</span><div><b>Same layout as Windows,</b> with the toolbar in the title bar and a translucent sidebar. Shortcuts use ⌘ in place of Ctrl.</div></div>
+        <div class="note"><span class="pin">2</span><div><b>Gmail picker sheet.</b> It uses the Gmail API with read-only access. You search, check one or more emails, and pick which flag the new tasks get. Each task gets the subject as its title and an email card in its notes.</div></div>
+        <div class="note"><span class="pin">3</span><div><b>Next is a ranked list.</b> Drag to reorder. Nextly saves a position for each task, so the order is the same on every device.</div></div>
+        <div class="note"><span class="pin">4</span><div><b>Share extension.</b> In Mail or Safari, choosing Share › Nextly opens the same capture card shown on iOS.</div></div>
+      </div>
+    </div>
+
+    <!-- iOS -->
+    <div id="p-ios" role="tabpanel" aria-labelledby="tab-ios" class="frame-row" hidden>
+      <div class="scroller">
+        <div class="phones">
+          <div>
+            <div class="phone"><span class="island"></span><div class="status"><span>9:41</span><span>●●●</span></div>
+              <div class="ph-body">
+                <div class="search" style="margin:0">Search</div>
+                <div class="ph-nav"><svg><use href="#i-inbox"/></svg>Inbox<span class="ct">3</span></div>
+                <div class="ph-nav" style="color:var(--today)"><svg><use href="#i-star"/></svg><span style="color:var(--ink)">Today</span><span class="ct">5</span></div>
+                <div class="ph-nav" style="color:var(--next)"><svg><use href="#i-next"/></svg><span style="color:var(--ink)">Next</span><span class="ct">8</span></div>
+                <div class="ph-nav"><svg><use href="#i-cal"/></svg>Scheduled</div>
+                <div class="ph-nav"><svg><use href="#i-box"/></svg>Someday</div>
+                <div class="ph-nav"><svg><use href="#i-log"/></svg>Logbook</div>
+                <div class="eyebrow" style="padding:12px 4px 2px">Areas</div>
+                <div class="ph-nav">Classroom</div>
+                <div class="ph-nav">Tech committee</div>
+              </div>
+              <span class="fab">+</span><div class="home-ind"></div>
+            </div>
+            <div class="cap">1 · Home</div>
+          </div>
+          <div>
+            <div class="phone"><span class="island"></span><div class="status"><span>9:41</span><span>●●●</span></div>
+              <div class="ph-body">
+                <div style="color:var(--next);font-size:12px">‹ Lists</div>
+                <div class="ph-title">Today</div>
+                <div class="ph-row"><span class="cb"></span><span class="t">Grade fraction exit tickets</span><span class="chips">1/3</span></div>
+                <div class="ph-row"><span class="cb"></span><span class="t">Reply to Ms. Ortiz</span><span class="chips"><svg><use href="#i-mail"/></svg></span></div>
+                <div class="swipe"><div class="ph-row"><span class="cb"></span><span class="t">Print vocab cards</span></div><div class="act a-next">→<br>Next</div><div class="act a-today" style="background:var(--wire-2);color:var(--ink-2)">Later</div></div>
+                <div class="ph-row" style="opacity:.55"><span class="cb"></span><span class="t">Submit refresh order</span><span class="chips"><svg><use href="#i-lock"/></svg></span></div>
+                <div class="eyebrow" style="padding:12px 4px 2px">Up next</div>
+                <div class="swipe"><div class="act a-today">★<br>Today</div><div class="ph-row"><span class="cb"></span><span class="t">Draft newsletter blurb</span></div></div>
+                <div class="ph-row"><span class="cb"></span><span class="t">Book library</span></div>
+              </div>
+              <span class="fab">+</span><div class="home-ind"></div>
+            </div>
+            <div class="cap">2 · Today, with swipe actions</div>
+          </div>
+          <div>
+            <div class="phone"><span class="island"></span><div class="status"><span>9:41</span><span>●●●</span></div>
+              <div class="ph-body">
+                <div style="display:flex;justify-content:space-between;color:var(--next);font-size:12px"><span>‹ Today</span><span>Done</span></div>
+                <div class="d-title" style="font-size:15px">Reply to Ms. Ortiz about conference time</div>
+                <div class="seg"><span>Inbox</span><span class="on-today">★</span><span>Next</span><span>Later</span></div>
+                <div class="field"><svg><use href="#i-sub"/></svg>Subtasks 1/3 · <svg><use href="#i-lock"/></svg>Blocks 1</div>
+                <div class="nb-h" style="margin-top:4px">What she asked</div>
+                <div class="line" style="width:92%"></div><div class="line" style="width:64%"></div>
+                <div class="mailcard"><svg><use href="#i-mail"/></svg><div class="m"><div>Re: Conference times</div><div>Open in Gmail ↗</div></div></div>
+              </div>
+              <div class="kbbar"><span>H</span><span>☐</span><span>•</span><span>▣</span><span><svg width="13" height="13"><use href="#i-clip"/></svg></span><span><svg width="13" height="13"><use href="#i-mail"/></svg></span></div>
+              <div class="kb">keyboard</div>
+            </div>
+            <div class="cap">3 · Detail and notes editor</div>
+          </div>
+          <div>
+            <div class="phone"><span class="island"></span><div class="status"><span>9:41</span><span>●●●</span></div>
+              <div class="ph-body" style="opacity:.45">
+                <div class="ph-title" style="font-size:18px">Gmail</div>
+                <div class="line"></div><div class="line" style="width:80%"></div><div class="line" style="width:90%"></div>
+              </div>
+              <div class="share">
+                <div class="card">
+                  <b>Add to Nextly</b>
+                  <div class="quick" style="border-style:solid;color:var(--ink)">Research day room request</div>
+                  <div class="mailcard" style="font-size:11px"><svg><use href="#i-mail"/></svg><div class="m"><div>Library Media Ctr</div><div>link attached</div></div></div>
+                  <div style="display:flex;gap:6px"><span class="flag f-today">Today</span><span class="flag f-next" style="box-shadow:inset 0 0 0 1.5px var(--next)">Next ✓</span><span class="flag f-date">Inbox</span></div>
+                  <span class="btn pri" style="text-align:center">Add</span>
+                </div>
+                <div class="apps"><div>Mail</div><div>Notes</div><div class="me">Nextly</div><div>More</div></div>
+              </div>
+            </div>
+            <div class="cap">4 · Share sheet capture</div>
+          </div>
+        </div>
+      </div>
+      <div class="notes">
+        <div class="note"><span class="pin">1</span><div><b>Lists first,</b> as in Things for iPhone. A floating + button opens quick add, and dragging it onto a list adds the new task there.</div></div>
+        <div class="note"><span class="pin">2</span><div><b>Swipe right promotes</b> a task (Next to Today). <b>Swipe left defers it</b> (Today to Next, or to Someday). The swipe never sets a date.</div></div>
+        <div class="note"><span class="pin">3</span><div><b>Notes editor.</b> The bar above the keyboard inserts a heading, checklist, bullet, image, file or email card.</div></div>
+        <div class="note"><span class="pin">4</span><div><b>Share extension.</b> Share › Nextly works from Gmail, Mail and Safari. It takes the subject and link and lets you pick a flag before adding.</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div style="display:grid;gap:6px"><div class="eyebrow">Shared across platforms</div><h2>Inside a task</h2></div>
+    <div class="cols">
+      <div class="panel">
+        <h3>Subtasks</h3>
+        <p>A subtask is a full task with a parent. It can have its own notes, flag and dependencies. Subtasks nest up to three levels deep. A parent shows a count like <b>2/5</b>, and finishing the last subtask asks whether to finish the parent too.</p>
+      </div>
+      <div class="panel">
+        <h3>Dependencies</h3>
+        <ul>
+          <li><b>Depends on</b>: this task stays greyed out until those tasks are done.</li>
+          <li><b>Blocks</b>: the reverse view, filled in for you.</li>
+          <li>Adding a link that would create a loop isn't allowed, and the editor shows why.</li>
+          <li>When the last blocking task is finished, this task moves to <span class="flag f-next">Next</span> unless it was already in Today.</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h3>Notes, blog-style</h3>
+        <p>Notes are a list of blocks stored as JSON, so the editor works the same on every platform and syncs one block at a time.</p>
+        <pre>heading · paragraph · checklist · quote
+image · file · email · link · divider</pre>
+        <p>Files are stored under their SHA-256 hash, so each file uploads once even if several tasks use it.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div style="display:grid;gap:6px"><div class="eyebrow">Email to task</div><h2>Three ways to capture email</h2></div>
+    <div class="cols">
+      <div class="panel">
+        <span class="flag f-next">Best</span>
+        <h3>In-app Gmail picker</h3>
+        <p>Google sign-in on each device with the <code>gmail.readonly</code> scope. The picker searches mail and saves the message ID, subject, sender and date. It never saves the email body.</p>
+        <p>Links use <code>mail.google.com/mail/u/0/#all/&lt;id&gt;</code>, which works in a browser and in the Gmail iOS app.</p>
+      </div>
+      <div class="panel">
+        <span class="flag f-date">Fastest to build</span>
+        <h3>Chrome &amp; Safari bookmarklet</h3>
+        <p>One click in Gmail reads the open email's subject and ID and opens a small "Add to Nextly" window served by your sync server. No Google sign-in needed. The script is in <code>capture/gmail-bookmarklet.js</code>.</p>
+      </div>
+      <div class="panel">
+        <span class="flag f-date">iOS &amp; macOS</span>
+        <h3>Share extension</h3>
+        <p>Share › Nextly from the Gmail app, Mail or Safari. Mail.app passes a <code>message://</code> link, and Gmail passes a web link. Both show up as email cards in the task's notes.</p>
+      </div>
+    </div>
+    <div class="warn">
+      <strong>Before you connect a school Gmail account</strong>
+      <span>Your district's Google Workspace admin may need to approve a custom app before it can request Gmail access. Notes and attachments go to your own server, not a district system, so keep student records out of them. That includes grades, IEP or 504 details, and parent emails about specific students. Basic directory information, like a name on a conference list, is the most you should store.</span>
+    </div>
+  </div>
+</section>
+
+<section id="sync">
+  <div class="wrap">
+    <div style="display:grid;gap:6px"><div class="eyebrow">Sync</div><h2>Docker server on your tailnet</h2></div>
+    <div class="verdict">
+      <b>Recommendation: run a small sync server in Docker, reachable only over Tailscale.</b>
+      <span class="lede">Tailscale connects the devices but doesn't sync anything by itself, so something still has to merge changes. Syncthing copies whole files, and iOS has no official Syncthing client. A small server handles merging per record. It uses the Tailscale you already run on the host and listens only on the host's Tailscale address, so your phone can reach it anywhere without opening any ports.</span>
+    </div>
+    <div class="scroller">
+      <table>
+        <thead><tr><th>Option</th><th>Works on iOS</th><th>Handles edits on two devices at once</th><th>Setup</th><th>Verdict</th></tr></thead>
+        <tbody>
+          <tr><td>Syncthing + shared SQLite file</td><td class="no">Only through 3rd-party apps</td><td class="no">No. You get conflict copies of the database.</td><td>Low</td><td>Avoid</td></tr>
+          <tr><td>Tailscale only, devices sync directly</td><td class="yes">Yes</td><td>Only if both devices are online</td><td>High (you write the sync code)</td><td>Fragile</td></tr>
+          <tr><td>Docker server on the Tailscale host</td><td class="yes">Yes</td><td class="yes">Yes. The latest edit to each record wins.</td><td>Low (one compose file)</td><td><b>Use this</b></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="diagram" role="img" aria-label="Windows, Mac and iPhone each keep a local SQLite copy and sync over the tailnet to a Docker host running a Tailscale sidecar and the Nextly server.">
+      <svg viewBox="0 0 900 260" xmlns="http://www.w3.org/2000/svg" font-family="Mulish, Arial, sans-serif">
+        <g font-size="13">
+          <rect x="20" y="20" width="180" height="58" rx="8" fill="var(--paper)" stroke="var(--line)"/>
+          <text x="36" y="44" fill="var(--ink)" font-weight="700">Windows app</text><text x="36" y="63" fill="var(--ink-3)" font-size="11.5">local SQLite + outbox</text>
+          <rect x="20" y="100" width="180" height="58" rx="8" fill="var(--paper)" stroke="var(--line)"/>
+          <text x="36" y="124" fill="var(--ink)" font-weight="700">Mac app</text><text x="36" y="143" fill="var(--ink-3)" font-size="11.5">local SQLite + outbox</text>
+          <rect x="20" y="180" width="180" height="58" rx="8" fill="var(--paper)" stroke="var(--line)"/>
+          <text x="36" y="204" fill="var(--ink)" font-weight="700">iPhone app</text><text x="36" y="223" fill="var(--ink-3)" font-size="11.5">local SQLite + outbox</text>
+        </g>
+        <rect x="290" y="20" width="230" height="218" rx="10" fill="var(--next-bg)" stroke="var(--next)" stroke-dasharray="5 4"/>
+        <text x="405" y="120" text-anchor="middle" fill="var(--next)" font-weight="800" font-size="13">Tailnet (WireGuard)</text>
+        <text x="405" y="140" text-anchor="middle" fill="var(--ink-2)" font-size="11.5">http://&lt;host&gt;.&lt;tailnet&gt;.ts.net:8080</text>
+        <g stroke="var(--ink-3)" stroke-width="1.5" fill="none">
+          <path d="M200 49 H600"/><path d="M200 129 H600"/><path d="M200 209 H600"/>
+        </g>
+        <text x="245" y="42" fill="var(--ink-3)" font-size="11">POST /sync</text>
+        <rect x="600" y="20" width="280" height="218" rx="10" fill="var(--paper)" stroke="var(--plum)" stroke-width="1.5"/>
+        <text x="618" y="44" fill="var(--plum)" font-weight="800" font-size="12" letter-spacing="1.2">DOCKER HOST</text>
+        <rect x="618" y="58" width="244" height="44" rx="6" fill="var(--wire)" stroke="var(--line)"/>
+        <text x="632" y="78" fill="var(--ink)" font-weight="700" font-size="12.5">Tailscale (already installed)</text><text x="632" y="94" fill="var(--ink-3)" font-size="11">port 8080 bound to 100.x.y.z only</text>
+        <rect x="618" y="112" width="244" height="44" rx="6" fill="var(--wire)" stroke="var(--line)"/>
+        <text x="632" y="132" fill="var(--ink)" font-weight="700" font-size="12.5">nextly server (Node 24)</text><text x="632" y="148" fill="var(--ink-3)" font-size="11">/sync · /files · /capture</text>
+        <rect x="618" y="166" width="117" height="56" rx="6" fill="var(--wire)" stroke="var(--line)"/>
+        <text x="632" y="190" fill="var(--ink)" font-weight="700" font-size="12">nextly.db</text><text x="632" y="207" fill="var(--ink-3)" font-size="11">SQLite, WAL</text>
+        <rect x="745" y="166" width="117" height="56" rx="6" fill="var(--wire)" stroke="var(--line)"/>
+        <text x="759" y="190" fill="var(--ink)" font-weight="700" font-size="12">files/</text><text x="759" y="207" fill="var(--ink-3)" font-size="11">by sha256</text>
+      </svg>
+    </div>
+    <div class="cols">
+      <div class="panel">
+        <h3>How sync works</h3>
+        <ul>
+          <li>Each device works from its own local copy, so the apps run fully offline.</li>
+          <li>Every change gets a timestamp that sorts correctly even if a device's clock is slightly off. If two devices edit the same record, the newer timestamp wins.</li>
+          <li>Each device sends its unsent changes and gets back everything newer than the last change it saw.</li>
+          <li>A deleted record is kept with a "deleted" mark, so the deletion reaches every device.</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h3>Generated files</h3>
+        <div class="files">
+          <div>server/docker-compose.yml <span>one service</span></div>
+          <div>server/.env.example <span>Tailscale IP, token</span></div>
+          <div>server/Dockerfile</div>
+          <div>server/server.js <span>sync API, no deps</span></div>
+          <div>server/capture.html <span>bookmarklet target</span></div>
+          <div>capture/gmail-bookmarklet.js</div>
+        </div>
+      </div>
+      <div class="panel">
+        <h3>Suggested client stack</h3>
+        <p><b>Tauri 2</b> builds Windows, macOS and iOS apps from one React + TypeScript codebase, with local SQLite through its SQL plugin. The iOS share extension is the only part that needs native Swift.</p>
+        <p>If the Mac and iPhone apps need to feel fully native, use SwiftUI there and WinUI 3 on Windows. Both talk to the same sync API.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer><div class="wrap">Nextly wireframes v0.1 · low fidelity, for layout and flow only · Colors follow the Chatham County Schools brand guide</div></footer>
+
+<script>
+(() => {
+  const tabs = [...document.querySelectorAll('.tab')];
+  const show = (id) => {
+    tabs.forEach(t => {
+      const on = t.getAttribute('aria-controls') === id;
+      t.setAttribute('aria-selected', on);
+      t.tabIndex = on ? 0 : -1;
+      document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+    });
+    try { localStorage.setItem('nextly-tab', id); } catch {}
+  };
+  tabs.forEach((t, i) => {
+    t.addEventListener('click', () => show(t.getAttribute('aria-controls')));
+    t.addEventListener('keydown', e => {
+      if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+      const n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
+      n.focus(); show(n.getAttribute('aria-controls'));
+    });
+  });
+  const hash = { windows: 'p-win', mac: 'p-mac', macos: 'p-mac', ios: 'p-ios' }[location.hash.slice(1)];
+  let saved = null; try { saved = localStorage.getItem('nextly-tab'); } catch {}
+  show(hash || (document.getElementById(saved) ? saved : 'p-win'));
+})();
+</script>
