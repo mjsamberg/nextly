@@ -16,6 +16,7 @@
 //   GET  /health
 //   WS   /events        live updates: {"type":"changed"} after another device syncs (live.js)
 //   POST /events/ticket one-minute WebSocket ticket, for browsers that can't send headers
+//   GET  /widget, POST /tasks, POST /tasks/:id/done   for the widget and Siri (tasks.js)
 
 import http from 'node:http';
 import fs from 'node:fs';
@@ -23,6 +24,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 import { createLive } from './live.js';
+import { createTaskApi } from './tasks.js';
 
 const TOKEN = process.env.NEXTLY_TOKEN;
 const DATA = process.env.NEXTLY_DATA || './data';
@@ -111,6 +113,7 @@ function readBody(req, limit) {
 
 const lastSeq = () => db.prepare('SELECT COALESCE(MAX(seq), 0) AS s FROM records').get().s;
 const live = createLive({ token: TOKEN, authorized, lastSeq });
+const taskApi = createTaskApi({ db, applyChanges, onChange: () => live.changed('server') });
 
 /** Returns how many changes were newer than what the server had. */
 function applyChanges(changes) {
@@ -164,6 +167,19 @@ const server = http.createServer(async (req, res) => {
         COALESCE(SUM(kind = 'task' AND deleted = 0), 0) AS tasks FROM records`).get();
       const files = fs.readdirSync(path.join(DATA, 'files')).length;
       return send(res, 200, { ok: true, serverId: SERVER_ID, ...r, files, liveDevices: live.count() });
+    }
+
+    if (url.pathname === '/widget' && req.method === 'GET') return send(res, 200, taskApi.widget());
+
+    if (url.pathname === '/tasks' && req.method === 'POST') {
+      const r = taskApi.create(JSON.parse((await readBody(req, 64 * 1024)).toString() || '{}'));
+      return send(res, r.status, r.body);
+    }
+
+    const done = url.pathname.match(/^\/tasks\/([\w-]{1,64})\/done$/);
+    if (done && req.method === 'POST') {
+      const r = taskApi.complete(done[1]);
+      return send(res, r.status, r.body);
     }
 
     if (url.pathname === '/events/ticket' && req.method === 'POST') {

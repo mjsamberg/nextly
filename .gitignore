@@ -4,3 +4,8 @@ node_modules/
 app/dist/
 app/src-tauri/target/
 app/src-tauri/gen/
+
+apple/build/
+apple/*.xcodeproj/
+app/src-tauri/entitlements.macos.plist
+app/src-tauri/tauri.macos-extensions.json

@@ -8,6 +8,7 @@ import { http } from './net';
 import { applyRemote, deviceId, localCounts, markSent, pendingChanges, requeueAll, setOnLocalChange } from './store';
 import { blockedByAccess, headerObject, type HeaderRow } from './logic';
 import { startLive, stopLive, type LiveState } from './live';
+import { shareSettings } from './apple';
 import type { Rec } from './types';
 
 /** headers: sent with every request, e.g. a Cloudflare Access service token. */
@@ -77,6 +78,7 @@ function check(res: Response, what: string) {
 export async function initSync() {
   const saved = await db.get<Partial<SyncSettings>>('meta', 'sync');
   settings = { url: saved?.url ?? '', token: saved?.token ?? '', headers: saved?.headers ?? [] };
+  shareSettings(settings);
   const last = await db.get<string>('meta', 'lastSync');
   const problem = notReady();
   setStatus({ state: problem ? (settings.url ? 'error' : 'off') : 'off', message: problem ?? 'Not synced yet', lastSync: last ?? null });
@@ -118,6 +120,7 @@ export async function saveSettings(s: SyncSettings) {
     headers: s.headers.filter((h) => h.name.trim()).map((h) => ({ name: h.name.trim(), value: h.value.trim() })),
   };
   await db.put('meta', settings, 'sync');
+  shareSettings(settings);
   if (changedServer) await db.put('meta', 0, 'cursor'); // new server: pull everything
   restartLive();
   await syncNow();

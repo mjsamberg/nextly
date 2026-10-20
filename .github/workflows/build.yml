@@ -28,21 +28,9 @@ jobs:
       - run: npm test
       - run: npm run build
 
-  desktop:
+  windows:
     needs: test
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: windows
-            os: windows-latest
-            args: ''
-            rust-targets: ''
-          - name: macos
-            os: macos-latest
-            args: --target universal-apple-darwin
-            rust-targets: aarch64-apple-darwin,x86_64-apple-darwin
-    runs-on: ${{ matrix.os }}
+    runs-on: windows-latest
     defaults:
       run:
         working-directory: app
@@ -54,25 +42,89 @@ jobs:
           cache: npm
           cache-dependency-path: app/package-lock.json
       - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.rust-targets }}
       - uses: swatinem/rust-cache@v2
         with:
           workspaces: app/src-tauri
       - run: npm ci
-      - run: npx tauri build ${{ matrix.args }}
+      - run: npx tauri build
       - uses: actions/upload-artifact@v4
         with:
-          name: nextly-${{ matrix.name }}
+          name: nextly-windows
           if-no-files-found: error
           path: |
             app/src-tauri/target/release/bundle/msi/*.msi
             app/src-tauri/target/release/bundle/nsis/*.exe
-            app/src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg
 
-  # Needs these repository secrets (see docs/ios-signing.md):
-  #   APPLE_DEVELOPMENT_TEAM, IOS_CERTIFICATE, IOS_CERTIFICATE_PASSWORD, IOS_MOBILE_PROVISION
-  # Optional: IOS_EXPORT_METHOD (debugging | release-testing | app-store-connect), default debugging.
+  # Signed + notarized with the widget and Siri when these secrets exist
+  # (see docs/apple-signing.md): APPLE_CERTIFICATE, APPLE_CERTIFICATE_PASSWORD,
+  # APPLE_SIGNING_IDENTITY, APPLE_DEVELOPMENT_TEAM, APPLE_ID, APPLE_PASSWORD.
+  # Without them: an unsigned app (no widget or Siri; macOS won't load
+  # extensions from an unsigned app), and the extensions are compiled as a check.
+  macos:
+    needs: test
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: app
+    env:
+      APPLE_DEVELOPMENT_TEAM: ${{ secrets.APPLE_DEVELOPMENT_TEAM }}
+      HAS_CERT: ${{ secrets.APPLE_CERTIFICATE != '' && secrets.APPLE_SIGNING_IDENTITY != '' && secrets.APPLE_DEVELOPMENT_TEAM != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: app/src-tauri
+      - run: brew list xcodegen >/dev/null 2>&1 || brew install xcodegen
+      - run: npm ci
+
+      - name: Compile widget and Siri extensions (unsigned check)
+        if: env.HAS_CERT != 'true'
+        run: bash ../apple/scripts/build-macos-extensions.sh check
+      - name: Build app (unsigned, no widget or Siri)
+        if: env.HAS_CERT != 'true'
+        run: |
+          echo "::notice title=macOS widget and Siri not included::Add the Developer ID secrets in docs/apple-signing.md to ship them."
+          npx tauri build --target universal-apple-darwin
+
+      - name: Import Developer ID certificate
+        if: env.HAS_CERT == 'true'
+        uses: apple-actions/import-codesign-certs@v3
+        with:
+          p12-file-base64: ${{ secrets.APPLE_CERTIFICATE }}
+          p12-password: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+      - name: Build and sign widget and Siri extensions
+        if: env.HAS_CERT == 'true'
+        env:
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+        run: bash ../apple/scripts/build-macos-extensions.sh sign
+      - name: Build, sign and notarize app with extensions
+        if: env.HAS_CERT == 'true'
+        env:
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_DEVELOPMENT_TEAM }}
+          NEXTLY_APP_GROUP: ${{ secrets.APPLE_DEVELOPMENT_TEAM }}.com.mjsamberg.nextly
+        run: npx tauri build --target universal-apple-darwin --config src-tauri/tauri.macos-extensions.json
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nextly-macos
+          if-no-files-found: error
+          path: app/src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg
+
+  # The widget and Siri extensions are always compiled (unsigned, simulator).
+  # A signed IPA is built when these secrets exist (see docs/apple-signing.md):
+  # APPLE_DEVELOPMENT_TEAM, APPLE_API_KEY, APPLE_API_ISSUER, APPLE_API_KEY_P8.
+  # Optional: IOS_EXPORT_METHOD (debugging | release-testing | app-store-connect).
   ios:
     needs: test
     runs-on: macos-latest
@@ -81,46 +133,49 @@ jobs:
         working-directory: app
     env:
       APPLE_DEVELOPMENT_TEAM: ${{ secrets.APPLE_DEVELOPMENT_TEAM }}
-      IOS_CERTIFICATE: ${{ secrets.IOS_CERTIFICATE }}
-      IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
-      IOS_MOBILE_PROVISION: ${{ secrets.IOS_MOBILE_PROVISION }}
+      HAS_KEY: ${{ secrets.APPLE_API_KEY != '' && secrets.APPLE_API_ISSUER != '' && secrets.APPLE_API_KEY_P8 != '' && secrets.APPLE_DEVELOPMENT_TEAM != '' }}
       EXPORT_METHOD: ${{ secrets.IOS_EXPORT_METHOD || 'debugging' }}
     steps:
-      - name: Check for signing secrets
-        id: secrets
-        run: |
-          if [ -n "$IOS_CERTIFICATE" ] && [ -n "$IOS_MOBILE_PROVISION" ] && [ -n "$APPLE_DEVELOPMENT_TEAM" ]; then
-            echo "ready=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "ready=false" >> "$GITHUB_OUTPUT"
-            echo "::notice title=iOS build skipped::Add the iOS signing secrets described in docs/ios-signing.md to build the iPhone app."
-          fi
-        working-directory: .
       - uses: actions/checkout@v4
-        if: steps.secrets.outputs.ready == 'true'
       - uses: actions/setup-node@v4
-        if: steps.secrets.outputs.ready == 'true'
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: app/package-lock.json
       - uses: dtolnay/rust-toolchain@stable
-        if: steps.secrets.outputs.ready == 'true'
         with:
-          targets: aarch64-apple-ios
+          targets: aarch64-apple-ios,aarch64-apple-ios-sim
       - uses: swatinem/rust-cache@v2
-        if: steps.secrets.outputs.ready == 'true'
         with:
           workspaces: app/src-tauri
-      - name: Build signed IPA
-        if: steps.secrets.outputs.ready == 'true'
-        run: |
+      - run: |
           brew list xcodegen >/dev/null 2>&1 || brew install xcodegen
-          npm ci
-          npx tauri ios init --ci
+          brew list yq >/dev/null 2>&1 || brew install yq
+      - run: npm ci
+      - run: npx tauri ios init --ci
+      - run: bash ../apple/scripts/patch-ios-project.sh
+
+      - name: Compile widget and Siri extensions (unsigned check)
+        run: |
+          project=$(ls -d src-tauri/gen/apple/*.xcodeproj)
+          xcodebuild -project "$project" -target NextlyWidgets -target NextlyIntents \
+            -sdk iphonesimulator -configuration debug CODE_SIGNING_ALLOWED=NO build
+
+      - name: Build signed IPA
+        if: env.HAS_KEY == 'true'
+        env:
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
+        run: |
+          export APPLE_API_KEY_PATH="$RUNNER_TEMP/AuthKey_$APPLE_API_KEY.p8"
+          printf '%s' "$APPLE_API_KEY_P8" > "$APPLE_API_KEY_PATH"
           npx tauri ios build --ci --export-method "$EXPORT_METHOD"
+      - name: Note skipped IPA
+        if: env.HAS_KEY != 'true'
+        run: echo "::notice title=iOS app not built::Add the App Store Connect API key secrets in docs/apple-signing.md to build the iPhone app."
       - uses: actions/upload-artifact@v4
-        if: steps.secrets.outputs.ready == 'true'
+        if: env.HAS_KEY == 'true'
         with:
           name: nextly-ios
           if-no-files-found: error
@@ -128,7 +183,7 @@ jobs:
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [desktop, ios]
+    needs: [windows, macos, ios]
     runs-on: ubuntu-latest
     permissions:
       contents: write

@@ -9,7 +9,8 @@ dependencies, block-based notes with attachments, and Gmail links.
 | `app/` | The app: Tauri 2 + React + TypeScript, one codebase for all three platforms |
 | `server/` | Sync server (Node 24, no dependencies) and its Docker Compose file |
 | `capture/` | Gmail bookmarklet for Chrome and Safari |
-| `docs/` | iOS signing setup |
+| `apple/` | Widget and Siri extensions (Swift) for macOS and iOS |
+| `docs/` | Cloudflare and Apple signing setup |
 | `wireframes.html` | The original wireframes |
 
 ## Get the apps
@@ -18,11 +19,27 @@ Every push to `main` builds them on GitHub Actions. Open the latest run under
 **Actions → Build apps** and download:
 
 - **nextly-windows**: `.msi` and `-setup.exe` installers
-- **nextly-macos**: a universal `.dmg` (Apple silicon and Intel). It isn't
-  signed yet, so the first time, right-click the app → **Open**, or run
-  `xattr -cr /Applications/Nextly.app`.
-- **nextly-ios**: a signed `.ipa`, once the secrets in
-  [docs/ios-signing.md](docs/ios-signing.md) are set.
+- **nextly-macos**: a universal `.dmg` (Apple silicon and Intel). Until the
+  signing secrets are set it's unsigned and has no widget or Siri; the first
+  time, right-click the app → **Open**, or run `xattr -cr /Applications/Nextly.app`.
+- **nextly-ios**: a signed `.ipa` with the widget and Siri, once the secrets
+  are set.
+
+Signing setup for both: [docs/apple-signing.md](docs/apple-signing.md).
+
+### Widget and Siri (Mac and iPhone)
+
+- **Widgets** for Today and Next in small, medium and large, plus Lock Screen
+  sizes on iPhone. Tap a circle to complete a task from the widget.
+- **Siri and Shortcuts**: "Add a task in Nextly", "Add a task to Next in
+  Nextly", "What's on my Today list in Nextly".
+- They live in `apple/` as two Swift extensions. They read the app's sync
+  settings from a shared App Group folder and talk to the server's task API
+  directly, so they work while the app is closed. If Siri can't reach the
+  server, the task is saved and the app adds it the next time it opens.
+- Changes made in the app reach the widget on its next refresh (about every
+  15 minutes, or sooner when you use the widget). Changes from Siri and the
+  widget reach your other devices right away through live updates.
 
 Pushing a tag like `v0.1.0` also creates a draft GitHub release with all of them.
 

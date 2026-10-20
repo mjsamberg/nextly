@@ -1,0 +1,74 @@
+# XcodeGen spec for the iOS widget and Siri extensions. Not used on its own:
+# scripts/patch-ios-project.sh adds it to the project `tauri ios init`
+# generates (app/src-tauri/gen/apple) and embeds both targets in the app.
+# Paths are relative to this file. ${...} values come from the environment.
+
+targets:
+  NextlyWidgets:
+    type: app-extension
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: Shared
+      - path: Widgets
+    info:
+      path: build/ios/NextlyWidgets-Info.plist
+      properties:
+        CFBundleDisplayName: Nextly
+        CFBundleShortVersionString: "${NEXTLY_VERSION}"
+        CFBundleVersion: "${NEXTLY_VERSION}"
+        NextlyAppGroup: group.com.mjsamberg.nextly
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+        # The sync server may be plain http (for example on a home network).
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: true
+    entitlements:
+      path: build/ios/NextlyWidgets.entitlements
+      properties:
+        com.apple.security.application-groups: [group.com.mjsamberg.nextly]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.mjsamberg.nextly.widgets
+        PRODUCT_NAME: NextlyWidgets
+        SWIFT_VERSION: "5.0"
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SKIP_INSTALL: true
+        DEVELOPMENT_TEAM: "${APPLE_DEVELOPMENT_TEAM}"
+    dependencies:
+      - sdk: WidgetKit.framework
+      - sdk: SwiftUI.framework
+
+  NextlyIntents:
+    type: extensionkit-extension
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: Shared
+      - path: Intents
+    info:
+      path: build/ios/NextlyIntents-Info.plist
+      properties:
+        CFBundleDisplayName: Nextly
+        CFBundleShortVersionString: "${NEXTLY_VERSION}"
+        CFBundleVersion: "${NEXTLY_VERSION}"
+        NextlyAppGroup: group.com.mjsamberg.nextly
+        EXAppExtensionAttributes:
+          EXExtensionPointIdentifier: com.apple.appintents-extension
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: true
+    entitlements:
+      path: build/ios/NextlyIntents.entitlements
+      properties:
+        com.apple.security.application-groups: [group.com.mjsamberg.nextly]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.mjsamberg.nextly.intents
+        PRODUCT_NAME: NextlyIntents
+        SWIFT_VERSION: "5.0"
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SKIP_INSTALL: true
+        DEVELOPMENT_TEAM: "${APPLE_DEVELOPMENT_TEAM}"
+    dependencies:
+      - sdk: AppIntents.framework
+      - sdk: WidgetKit.framework
