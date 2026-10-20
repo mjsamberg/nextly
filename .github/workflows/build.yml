@@ -87,7 +87,7 @@ jobs:
 
       - name: Compile widget and Siri extensions (unsigned check)
         if: env.HAS_CERT != 'true'
-        run: bash ../apple/scripts/build-macos-extensions.sh check
+        run: bash ../apple/scripts/ci-run.sh "Compile macOS extensions" bash ../apple/scripts/build-macos-extensions.sh check
       - name: Build app (unsigned, no widget or Siri)
         if: env.HAS_CERT != 'true'
         run: |
@@ -104,7 +104,7 @@ jobs:
         if: env.HAS_CERT == 'true'
         env:
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-        run: bash ../apple/scripts/build-macos-extensions.sh sign
+        run: bash ../apple/scripts/ci-run.sh "Sign macOS extensions" bash ../apple/scripts/build-macos-extensions.sh sign
       - name: Build, sign and notarize app with extensions
         if: env.HAS_CERT == 'true'
         env:
@@ -113,7 +113,7 @@ jobs:
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_DEVELOPMENT_TEAM }}
           NEXTLY_APP_GROUP: ${{ secrets.APPLE_DEVELOPMENT_TEAM }}.com.mjsamberg.nextly
-        run: npx tauri build --target universal-apple-darwin --config src-tauri/tauri.macos-extensions.json
+        run: bash ../apple/scripts/ci-run.sh "macOS app build" npx tauri build --target universal-apple-darwin --config src-tauri/tauri.macos-extensions.json
 
       - uses: actions/upload-artifact@v4
         with:
@@ -152,13 +152,13 @@ jobs:
           brew list xcodegen >/dev/null 2>&1 || brew install xcodegen
           brew list yq >/dev/null 2>&1 || brew install yq
       - run: npm ci
-      - run: npx tauri ios init --ci
-      - run: bash ../apple/scripts/patch-ios-project.sh
+      - run: bash ../apple/scripts/ci-run.sh "tauri ios init" npx tauri ios init --ci
+      - run: bash ../apple/scripts/ci-run.sh "Patch iOS project" bash ../apple/scripts/patch-ios-project.sh
 
       - name: Compile widget and Siri extensions (unsigned check)
         run: |
           project=$(ls -d src-tauri/gen/apple/*.xcodeproj)
-          xcodebuild -project "$project" -target NextlyWidgets -target NextlyIntents \
+          bash ../apple/scripts/ci-run.sh "Compile iOS extensions" xcodebuild -project "$project" -target NextlyWidgets -target NextlyIntents \
             -sdk iphonesimulator -configuration debug CODE_SIGNING_ALLOWED=NO build
 
       - name: Build signed IPA
@@ -170,7 +170,7 @@ jobs:
         run: |
           export APPLE_API_KEY_PATH="$RUNNER_TEMP/AuthKey_$APPLE_API_KEY.p8"
           printf '%s' "$APPLE_API_KEY_P8" > "$APPLE_API_KEY_PATH"
-          npx tauri ios build --ci --export-method "$EXPORT_METHOD"
+          bash ../apple/scripts/ci-run.sh "iOS build" npx tauri ios build --ci --export-method "$EXPORT_METHOD"
       - name: Note skipped IPA
         if: env.HAS_KEY != 'true'
         run: echo "::notice title=iOS app not built::Add the App Store Connect API key secrets in docs/apple-signing.md to build the iPhone app."
