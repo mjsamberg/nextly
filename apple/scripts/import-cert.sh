@@ -54,6 +54,17 @@ security unlock-keychain -p "$kc_pass" "$keychain"
 security import "$p12" -k "$keychain" -P "$P12_PASS" -A -f pkcs12 >/dev/null \
   || fail "macOS couldn't import the .p12" "The file and password are fine, but the keychain refused it. Re-export it from Keychain Access and update APPLE_CERTIFICATE."
 security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$kc_pass" "$keychain" >/dev/null
+
+# Without Apple's Developer ID intermediate certificates the identity isn't
+# trusted, so codesign and find-identity -v won't use it. CI machines don't
+# always have them.
+for ca in DeveloperIDG2CA DeveloperIDCA; do
+  if curl -fsSL "https://www.apple.com/certificateauthority/$ca.cer" -o "$dir/$ca.cer"; then
+    security import "$dir/$ca.cer" -k "$keychain" >/dev/null 2>&1 || true
+  else
+    echo "::warning title=Couldn't download Apple's $ca certificate::Signing may fail if this machine doesn't already have it."
+  fi
+done
 security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
 rm -f "$p12"
 
@@ -61,13 +72,22 @@ rm -f "$p12"
 identities="$(security find-identity -v -p codesigning "$keychain" | grep '"Developer ID Application: ')"
 wanted="$(printf '%s' "$APPLE_SIGNING_IDENTITY" | tr -d '\r\n' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')"
 line="$(printf '%s\n' "$identities" | grep -F "\"$wanted\"" | head -1)"
+count="$(printf '%s\n' "$identities" | grep -c .)"
+if [ "$count" -eq 0 ]; then
+  untrusted="$(security find-identity -p codesigning "$keychain" | grep -c '"Developer ID Application: ' || true)"
+  if [ "$untrusted" -gt 0 ]; then
+    fail "The Developer ID certificate isn't trusted" \
+      "It imported, but macOS doesn't consider it valid (expired, revoked, or missing Apple's intermediate certificate). Check it in Keychain Access; if it shows as expired or revoked, create a new Developer ID Application certificate."
+  fi
+  fail "No signing identity in the .p12" "The certificate imported but isn't usable for signing with its key. Re-export it from Keychain Access → My Certificates, with the private key."
+fi
 if [ -z "$line" ]; then
-  if [ "$(printf '%s\n' "$identities" | grep -c .)" -eq 1 ]; then
+  if [ "$count" -eq 1 ]; then
     line="$identities"
     echo "::warning title=APPLE_SIGNING_IDENTITY doesn't exactly match::Signing with the one Developer ID certificate in the .p12. To silence this, set the secret to the exact name shown in Keychain Access."
   else
-    fail "APPLE_SIGNING_IDENTITY doesn't match the certificate" \
-      "Copy the exact name from Keychain Access, for example: Developer ID Application: Your Name (TEAMID1234)."
+    fail "APPLE_SIGNING_IDENTITY doesn't match any of the certificates" \
+      "The .p12 holds $count Developer ID certificates. Set the secret to the exact name of the one to use, as shown in Keychain Access."
   fi
 fi
 hash="$(printf '%s' "$line" | awk '{print $2}')"
