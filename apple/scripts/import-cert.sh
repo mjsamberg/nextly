@@ -57,8 +57,27 @@ security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$kc_pass"
 security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
 rm -f "$p12"
 
-if ! security find-identity -v -p codesigning "$keychain" | grep -qF "\"$APPLE_SIGNING_IDENTITY\""; then
-  fail "APPLE_SIGNING_IDENTITY doesn't match the certificate" \
-    "The certificate imported, but its name differs from the secret. Copy the exact name from Keychain Access, for example: Developer ID Application: Your Name (TEAMID1234)."
+# Pick the identity to sign with. Lines look like:  1) <SHA-1> "Developer ID Application: Name (TEAMID)"
+identities="$(security find-identity -v -p codesigning "$keychain" | grep '"Developer ID Application: ')"
+wanted="$(printf '%s' "$APPLE_SIGNING_IDENTITY" | tr -d '\r\n' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')"
+line="$(printf '%s\n' "$identities" | grep -F "\"$wanted\"" | head -1)"
+if [ -z "$line" ]; then
+  if [ "$(printf '%s\n' "$identities" | grep -c .)" -eq 1 ]; then
+    line="$identities"
+    echo "::warning title=APPLE_SIGNING_IDENTITY doesn't exactly match::Signing with the one Developer ID certificate in the .p12. To silence this, set the secret to the exact name shown in Keychain Access."
+  else
+    fail "APPLE_SIGNING_IDENTITY doesn't match the certificate" \
+      "Copy the exact name from Keychain Access, for example: Developer ID Application: Your Name (TEAMID1234)."
+  fi
 fi
+hash="$(printf '%s' "$line" | awk '{print $2}')"
+team="$(printf '%s' "$line" | sed -E 's/.*\(([A-Z0-9]{10})\)"$/\1/')"
+
+# The Mac App Group is "<Team ID>.com.mjsamberg.nextly", so these must agree.
+if [ -n "${APPLE_DEVELOPMENT_TEAM:-}" ] && [ "$team" != "$(printf '%s' "$APPLE_DEVELOPMENT_TEAM" | tr -d '[:space:]')" ]; then
+  fail "Team ID mismatch" "The certificate belongs to a different team than APPLE_DEVELOPMENT_TEAM. Use the Team ID from the certificate's name (the 10 characters in parentheses)."
+fi
+
+# Later steps sign with the certificate's SHA-1, which codesign accepts.
+[ -n "${GITHUB_ENV:-}" ] && echo "NEXTLY_SIGNING_IDENTITY=$hash" >> "$GITHUB_ENV"
 echo "Developer ID certificate imported."

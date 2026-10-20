@@ -104,12 +104,12 @@ jobs:
       - name: Build and sign widget and Siri extensions
         if: env.HAS_CERT == 'true'
         env:
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_SIGNING_IDENTITY: ${{ env.NEXTLY_SIGNING_IDENTITY }}
         run: bash ../apple/scripts/ci-run.sh "Sign macOS extensions" bash ../apple/scripts/build-macos-extensions.sh sign
       - name: Build, sign and notarize app with extensions
         if: env.HAS_CERT == 'true'
         env:
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_SIGNING_IDENTITY: ${{ env.NEXTLY_SIGNING_IDENTITY }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_DEVELOPMENT_TEAM }}
