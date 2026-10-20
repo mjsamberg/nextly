@@ -152,7 +152,11 @@ jobs:
           brew list xcodegen >/dev/null 2>&1 || brew install xcodegen
           brew list yq >/dev/null 2>&1 || brew install yq
       - run: npm ci
-      - run: bash ../apple/scripts/ci-run.sh "tauri ios init" npx tauri ios init --ci
+      # tauri ios init insists on a Team ID. Without the secret, a placeholder
+      # is enough for the unsigned compile check (nothing gets signed).
+      - run: |
+          export APPLE_DEVELOPMENT_TEAM="${APPLE_DEVELOPMENT_TEAM:-UNSIGNED00}"
+          bash ../apple/scripts/ci-run.sh "tauri ios init" npx tauri ios init --ci
       - run: bash ../apple/scripts/ci-run.sh "Patch iOS project" bash ../apple/scripts/patch-ios-project.sh
 
       - name: Compile widget and Siri extensions (unsigned check)
