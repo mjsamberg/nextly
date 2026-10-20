@@ -37,13 +37,20 @@ fi
 : "${APPLE_SIGNING_IDENTITY:?set APPLE_SIGNING_IDENTITY}"
 : "${APPLE_DEVELOPMENT_TEAM:?set APPLE_DEVELOPMENT_TEAM}"
 
+# CODE_SIGN_INJECT_BASE_ENTITLEMENTS=NO keeps Xcode from adding
+# com.apple.security.get-task-allow (debugger access), which notarization rejects.
 xcodebuild "${common[@]}" \
   CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY="$APPLE_SIGNING_IDENTITY" DEVELOPMENT_TEAM="$APPLE_DEVELOPMENT_TEAM" \
-  OTHER_CODE_SIGN_FLAGS="--timestamp" build
+  CODE_SIGN_INJECT_BASE_ENTITLEMENTS=NO OTHER_CODE_SIGN_FLAGS="--timestamp" build
 
 products="$out/products/Release"
 for ext in NextlyWidgets NextlyIntents; do
   codesign --verify --strict --verbose=2 "$products/$ext.appex"
+  # Catch it here instead of after a slow notarization round trip.
+  if codesign -d --entitlements - --xml "$products/$ext.appex" 2>/dev/null | grep -q 'get-task-allow'; then
+    echo "$ext.appex still has the get-task-allow entitlement, which notarization rejects." >&2
+    exit 1
+  fi
 done
 
 # The app's own entitlements: just the App Group it shares with the extensions.
