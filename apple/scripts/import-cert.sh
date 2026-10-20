@@ -38,6 +38,15 @@ fi
 pk -nocerts -nodes | grep -q 'PRIVATE KEY' || fail "The .p12 has no private key" \
   "Export it from Keychain Access → My Certificates (not Certificates), so the key is included. The .cer from Apple's website has no key."
 
+# The key must belong to the certificate (compare public key fingerprints;
+# only "match" or "no match" is ever printed).
+cert_pub="$(pk -nokeys -clcerts | openssl x509 -noout -pubkey 2>/dev/null | openssl sha256 2>/dev/null)"
+key_pub="$(pk -nocerts -nodes | openssl pkey -pubout 2>/dev/null | openssl sha256 2>/dev/null)"
+if [ -n "$cert_pub" ] && [ -n "$key_pub" ] && [ "$cert_pub" != "$key_pub" ]; then
+  fail "The private key doesn't belong to the certificate" \
+    "The .p12 has a key and a Developer ID certificate, but not a matching pair. In Keychain Access → My Certificates, expand the Developer ID Application certificate, select it (its key comes along), and export that as .p12."
+fi
+
 subject="$(pk -nokeys -clcerts | openssl x509 -noout -subject 2>/dev/null)"
 case "$subject" in
   *"Developer ID Application"*) ;;
@@ -51,8 +60,24 @@ kc_pass="$(openssl rand -hex 16)"
 security create-keychain -p "$kc_pass" "$keychain"
 security set-keychain-settings -lut 21600 "$keychain"
 security unlock-keychain -p "$kc_pass" "$keychain"
-security import "$p12" -k "$keychain" -P "$P12_PASS" -A -f pkcs12 >/dev/null \
+imported="$(security import "$p12" -k "$keychain" -P "$P12_PASS" -A -f pkcs12 2>&1)" \
   || fail "macOS couldn't import the .p12" "The file and password are fine, but the keychain refused it. Re-export it from Keychain Access and update APPLE_CERTIFICATE."
+# Only counts, e.g. "1 identity imported." or "1 key imported. 1 certificate imported."
+echo "security import: $(printf '%s' "$imported" | grep -Eo '[0-9]+ (identit(y|ies)|keys?|certificates?) imported' | tr '\n' ' ')"
+if ! printf '%s' "$imported" | grep -Eq '[1-9][0-9]* (identit|key)'; then
+  # macOS can't read some .p12 encryptions (e.g. OpenSSL 3's default AES).
+  # Re-pack it with the widely supported legacy algorithms and try again.
+  repacked="$dir/repacked.p12"
+  pk -nodes | openssl pkcs12 -export -out "$repacked" -passout env:P12_PASS \
+    -keypbe PBE-SHA1-3DES -certpbe PBE-SHA1-3DES 2>/dev/null \
+    || pk -nodes | openssl pkcs12 -export -out "$repacked" -passout env:P12_PASS 2>/dev/null
+  imported="$(security import "$repacked" -k "$keychain" -P "$P12_PASS" -A -f pkcs12 2>&1)" || true
+  rm -f "$repacked"
+  echo "security import (re-packed): $(printf '%s' "$imported" | grep -Eo '[0-9]+ (identit(y|ies)|keys?|certificates?) imported' | tr '\n' ' ')"
+  printf '%s' "$imported" | grep -Eq '[1-9][0-9]* (identit|key)' \
+    || fail "macOS imported the certificate but not its private key" \
+      "Re-export from Keychain Access → My Certificates on a Mac (not with openssl), select the Developer ID Application certificate, and export as .p12."
+fi
 security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$kc_pass" "$keychain" >/dev/null
 
 # Without Apple's Developer ID intermediate certificates the identity isn't
