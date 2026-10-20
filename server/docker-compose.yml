@@ -16,7 +16,8 @@ services:
   nextly:
     build:
       context: https://github.com/mjsamberg/nextly.git#main:server
-    image: nextly-sync:latest
+    # Always build from GitHub; there is no published image to pull.
+    pull_policy: build
     environment:
       NEXTLY_TOKEN: ${NEXTLY_TOKEN}
       NEXTLY_DATA: /data
