@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- Source for `npx tauri icon icon.svg`. Plum tile, gold star (Today), white arrow (Next). -->
+  <rect width="1024" height="1024" rx="230" fill="#7a3c59"/>
+  <path fill="#ffb600" d="M380 196l58 122 134 15-100 91 28 132-120-68-120 68 28-132-100-91 134-15z"/>
+  <path fill="none" stroke="#ffffff" stroke-width="84" stroke-linecap="round" stroke-linejoin="round" d="M250 740h470M580 600l140 140-140 140"/>
+</svg>

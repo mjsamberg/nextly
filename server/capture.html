@@ -53,12 +53,16 @@
     const when = document.querySelector('input[name=when]:checked').value;
     const task = {
       id, kind: 'task', hlc, deleted: false,
+      // Same shape the apps write (app/src/types.ts).
       data: {
         title: $('title').value,
-        list: when === 'inbox' ? 'inbox' : null,
-        flag: when === 'inbox' ? null : when,
-        notes: [{ type: 'text', text: $('note').value }],
-        links: $('link').value ? [{ type: 'gmail', url: $('link').value, subject: $('title').value }] : [],
+        flag: when,
+        projectId: null, parentId: null, deadline: null,
+        done: false, doneAt: null, order: Date.now(), dependsOn: [],
+        notes: [
+          ...($('note').value ? [{ id: id + '-n', type: 'paragraph', text: $('note').value }] : []),
+          ...($('link').value ? [{ id: id + '-e', type: 'email', url: $('link').value, subject: $('title').value }] : []),
+        ],
         createdAt: new Date().toISOString(),
       },
     };

@@ -8,7 +8,9 @@
 //
 //   POST /sync          { cursor, changes: [row] } -> { cursor, changes: [row] }
 //   PUT  /files/:sha256 raw bytes (attachments, content-addressed)
-//   GET  /files/:sha256
+//   GET  /files/:sha256 bearer token, or a signed link from:
+//   POST /files/:sha256/link { name, mime } -> { url }  (valid 10 minutes, so
+//                       an attachment can open in the system browser)
 //   GET  /capture       page used by the Gmail bookmarklet / share sheet
 //   GET  /health
 
@@ -58,10 +60,30 @@ function authorized(req) {
   return given.length === want.length && crypto.timingSafeEqual(given, want);
 }
 
+// Auth is a bearer token, not a cookie, so allowing any origin is safe and
+// lets the app's frontend run in a plain browser during development.
+const CORS = {
+  'access-control-allow-origin': '*',
+  'access-control-allow-headers': 'authorization, content-type',
+  'access-control-allow-methods': 'GET, POST, PUT, OPTIONS',
+};
+
 function send(res, status, body, type = 'application/json') {
-  res.writeHead(status, { 'content-type': type });
+  res.writeHead(status, { 'content-type': type, ...CORS });
   res.end(type === 'application/json' ? JSON.stringify(body) : body);
 }
+
+const sign = (sha, exp, name, mime) =>
+  crypto.createHmac('sha256', TOKEN).update(`${sha}|${exp}|${name}|${mime}`).digest('hex');
+
+function validLink(sha, q) {
+  const exp = Number(q.get('exp'));
+  const sig = Buffer.from(q.get('sig') || '');
+  const want = Buffer.from(sign(sha, exp, q.get('name') || '', q.get('mime') || ''));
+  return exp > Date.now() && sig.length === want.length && crypto.timingSafeEqual(sig, want);
+}
+
+const safeMime = (m) => (/^[\w.+-]+\/[\w.+-]+$/.test(m || '') ? m : 'application/octet-stream');
 
 function readBody(req, limit) {
   return new Promise((resolve, reject) => {
@@ -96,7 +118,22 @@ function applyChanges(changes) {
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://x');
   try {
+    if (req.method === 'OPTIONS') { res.writeHead(204, CORS); return res.end(); }
     if (url.pathname === '/health') return send(res, 200, { ok: true });
+
+    const signed = url.pathname.match(/^\/files\/([a-f0-9]{64})$/);
+    if (signed && req.method === 'GET' && url.searchParams.has('sig')) {
+      const p = path.join(DATA, 'files', signed[1]);
+      if (!validLink(signed[1], url.searchParams)) return send(res, 403, { error: 'This link has expired. Open the file from Nextly again.' });
+      if (!fs.existsSync(p)) return send(res, 404, { error: 'No such file' });
+      const name = url.searchParams.get('name') || 'file';
+      res.writeHead(200, {
+        'content-type': safeMime(url.searchParams.get('mime')),
+        'content-disposition': `inline; filename*=UTF-8''${encodeURIComponent(name)}`,
+        ...CORS,
+      });
+      return fs.createReadStream(p).pipe(res);
+    }
 
     if (url.pathname === '/capture' && req.method === 'GET') {
       return send(res, 200, fs.readFileSync(new URL('./capture.html', import.meta.url)), 'text/html; charset=utf-8');
@@ -112,6 +149,14 @@ const server = http.createServer(async (req, res) => {
       return send(res, 200, { cursor: newCursor, changes: rows, more: rows.length === 5000 });
     }
 
+    const link = url.pathname.match(/^\/files\/([a-f0-9]{64})\/link$/);
+    if (link && req.method === 'POST') {
+      const { name = '', mime = '' } = JSON.parse((await readBody(req, 4096)).toString() || '{}');
+      const exp = Date.now() + 10 * 60 * 1000;
+      const q = new URLSearchParams({ exp: String(exp), name, mime, sig: sign(link[1], exp, name, mime) });
+      return send(res, 200, { url: `/files/${link[1]}?${q}` });
+    }
+
     const file = url.pathname.match(/^\/files\/([a-f0-9]{64})$/);
     if (file) {
       const p = path.join(DATA, 'files', file[1]);
@@ -124,7 +169,7 @@ const server = http.createServer(async (req, res) => {
       }
       if (req.method === 'GET') {
         if (!fs.existsSync(p)) return send(res, 404, { error: 'No such file' });
-        res.writeHead(200, { 'content-type': 'application/octet-stream' });
+        res.writeHead(200, { 'content-type': 'application/octet-stream', ...CORS });
         return fs.createReadStream(p).pipe(res);
       }
     }
