@@ -56,8 +56,9 @@ async function share() {
     const wrote = await invoke<boolean>('apple_share', { config: JSON.stringify(config), snapshot: JSON.stringify(snapshot()) });
     setShareStatus(wrote
       ? { state: 'ok', at: new Date().toISOString(), message: '' }
-      : { state: 'no-group', at: null, message: 'This build can’t open the shared App Group folder, so the widget and Siri can’t see your settings. The app may not be signed with the App Group.' });
+      : { state: 'no-group', at: null, message: 'This platform has no App Group folder.' });
   } catch (e) {
+    // The Rust side says which step failed and which group it asked for.
     setShareStatus({ state: 'error', at: null, message: String(e) });
   }
 }

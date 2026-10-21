@@ -21,32 +21,42 @@ mod imp {
         None => "group.com.mjsamberg.nextly",
     };
 
-    pub fn group_dir() -> Option<PathBuf> {
+    /// The shared folder, or a description of which step failed (shown in Settings).
+    pub fn group_dir() -> Result<Option<PathBuf>, String> {
         let id = NSString::from_str(APP_GROUP);
-        let url = NSFileManager::defaultManager().containerURLForSecurityApplicationGroupIdentifier(&id)?;
-        let dir = PathBuf::from(url.path()?.to_string());
-        std::fs::create_dir_all(&dir).ok()?;
-        Some(dir)
+        let url = NSFileManager::defaultManager()
+            .containerURLForSecurityApplicationGroupIdentifier(&id)
+            .ok_or_else(|| format!(
+                "iOS returned no folder for App Group “{APP_GROUP}”. The app must be signed with this group and its provisioning profile must allow it."
+            ))?;
+        let path = url
+            .path()
+            .ok_or_else(|| format!("The App Group “{APP_GROUP}” folder has no file path."))?;
+        let dir = PathBuf::from(path.to_string());
+        std::fs::create_dir_all(&dir)
+            .map_err(|e| format!("Couldn’t open the App Group “{APP_GROUP}” folder: {e}"))?;
+        Ok(Some(dir))
     }
 }
 
 #[cfg(not(any(target_os = "macos", target_os = "ios")))]
 mod imp {
-    pub fn group_dir() -> Option<std::path::PathBuf> {
-        None
+    pub fn group_dir() -> Result<Option<std::path::PathBuf>, String> {
+        Ok(None)
     }
 }
 
 fn write_atomic(dir: &std::path::Path, name: &str, contents: &str) -> Result<(), String> {
     let tmp = dir.join(format!(".{name}.tmp"));
-    std::fs::write(&tmp, contents).map_err(|e| e.to_string())?;
-    std::fs::rename(&tmp, dir.join(name)).map_err(|e| e.to_string())
+    std::fs::write(&tmp, contents).map_err(|e| format!("Couldn’t write {name} to the App Group folder: {e}"))?;
+    std::fs::rename(&tmp, dir.join(name)).map_err(|e| format!("Couldn’t save {name} in the App Group folder: {e}"))
 }
 
 /// Saves the sync settings and list snapshot for the extensions.
+/// Ok(false) on platforms without App Groups; Err explains what failed.
 #[tauri::command]
 pub fn apple_share(config: String, snapshot: String) -> Result<bool, String> {
-    let Some(dir) = imp::group_dir() else { return Ok(false) };
+    let Some(dir) = imp::group_dir()? else { return Ok(false) };
     write_atomic(&dir, "config.json", &config)?;
     write_atomic(&dir, "snapshot.json", &snapshot)?;
     Ok(true)
@@ -55,7 +65,7 @@ pub fn apple_share(config: String, snapshot: String) -> Result<bool, String> {
 /// Returns tasks Siri saved while offline (a JSON array) and clears them.
 #[tauri::command]
 pub fn apple_take_pending() -> Result<String, String> {
-    let Some(dir) = imp::group_dir() else { return Ok("[]".into()) };
+    let Some(dir) = imp::group_dir()? else { return Ok("[]".into()) };
     let path = dir.join("pending.json");
     match std::fs::read_to_string(&path) {
         Ok(s) => {
