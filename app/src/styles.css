@@ -62,6 +62,12 @@ h1, h2 { font-family: var(--display); font-weight: 600; text-transform: uppercas
   .app[data-pane="nav"] .sidebar, .app[data-pane="list"] .list-pane, .app[data-pane="detail"] .detail-pane { display: flex; }
   .app[data-pane="list"] .list-pane, .app[data-pane="detail"] .detail-pane { display: block; }
   .sidebar { border: 0; padding-left: max(14px, var(--safe-l)); padding-right: max(14px, var(--safe-r)); font-size: 16px; }
+  /* Swipe back (edgeSwipe.ts): show the previous screen under the one being dragged. */
+  .app[data-swiping][data-pane="detail"] > .list-pane,
+  .app[data-swiping][data-pane="list"] > .sidebar { display: block; position: fixed; inset: 0; z-index: 0; overflow: hidden; }
+  .app[data-swiping][data-pane="detail"] > .detail-pane,
+  .app[data-swiping][data-pane="list"] > .list-pane { position: relative; z-index: 1; min-height: 100%; background: var(--bg); box-shadow: -10px 0 30px rgba(10, 20, 40, .25); }
+  .app[data-swiping][data-pane="detail"] > .detail-pane { background: var(--paper); }
   .sidebar .nav { padding: 10px 8px; }
   .detail-pane { border: 0; }
 }

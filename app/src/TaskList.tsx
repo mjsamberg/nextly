@@ -4,6 +4,7 @@ import { createTask, moveInNext, setFlag, toggleDone, useStore } from './store';
 import { deadlineLabel, defer, parseQuickAdd, promote, uid } from './logic';
 import { tasksFor, viewTitle } from './lists';
 import { mod, platform } from './net';
+import { EDGE_SWIPE_ZONE } from './edgeSwipe';
 import type { Flag, TaskItem, View } from './types';
 
 interface Props {
@@ -218,7 +219,8 @@ function useSwipe(t: TaskItem) {
     style: dx ? { transform: `translateX(${dx}px)` } : undefined,
     moved: () => moved.current,
     handlers: {
-      onPointerDown: (e: PointerEvent) => { if (e.pointerType === 'touch' && !t.done) start.current = { x: e.clientX, y: e.clientY, id: e.pointerId }; },
+      // Touches at the very edge belong to the swipe-back gesture.
+      onPointerDown: (e: PointerEvent) => { if (e.pointerType === 'touch' && !t.done && e.clientX > EDGE_SWIPE_ZONE) start.current = { x: e.clientX, y: e.clientY, id: e.pointerId }; },
       onPointerMove: (e: PointerEvent) => {
         const s = start.current;
         if (!s || s.id !== e.pointerId) return;

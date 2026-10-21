@@ -5,6 +5,7 @@ import Detail from './Detail';
 import Settings from './Settings';
 import { deleteTask, setFlag, toggleDone, useStore } from './store';
 import { onCaptured } from './capture';
+import { useEdgeSwipeBack } from './edgeSwipe';
 import type { View } from './types';
 
 type Pane = 'nav' | 'list' | 'detail';
@@ -41,6 +42,14 @@ export default function App() {
     setView('inbox'); setSettingsOpen(false); setSelected(id); setPane('detail');
     setToast({ text: `Added “${title}” to the Inbox` });
   }), []);
+
+  // Phone layout: swipe from the left edge goes back one screen, like the Back buttons.
+  useEdgeSwipeBack(
+    pane === 'detail' ? close
+      : pane === 'list' ? () => { setSettingsOpen(false); setPane('nav'); }
+      : null,
+    narrow,
+  );
 
   const remove = useCallback((id: string) => {
     const title = v.task(id)?.title || 'task';
