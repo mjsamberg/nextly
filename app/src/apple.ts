@@ -4,6 +4,7 @@
 // can't be reached. Tasks Siri saved while offline come back through
 // pending.json and are added here.
 
+import { useSyncExternalStore } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { inTauri, platform } from './net';
 import { createTask, subscribe, view } from './store';
@@ -38,13 +39,26 @@ function snapshot() {
   };
 }
 
+/** What happened the last time we shared with the extensions, for Settings. */
+export interface ShareStatus { state: 'off' | 'ok' | 'no-group' | 'error'; at: string | null; message: string }
+
+let status: ShareStatus = { state: 'off', at: null, message: '' };
+const listeners = new Set<() => void>();
+const setShareStatus = (s: ShareStatus) => { status = s; listeners.forEach((l) => l()); };
+export const widgetSharingEnabled = enabled;
+export const useShareStatus = () =>
+  useSyncExternalStore((l) => { listeners.add(l); return () => { listeners.delete(l); }; }, () => status);
+
 async function share() {
   if (!enabled) return;
   const config = { url: settings.url.replace(/\/+$/, ''), token: settings.token, headers: headerObject(settings.headers) };
   try {
-    await invoke('apple_share', { config: JSON.stringify(config), snapshot: JSON.stringify(snapshot()) });
+    const wrote = await invoke<boolean>('apple_share', { config: JSON.stringify(config), snapshot: JSON.stringify(snapshot()) });
+    setShareStatus(wrote
+      ? { state: 'ok', at: new Date().toISOString(), message: '' }
+      : { state: 'no-group', at: null, message: 'This build can’t open the shared App Group folder, so the widget and Siri can’t see your settings. The app may not be signed with the App Group.' });
   } catch (e) {
-    console.warn('Couldn’t share data with the widget:', e);
+    setShareStatus({ state: 'error', at: null, message: String(e) });
   }
 }
 

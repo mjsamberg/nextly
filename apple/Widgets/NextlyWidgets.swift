@@ -63,8 +63,10 @@ struct ListProvider: TimelineProvider {
             var fresh = false
             if setUp { (data, fresh) = await NextlyAPI.lists() }
             let entry = ListEntry(date: .now, data: data, fresh: fresh, setUp: setUp)
-            // Retry sooner when the server couldn't be reached.
-            let next = Date.now.addingTimeInterval(fresh ? 15 * 60 : 5 * 60)
+            // Not set up yet: check again soon, since the app can't tell us
+            // when it has shared its settings. Server unreachable: retry
+            // sooner than the normal 15 minutes. (iOS may stretch these.)
+            let next = Date.now.addingTimeInterval(!setUp ? 60 : fresh ? 15 * 60 : 5 * 60)
             completion(Timeline(entries: [entry], policy: .after(next)))
         }
     }

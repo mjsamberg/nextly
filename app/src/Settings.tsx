@@ -4,6 +4,19 @@ import { createArea, deleteArea, deleteProject, deviceId, updateArea, updateProj
 import { checkConnection, getSettings, saveSettings, syncNow, useSyncStatus } from './sync';
 import { checkHeaders, type HeaderRow } from './logic';
 import { mod } from './net';
+import { useShareStatus, widgetSharingEnabled } from './apple';
+
+/** Whether the widget and Siri can see the sync settings (Mac and iPhone). */
+function WidgetShareLine() {
+  const s = useShareStatus();
+  const dot = s.state === 'ok' ? 'idle' : s.state === 'off' ? 'off' : 'error';
+  const text = s.state === 'ok'
+    ? `Widget and Siri: settings shared at ${new Date(s.at!).toLocaleTimeString()}. A widget showing “set up sync” picks them up within a few minutes, or remove and re-add it.`
+    : s.state === 'off'
+      ? 'Widget and Siri: waiting to share settings…'
+      : `Widget and Siri can’t see your settings: ${s.message}`;
+  return <p className={`sync-line ${s.state === 'ok' || s.state === 'off' ? '' : 'error'}`}><span className={`sync-dot ${dot}`} />{text}</p>;
+}
 
 const LIVE_LABEL = {
   off: 'Live updates off',
@@ -77,6 +90,7 @@ export default function Settings({ onBack }: { onBack: () => void }) {
           <span className={`sync-dot ${sync.live === 'live' ? 'idle' : sync.live === 'retrying' ? 'error' : sync.live === 'connecting' ? 'syncing' : 'off'}`} />
           {LIVE_LABEL[sync.live]}{sync.liveDetail ? ` · ${sync.liveDetail}` : ''}
         </p>
+        {widgetSharingEnabled && <WidgetShareLine />}
         <p className="muted small">This device: <code>{deviceId}</code></p>
       </section>
 
