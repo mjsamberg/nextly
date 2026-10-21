@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { blockedByAccess, checkHeaders, defer, headerObject, normTask, openBlockers, orderBetween, parseDateWord, parseQuickAdd, wouldCycle } from './logic.ts';
+import { blockedByAccess, checkHeaders, defer, headerObject, normTask, openBlockers, orderBetween, parseCaptureLink, parseDateWord, parseQuickAdd, wouldCycle } from './logic.ts';
 import type { TaskItem } from './types.ts';
 
 // Tuesday, Oct 20 2026
@@ -91,4 +91,25 @@ test('detects Cloudflare Access blocking a request', () => {
   assert.equal(blockedByAccess(403, 'text/html', 'https://nextly.example.com/sync'), true);
   assert.equal(blockedByAccess(200, 'application/json', 'https://nextly.example.com/sync'), false);
   assert.equal(blockedByAccess(401, 'application/json', 'https://nextly.example.com/sync'), false);
+});
+
+test('nextly:// capture links from the bookmarklet', () => {
+  const gmail = 'https://mail.google.com/mail/u/0/#all/18f2a';
+  const c = parseCaptureLink(`nextly://add?title=${encodeURIComponent('Re: Conference times')}&url=${encodeURIComponent(gmail)}`);
+  assert.deepEqual(c, { title: 'Re: Conference times', flag: 'inbox', emailUrl: gmail, otherUrl: null, note: '' });
+  // Forms Windows and browsers use.
+  assert.equal(parseCaptureLink('nextly://add/?title=x')?.title, 'x');
+  assert.equal(parseCaptureLink('nextly:add?title=x')?.title, 'x');
+  assert.equal(parseCaptureLink('nextly://add?title=x&list=next')?.flag, 'next');
+  assert.equal(parseCaptureLink('nextly://add?title=x&list=delete-everything')?.flag, 'inbox');
+  // An email link with no subject still makes a task.
+  assert.equal(parseCaptureLink(`nextly://add?url=${encodeURIComponent(gmail)}`)?.title, 'Email');
+  // Non-email links are kept, but not as email cards; other schemes are dropped.
+  assert.equal(parseCaptureLink('nextly://add?title=x&url=https%3A%2F%2Fexample.com')?.otherUrl, 'https://example.com');
+  assert.equal(parseCaptureLink('nextly://add?title=x&url=javascript%3Aalert(1)')?.otherUrl, null);
+  // Anything that isn't an add link is ignored.
+  assert.equal(parseCaptureLink('nextly://delete?id=1'), null);
+  assert.equal(parseCaptureLink('https://add?title=x'), null);
+  assert.equal(parseCaptureLink('nextly://add'), null);
+  assert.equal(parseCaptureLink('nextly://add?title=' + 'a'.repeat(900))?.title.length, 500);
 });

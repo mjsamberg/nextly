@@ -4,6 +4,7 @@ import TaskList from './TaskList';
 import Detail from './Detail';
 import Settings from './Settings';
 import { deleteTask, setFlag, toggleDone, useStore } from './store';
+import { onCaptured } from './capture';
 import type { View } from './types';
 
 type Pane = 'nav' | 'list' | 'detail';
@@ -33,6 +34,13 @@ export default function App() {
   }, []);
   const open = useCallback((id: string) => { setSelected(id); setSettingsOpen(false); setPane('detail'); }, []);
   const close = useCallback(() => { setSelected(null); setPane('list'); }, []);
+
+  // A task from the Gmail bookmarklet: show the Inbox with it open, so you can
+  // pick Today or Next right away.
+  useEffect(() => onCaptured(({ id, title }) => {
+    setView('inbox'); setSettingsOpen(false); setSelected(id); setPane('detail');
+    setToast({ text: `Added “${title}” to the Inbox` });
+  }), []);
 
   const remove = useCallback((id: string) => {
     const title = v.task(id)?.title || 'task';

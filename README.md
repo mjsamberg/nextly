@@ -8,7 +8,7 @@ dependencies, block-based notes with attachments, and Gmail links.
 | --- | --- |
 | `app/` | The app: Tauri 2 + React + TypeScript, one codebase for all three platforms |
 | `server/` | Sync server (Node 24, no dependencies) and its Docker Compose file |
-| `capture/` | Gmail bookmarklet for Chrome and Safari |
+| `capture/` | Gmail bookmarklet for Chrome and Safari (hands emails to the app) |
 | `apple/` | Widget and Siri extensions (Swift) for macOS and iOS |
 | `docs/` | Cloudflare and Apple signing setup |
 | `wireframes.html` | The original wireframes |
@@ -42,6 +42,19 @@ Signing setup for both: [docs/apple-signing.md](docs/apple-signing.md).
   widget reach your other devices right away through live updates.
 
 Pushing a tag like `v0.1.0` also creates a draft GitHub release with all of them.
+
+## Email to task
+
+**Gmail bookmarklet (Chrome and Safari, Windows and Mac).** Create a bookmark
+and paste the single line from [capture/bookmarklet.txt](capture/bookmarklet.txt)
+as its URL. With a Gmail message open, click it: the browser hands the email to
+the Nextly app through a `nextly://add` link (the first time it asks to open
+Nextly; tick "Always allow"). The app adds an Inbox task with an email card and
+opens it so you can choose Today or Next. It needs the app installed on that
+computer, and works offline.
+
+**iPhone and Mac:** Siri ("Add a task in Nextly"), or paste a Gmail link into
+quick add.
 
 ## Run the sync server
 

@@ -17,8 +17,14 @@ tauri = { version = "2", features = [] }
 tauri-plugin-http = "2"
 tauri-plugin-opener = "2"
 tauri-plugin-websocket = "2"
+tauri-plugin-deep-link = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+
+# Sends nextly:// links to the window that's already open instead of starting
+# a second copy (Windows; harmless on macOS, which does this itself).
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+tauri-plugin-single-instance = { version = "2", features = ["deep-link"] }
 
 # App Group container lookup for the widget and Siri extensions (apple.rs).
 [target.'cfg(any(target_os = "macos", target_os = "ios"))'.dependencies]

@@ -203,6 +203,45 @@ export function blockedByAccess(status: number, contentType: string | null, fina
   return (status === 403 || status === 302 || (status === 200 && !!contentType && contentType.includes('text/html')));
 }
 
+// ---------- nextly:// capture links ----------
+
+export interface Capture {
+  title: string;
+  flag: Flag;
+  emailUrl: string | null; // only Gmail or Apple Mail links become email cards
+  otherUrl: string | null; // anything else is kept as a plain link in the notes
+  note: string;
+}
+
+/**
+ * Reads nextly://add?title=…&url=…&list=…&note=… from the bookmarklet.
+ * Any web page can open a nextly:// link, so this only ever adds a task, caps
+ * every field, and defaults to the Inbox. Returns null for anything else.
+ */
+export function parseCaptureLink(link: string): Capture | null {
+  let u: URL;
+  try { u = new URL(link); } catch { return null; }
+  if (u.protocol !== 'nextly:') return null;
+  // Browsers and Windows may hand it over as nextly://add, nextly://add/ or nextly:add.
+  const action = (u.host || u.pathname).replace(/^\/+|\/+$/g, '').toLowerCase();
+  if (action !== 'add') return null;
+  const q = u.searchParams;
+  const clip = (s: string | null, n: number) => (s ?? '').replace(/\s+/g, ' ').trim().slice(0, n);
+  const url = clip(q.get('url'), 2000);
+  const isEmail = /^https:\/\/mail\.google\.com\//.test(url) || /^message:/.test(url);
+  const isWeb = /^https?:\/\//.test(url);
+  const list = q.get('list');
+  const title = clip(q.get('title'), 500) || (isEmail ? 'Email' : '');
+  if (!title) return null;
+  return {
+    title,
+    flag: list === 'today' || list === 'next' || list === 'someday' ? list : 'inbox',
+    emailUrl: isEmail ? url : null,
+    otherUrl: !isEmail && isWeb ? url : null,
+    note: (q.get('note') ?? '').trim().slice(0, 5000),
+  };
+}
+
 export function noteText(t: Task): string {
   return t.notes.map((b) => [b.text, b.subject, b.name].filter(Boolean).join(' ')).join(' ');
 }

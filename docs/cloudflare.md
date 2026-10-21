@@ -28,8 +28,7 @@ team (one.dash.cloudflare.com).
    - Policy 1: action **Service Auth**, include **Service Token** `nextly-apps`.
      This is what the apps use.
    - Policy 2 (for the browser): action **Allow**, include **Emails** with your
-     address. This lets you sign in from a browser to use the Gmail bookmarklet
-     and open attachments.
+     address. This lets you sign in from a browser to open attachments.
 
 ## 3. Set up each app
 
@@ -47,9 +46,9 @@ policy includes the token.
 
 ## Browser pieces
 
-- **Gmail bookmarklet**: set `NEXTLY_HOST` in `capture/gmail-bookmarklet.js` to
-  `https://nextly.example.com`. The first time, the capture window asks you to
-  sign in with Cloudflare Access (policy 2). After that it works as before.
+- **Gmail bookmarklet**: doesn't use the server. It hands the email to the
+  Nextly app on the same computer through a `nextly://` link, and the app syncs
+  it. See [README](../README.md#email-to-task).
 - **Opening attachments** in the system browser goes through the same sign-in.
   The file links are already signed by the server and expire after 10 minutes,
   so you can skip the sign-in for them by adding a second Access application for
