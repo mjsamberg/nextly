@@ -34,6 +34,7 @@ services:
       IIQ_POLL_SECONDS: ${IIQ_POLL_SECONDS:-120}
       IIQ_PROJECT: ${IIQ_PROJECT:-Incident IQ}
       IIQ_TICKET_URL: ${IIQ_TICKET_URL:-}
+      IIQ_PRODUCT_ID: ${IIQ_PRODUCT_ID:-}
       PORT: "8080"
     volumes:
       - nextly-data:/data

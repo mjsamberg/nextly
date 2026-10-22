@@ -40,12 +40,23 @@ export function iiqConfig(env = process.env) {
     // (community.incidentiq.com, "closing tickets via API now requiring
     // resolution action"). Finishing a ticket task in Nextly posts this one.
     resolutionActionId: (env.IIQ_RESOLUTION_ACTION_ID || '').trim() || null,
+    // Some IIQ calls also want the product (ticketing) id; optional.
+    productId: (env.IIQ_PRODUCT_ID || '').trim() || null,
     pollSeconds: Math.max(30, Number(env.IIQ_POLL_SECONDS) || POLL_DEFAULT),
     project: env.IIQ_PROJECT || 'Incident IQ',
     ticketUrl: env.IIQ_TICKET_URL || `${url}/agent/tickets/{TicketId}`,
     resolve,
   };
 }
+
+const query = (page) => `?$p=${page}&$s=100&$o=TicketModifiedDate&$d=Descending`;
+/** Ways to list my open tickets, most specific first. */
+const LIST_WAYS = [
+  { name: 'POST /api/v1.0/tickets/-/-/AssignedToMe_Unassigned', request: (p) => ['POST', `/api/v1.0/tickets/-/-/AssignedToMe_Unassigned${query(p)}`, {}] },
+  { name: 'POST /services/tickets/-/-/AssignedToMe_Unassigned', request: (p) => ['POST', `/services/tickets/-/-/AssignedToMe_Unassigned${query(p)}`, {}] },
+  // The general search, filtered to tickets where I'm the agent (closed ones are dropped later).
+  { name: 'POST /api/v1.0/tickets (agent = you)', needsMe: true, onlyMine: true, request: (p, me) => ['POST', `/api/v1.0/tickets${query(p)}`, { Schema: 'All', Filters: [{ Facet: 'agent', Value: me }] }] },
+];
 
 export function createClient(cfg, fetchImpl = fetch) {
   async function call(method, path, body) {
@@ -56,38 +67,86 @@ export function createClient(cfg, fetchImpl = fetch) {
         Authorization: `Bearer ${cfg.token}`,
         Client: 'ApiClient',
         Accept: 'application/json',
+        ...(cfg.productId ? { ProductId: cfg.productId } : {}),
         ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
       },
       body: body !== undefined ? JSON.stringify(body) : undefined,
       signal: AbortSignal.timeout(30_000),
     });
     const text = await res.text();
-    if (res.status === 401 || res.status === 403) throw new Error(`Incident IQ refused the request (${res.status}). Check IIQ_TOKEN and IIQ_SITE_ID.`);
-    if (!res.ok) throw new Error(`Incident IQ answered ${res.status} for ${method} ${path}${text ? `: ${text.slice(0, 200)}` : ''}`);
-    try { return text ? JSON.parse(text) : null; } catch { throw new Error(`Incident IQ sent something other than JSON for ${path}.`); }
+    const fail = (message) => Object.assign(new Error(message), { status: res.status });
+    if (res.status === 401 || res.status === 403) throw fail(`Incident IQ refused the request (${res.status}). Check IIQ_TOKEN and IIQ_SITE_ID.`);
+    if (!res.ok) throw fail(`Incident IQ answered ${res.status} for ${method} ${path.split('?')[0]}${text ? `: ${text.slice(0, 200)}` : ''}`);
+    try { return text ? JSON.parse(text) : null; } catch { throw fail(`Incident IQ sent something other than JSON for ${path.split('?')[0]}.`); }
   }
-  const items = (r) => (Array.isArray(r) ? r : r?.Items ?? r?.Tickets ?? r?.Results ?? []);
+  const items = (r) => (Array.isArray(r) ? r : r?.Items ?? r?.Tickets ?? r?.Results ?? null);
+
+  async function allPages(way, me) {
+    const out = [];
+    for (let page = 0; page < 20; page++) {
+      const batch = items(await call(...way.request(page, me)));
+      if (!batch) throw Object.assign(new Error(`${way.name}: the answer had no list of tickets.`), { status: 0 });
+      out.push(...batch);
+      if (batch.length < 100) break;
+    }
+    return out;
+  }
+  let workingWay = null;
+
+  // Some calls are documented under /api/v1.0, others under /services; try
+  // each path in turn when the first isn't found.
+  async function either(method, paths, body) {
+    for (let i = 0; i < paths.length; i++) {
+      try { return await call(method, paths[i], body); } catch (e) { if (i === paths.length - 1 || ![404, 405].includes(e.status)) throw e; }
+    }
+  }
 
   return {
     call,
-    /** Open tickets assigned to the token's user (the list also has unassigned ones). */
-    async myOpenTickets() {
-      const out = [];
-      for (let page = 0; page < 20; page++) {
-        const r = await call('POST', `/api/v1.0/tickets/-/-/AssignedToMe_Unassigned?$p=${page}&$s=100&$o=TicketModifiedDate&$d=Descending`, {});
-        const batch = items(r);
-        out.push(...batch);
-        if (batch.length < 100) break;
+    /**
+     * Open tickets assigned to me. Incident IQ's docs list the "assigned to
+     * me" view under the web app's /services path, and a general ticket
+     * search under /api/v1.0/tickets; which one a site accepts for API
+     * clients varies, so try each and keep the first that works.
+     */
+    async myOpenTickets(me) {
+      if (workingWay) return Object.assign(await allPages(workingWay, me), { onlyMine: !!workingWay.onlyMine });
+      let lastError = null;
+      for (const way of LIST_WAYS) {
+        if (way.needsMe && !me) continue;
+        try {
+          const list = await allPages(way, me);
+          list.onlyMine = !!way.onlyMine;
+          workingWay = way;
+          return list;
+        } catch (e) {
+          if (![0, 400, 404, 405].includes(e.status)) throw e; // e.g. a bad token: stop and say so
+          lastError = e;
+        }
       }
-      return out;
+      throw lastError ?? new Error('No way to list tickets worked. Run iiq-probe.js for details.');
     },
-    ticket: (id) => call('GET', `/api/v1.0/tickets/${id}`).then((r) => r?.Item ?? r),
+    /** For the probe: how each way of listing tickets answers (status and count only). */
+    async tryListWays(me) {
+      const results = [];
+      for (const way of LIST_WAYS) {
+        if (way.needsMe && !me) { results.push({ name: way.name, result: 'skipped (needs your user id)' }); continue; }
+        try {
+          const r = items(await call(...way.request(0, me)));
+          results.push({ name: way.name, result: r ? `works: ${r.length} tickets on the first page` : 'answered, but with no ticket list' });
+        } catch (e) {
+          results.push({ name: way.name, result: `failed (${e.status || 'no status'})` });
+        }
+      }
+      return results;
+    },
+    ticket: (id) => either('GET', [`/api/v1.0/tickets/${id}`, `/services/tickets/${id}`]).then((r) => r?.Item ?? r),
     comment: (id, text) => call('POST', `/api/v1.0/tickets/${id}/activities/new`, {
       TicketId: id,
       ActivityItems: [{ $type: 'Spark.Shared.Models.TicketActivityComment, Spark.Shared', TicketActivityTypeId: 6, Comments: text }],
       IsPublic: false, WaitForResponse: false, TicketWasUpdated: false,
     }),
-    start: (id, userId) => call('POST', `/api/v1.0/tickets/${id}/start`, userId ? { UserId: userId } : {}),
+    start: (id, userId) => either('POST', [`/api/v1.0/tickets/${id}/start`, `/services/tickets/${id}/start`], userId ? { UserId: userId } : {}),
     /** A resolution action (activity type 8), which is how tickets get resolved. */
     resolution: (id, actionId, notes) => call('POST', `/api/v1.0/tickets/${id}/activities/new`, {
       TicketId: id,
@@ -101,7 +160,7 @@ export function createClient(cfg, fetchImpl = fetch) {
         Meta: null,
       }],
     }),
-    nextSteps: (id) => call('GET', `/api/v1.0/tickets/${id}/next-steps`),
+    nextSteps: (id) => either('GET', [`/services/tickets/${id}/next-steps`, `/api/v1.0/tickets/${id}/next-steps`]),
   };
 }
 
@@ -189,10 +248,10 @@ export function createIiq({ db, applyChanges, onChange, cfg, client = cfg && cre
     if (state.running) return;
     state.running = true;
     try {
-      const raw = await client.myOpenTickets();
+      const raw = await client.myOpenTickets(me);
       // The list also holds unassigned tickets; keep mine (or any assigned
       // one if the token doesn't say who "me" is).
-      const mine = raw.map((t) => readTicket(t, cfg)).filter((t) => t.id && !t.closed && t.assignedTo && (!me || t.assignedTo.toLowerCase() === me.toLowerCase()));
+      const mine = raw.map((t) => readTicket(t, cfg)).filter((t) => t.id && !t.closed && (raw.onlyMine || (t.assignedTo && (!me || t.assignedTo.toLowerCase() === me.toLowerCase()))));
       const rows = [];
       ensureProject(rows);
       const open = new Set();

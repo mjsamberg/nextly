@@ -95,6 +95,7 @@ IIQ_RESOLVE_REQUEST={"method":"POST","path":"/api/v1.0/tickets/{TicketId}/…","
 | `IIQ_POLL_SECONDS` | `120` | How often to check IIQ (minimum 30) |
 | `IIQ_PROJECT` | `Incident IQ` | Name of the project tickets go into |
 | `IIQ_TICKET_URL` | `<IIQ_URL>/agent/tickets/{TicketId}` | Where **Open in Incident IQ** goes |
+| `IIQ_PRODUCT_ID` | (none) | Sent as a `ProductId` header, if your site wants one (Developer Tools shows it) |
 
 ## Notes
 

@@ -35,11 +35,14 @@ function shape(v, key = '', depth = 0) {
 console.log(`Site: ${cfg.url}`);
 const me = cfg.userId ?? userIdFromToken(cfg.token);
 console.log(`Your user id: ${me ? 'found' + (cfg.userId ? ' (IIQ_USER_ID)' : ' in the token') : 'not found in the token; set IIQ_USER_ID'}`);
+console.log('\nWays of listing your tickets (status and count only):');
+for (const w of await client.tryListWays(me)) console.log(`  ${w.name}: ${w.result}`);
+
 try {
-  const list = await client.myOpenTickets();
+  const list = await client.myOpenTickets(me);
   const read = list.map((t) => readTicket(t, cfg));
   const assigned = read.filter((t) => t.assignedTo);
-  console.log(`AssignedToMe_Unassigned: ${list.length} tickets, ${assigned.length} assigned, ${me ? read.filter((t) => t.assignedTo?.toLowerCase() === me.toLowerCase()).length : '?'} assigned to you`);
+  console.log(`\nUsing the first that works: ${list.length} tickets, ${assigned.length} with an assignee found, ${me ? read.filter((t) => t.assignedTo?.toLowerCase() === me.toLowerCase()).length : '?'} assigned to you${list.onlyMine ? ' (this search only returns yours)' : ''}`);
   if (!list.length) process.exit(0);
   console.log('\nHow Nextly reads the first ticket (true = found):');
   const r = read[0];
@@ -47,11 +50,16 @@ try {
   console.log('\nFirst ticket in the list, shape only:');
   console.log(shape(list[0]));
   if (r.id) {
-    console.log('\nThe same ticket from GET /tickets/{id}, shape only:');
-    console.log(shape(await client.ticket(r.id)));
+    // Each of these on its own, so one failure doesn't hide the rest.
+    try {
+      console.log('\nThe same ticket from GET /tickets/{id}, shape only:');
+      console.log(shape(await client.ticket(r.id)));
+    } catch (e) { console.log(`  failed: ${e.message}`); }
     if (process.argv.includes('--steps')) {
-      console.log('\nIts next steps (how workflows move tickets along):');
-      console.log(shape(await client.nextSteps(r.id)));
+      try {
+        console.log('\nIts next steps (how workflows move tickets along):');
+        console.log(shape(await client.nextSteps(r.id)));
+      } catch (e) { console.log(`  failed: ${e.message}`); }
     }
   }
 } catch (e) {
