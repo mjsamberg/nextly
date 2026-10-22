@@ -81,5 +81,5 @@ export type ProjectItem = WithId<Project>;
 export type AreaItem = WithId<Area>;
 
 export type View =
-  | 'inbox' | 'doing' | 'today' | 'next' | 'scheduled' | 'someday' | 'logbook' | 'search'
+  | 'inbox' | 'doing' | 'today' | 'next' | 'scheduled' | 'someday' | 'all' | 'logbook' | 'search'
   | `project:${string}`;

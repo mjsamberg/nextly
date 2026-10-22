@@ -22,6 +22,7 @@ export const Search = (p: P) => <S {...p}><circle cx="7" cy="7" r="4.5" {...stro
 export const Gear = (p: P) => <S {...p}><circle cx="8" cy="8" r="2.2" {...stroke} /><path {...stroke} d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4" /></S>;
 export const Play = (p: P) => <S {...p}><path fill="currentColor" d="M4.5 2.8v10.4L13 8z" /></S>;
 export const Repeat = (p: P) => <S {...p}><path {...stroke} d="M2.5 7.5V6a2.5 2.5 0 012.5-2.5h7.5M10.5 1.5l2 2-2 2M13.5 8.5V10a2.5 2.5 0 01-2.5 2.5H3.5M5.5 14.5l-2-2 2-2" /></S>;
+export const Stack = (p: P) => <S {...p}><path {...stroke} d="M6 4.5h7.5M6 8h7.5M6 11.5h7.5" /><g fill="currentColor"><circle cx="3" cy="4.5" r="1" /><circle cx="3" cy="8" r="1" /><circle cx="3" cy="11.5" r="1" /></g></S>;
 export const Chevron = (p: P) => <S {...p}><path {...stroke} strokeWidth={1.8} d="M6 3l5 5-5 5" /></S>;
 export const Back = (p: P) => <S {...p}><path {...stroke} strokeWidth={1.8} d="M10 3L5 8l5 5" /></S>;
 export const Plus = (p: P) => <S {...p}><path {...stroke} strokeWidth={1.8} d="M8 3v10M3 8h10" /></S>;

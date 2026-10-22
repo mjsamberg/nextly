@@ -22,6 +22,7 @@ const MAIN: { id: View; label: string; icon: JSX.Element; cls?: string }[] = [
   { id: 'next', label: 'Next', icon: <I.Next />, cls: 'ic-next' },
   { id: 'scheduled', label: 'Scheduled', icon: <I.Calendar /> },
   { id: 'someday', label: 'Someday', icon: <I.Box /> },
+  { id: 'all', label: 'All', icon: <I.Stack /> },
   { id: 'logbook', label: 'Logbook', icon: <I.Check /> },
 ];
 

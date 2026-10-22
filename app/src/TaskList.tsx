@@ -2,7 +2,7 @@ import { useRef, useState, type PointerEvent, type RefObject } from 'react';
 import * as I from './icons';
 import { createTask, moveInNext, setFlag, setStartOn, toggleDone, useStore } from './store';
 import { deadlineLabel, defer, parseQuickAdd, promote, repeatLabel, uid } from './logic';
-import { tasksFor, viewTitle } from './lists';
+import { allGrouped, tasksFor, viewTitle } from './lists';
 import { mod, platform } from './net';
 import { EDGE_SWIPE_ZONE } from './edgeSwipe';
 import type { Flag, TaskItem, View } from './types';
@@ -73,7 +73,8 @@ export default function TaskList({ view, query, selected, onOpen, onBack, onGo, 
         </form>
       )}
 
-      {view === 'today' ? <TodayBody tasks={tasks} selected={selected} onOpen={onOpen} onGo={onGo} />
+      {view === 'all' ? <AllBody selected={selected} onOpen={onOpen} onGo={onGo} />
+        : view === 'today' ? <TodayBody tasks={tasks} selected={selected} onOpen={onOpen} onGo={onGo} />
         : view === 'next' ? <NextBody tasks={tasks} selected={selected} onOpen={onOpen} />
         : tasks.length
           ? <div className="rows">{tasks.map((t) => <Row key={t.id} t={t} view={view} selected={selected === t.id} onOpen={onOpen} />)}</div>
@@ -123,6 +124,33 @@ function TodayBody({ tasks, selected, onOpen, onGo }: { tasks: TaskItem[]; selec
   );
 }
 
+/** Every open task on one screen: area headings, project subheadings. */
+function AllBody({ selected, onOpen, onGo }: { selected: string | null; onOpen: (id: string) => void; onGo: (v: View) => void }) {
+  const v = useStore();
+  const groups = allGrouped(v);
+  if (!groups.length) return <Empty view="all" />;
+  return (
+    <>
+      {groups.map((g) => (
+        <section key={g.areaId ?? g.title} className="all-area">
+          <h2 className="area-h">{g.title}</h2>
+          {g.projects.map((p) => (
+            <div key={p.projectId ?? 'none'} className="all-project">
+              {p.projectId && (
+                <button className="sec proj-h" onClick={() => onGo(`project:${p.projectId}`)} title="Open project">
+                  <I.Folder width={12} height={12} />{p.title} · {p.tasks.length}
+                </button>
+              )}
+              {/* Rows render as if in the project, so they don't repeat its name. */}
+              <div className="rows">{p.tasks.map((t) => <Row key={t.id} t={t} view={p.projectId ? `project:${p.projectId}` : 'all'} selected={selected === t.id} onOpen={onOpen} />)}</div>
+            </div>
+          ))}
+        </section>
+      ))}
+    </>
+  );
+}
+
 function NextBody({ tasks, selected, onOpen }: { tasks: TaskItem[]; selected: string | null; onOpen: (id: string) => void }) {
   const [dragId, setDragId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
@@ -155,6 +183,7 @@ const EMPTY: Record<string, string> = {
   next: 'Next is empty. Flag tasks as Next to line up what comes after Today.',
   scheduled: 'Nothing scheduled. Tasks with a start date, a deadline or a repeat show up here.',
   someday: 'No Someday tasks.',
+  all: 'No open tasks anywhere. Add one above, or in any list.',
   logbook: 'Finished tasks show up here.',
   search: 'Type to search task titles and notes.',
 };

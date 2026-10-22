@@ -258,3 +258,5 @@
   [data-platform="ios"] .detail-pane { border-left: .5px solid var(--ios-sep); }
   [data-platform="ios"] .nav { white-space: nowrap; }
 }
+[data-platform="ios"] .area-h { font-size: 22px; border-bottom-width: 0; padding-top: 10px; }
+[data-platform="ios"] .proj-h { min-height: 40px; }

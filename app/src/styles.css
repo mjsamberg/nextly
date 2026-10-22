@@ -306,3 +306,13 @@ h1, h2 { font-family: var(--display); font-weight: 600; text-transform: uppercas
 .side-add { display: flex; flex-wrap: wrap; }
 .side-add .nav { width: auto; flex: 1 1 auto; }
 .nav-group .new-proj input { margin-top: 2px; }
+
+/* ---------- All ---------- */
+.all-area { margin-top: 18px; }
+.all-area:first-of-type { margin-top: 6px; }
+.area-h { font-size: 18px; letter-spacing: .03em; color: var(--plum); padding: 4px 0 2px; border-bottom: 2px solid var(--plum); }
+@media (prefers-color-scheme: dark) { .area-h { color: var(--blocked); border-color: var(--blocked); } }
+.all-project { margin-top: 4px; }
+.proj-h { width: 100%; text-align: left; cursor: pointer; }
+.proj-h svg { flex: none; }
+.proj-h:hover { color: var(--ink-2); }
