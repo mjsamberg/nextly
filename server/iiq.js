@@ -14,6 +14,10 @@
 // needs a separate close step; see docs/incident-iq.md); until then it posts
 // an internal note and asks you to close the ticket in IIQ.
 //
+// Safeguards (docs/incident-iq.md): the client sends only reads and
+// single-ticket changes on known paths (allowed()); each action is vetted
+// live against your open tickets (vet()) and rate-limited.
+//
 // API (apihub.incidentiq.com): headers SiteId, Authorization, Client: ApiClient.
 // Response shapes aren't documented, so fields are read defensively; run
 // `node iiq-probe.js` to see your site's shapes.
@@ -30,6 +34,11 @@ export function iiqConfig(env = process.env) {
   if (env.IIQ_RESOLVE_REQUEST) {
     // A bad setting here shouldn't stop sync; resolving just stays manual.
     try { resolve = JSON.parse(env.IIQ_RESOLVE_REQUEST); } catch { console.error('IIQ_RESOLVE_REQUEST is not valid JSON; ignoring it.'); }
+    // It may only change the one ticket being resolved.
+    if (resolve && (!/^\/(api\/v1\.0|services)\/tickets\/\{TicketId\}(\/[A-Za-z0-9-]+)+$/.test(resolve.path ?? '') || !['POST', 'PUT', undefined].includes(resolve.method))) {
+      console.error('IIQ_RESOLVE_REQUEST must be a POST or PUT to /api/v1.0/tickets/{TicketId}/… or /services/tickets/{TicketId}/…; ignoring it.');
+      resolve = null;
+    }
   }
   return {
     url,
@@ -65,8 +74,46 @@ const LIST_WAYS = [
   { name: 'POST /api/v1.0/tickets (agent = you)', needsMe: true, onlyMine: true, request: (p, me) => ['POST', `/api/v1.0/tickets${query(p)}`, { Schema: 'All', Filters: [{ Facet: 'agent', Id: me }] }] },
 ];
 
-export function createClient(cfg, fetchImpl = fetch) {
+// Everything the server may send to Incident IQ. Reads are GETs plus the
+// searches below, which use POST. Changes go to one ticket per request, on
+// these paths only (plus a validated IIQ_RESOLVE_REQUEST), so nothing here
+// can change tickets in bulk or touch anything but tickets.
+const TID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
+const READ_POSTS = [
+  /^\/(api\/v1\.0|services)\/tickets$/,
+  /^\/(api\/v1\.0|services)\/tickets\/-\/-\/AssignedToMe_Unassigned$/,
+  /^\/(api\/v1\.0|services)\/search\/v2$/,
+  /^\/services\/users$/,
+  /^\/(api\/v1\.0|services)\/filters$/,
+];
+const WRITES = [
+  new RegExp(`^/api/v1\\.0/tickets/(${TID})/activities/new$`, 'i'), // comment, resolution action
+  new RegExp(`^/(?:api/v1\\.0|services)/tickets/(${TID})/start$`, 'i'),
+];
+
+/**
+ * @param {object} [opts]
+ * @param {boolean} [opts.readOnly] refuse every change (the probe and iiq-options.js)
+ */
+export function createClient(cfg, fetchImpl = fetch, { readOnly = false } = {}) {
+  const writes = [...WRITES];
+  if (cfg.resolve) writes.push(new RegExp(`^${cfg.resolve.path.replace(/[.*+?^$()|[\]\\]/g, '\\$&').replace('{TicketId}', `(${TID})`)}$`, 'i'));
+
+  /** Throws unless the request is a read or a change to exactly one ticket. */
+  function allowed(method, path, body) {
+    const p = path.split('?')[0];
+    if (method === 'GET') return;
+    if (method === 'POST' && READ_POSTS.some((r) => r.test(p))) return;
+    const refuse = (why) => { throw Object.assign(new Error(`Blocked: ${method} ${p} (${why}).`), { status: 0, blocked: true }); };
+    if (readOnly) refuse('this tool only reads');
+    const m = writes.map((r) => p.match(r)).find(Boolean);
+    if (!m) refuse('not a change Nextly makes');
+    if (path.includes('?')) refuse('changes take no query');
+    if (body?.TicketId !== undefined && String(body.TicketId).toLowerCase() !== m[1].toLowerCase()) refuse('the body names a different ticket');
+  }
+
   async function call(method, path, body) {
+    allowed(method, path, body);
     const res = await fetchImpl(cfg.url + path, {
       method,
       headers: {
@@ -455,6 +502,7 @@ export function createIiq({ db, applyChanges, onChange, cfg, client = cfg && cre
         }, cur.hlc));
       }
       write(rows);
+      lastMine = new Set(mine.map((t) => t.id));
       state.tickets = mine.length;
       state.lastSync = now().toISOString();
       state.lastError = null;
@@ -466,6 +514,38 @@ export function createIiq({ db, applyChanges, onChange, cfg, client = cfg && cre
     }
   }
 
+  // Limits on changes to Incident IQ, so a bad device, a bug or a replayed
+  // backlog can't touch many tickets: each action is one of yours, checked
+  // live just before it's sent, and only so many go out per hour.
+  const MAX_CHANGES_PER_HOUR = 30;
+  const MAX_ACTION_AGE_MS = 3 * 24 * 3600_000;
+  const sent = []; // times of recent changes
+  let lastMine = null; // ticket ids from the last sync's list (all yours)
+
+  /** Why an action mustn't be sent, or null if it may. */
+  async function vet(d, done) {
+    if (!['comment', 'start', 'resolve'].includes(d.type)) return `Unknown action “${d.type}”.`;
+    if (!GUID.test(String(d.ticketId ?? ''))) return 'Not a ticket id.';
+    // It must belong to a ticket task this server created, for that ticket.
+    const task = getRec.get(String(d.taskId ?? ''));
+    const ext = task && !task.deleted ? JSON.parse(task.data).external : null;
+    if (task?.id !== `iiq-${d.ticketId}` || ext?.source !== 'iiq' || ext.id !== d.ticketId) return 'That task isn’t linked to this ticket.';
+    if (!(Date.parse(d.createdAt) > Date.now() - MAX_ACTION_AGE_MS)) return 'Too old to send (more than 3 days). Do it again if it’s still needed.';
+    if (d.type !== 'comment' && done.has(`${d.type}:${d.ticketId}`)) return 'Already sent.';
+    if (!me) return 'Nextly can’t tell which Incident IQ user you are, so it changes nothing.';
+    // Live check: still open and still assigned to you.
+    const tk = readTicket(await client.ticket(d.ticketId), cfg);
+    if (tk.closed) return 'The ticket is already closed in Incident IQ.';
+    const named = !!(tk.assignedTo || tk.assignedEmail);
+    // If the ticket's details don't name the assignee, go by the last
+    // ticket list, which is filtered to you.
+    if (!named && !lastMine) return { wait: 'Waiting for the first ticket sync.' };
+    if (named ? !isMine(tk, { me, email: cfg.userEmail }) : !lastMine.has(d.ticketId)) return 'The ticket isn’t assigned to you in Incident IQ, so Nextly won’t change it.';
+    return null;
+  }
+
+  const getNumber = (d) => { const r = getRec.get(String(d.taskId ?? '')); try { return JSON.parse(r.data).external.number ?? '?'; } catch { return '?'; } };
+
   let acting = false;
   /** Carries out pending comment / start / resolve requests from devices. */
   async function processActions() {
@@ -474,10 +554,31 @@ export function createIiq({ db, applyChanges, onChange, cfg, client = cfg && cre
     try {
       const pending = pendingActions.all();
       if (pending.length) me ??= (await resolveMe(cfg, client).catch(() => ({ id: null }))).id; // "start" needs it
+      const done = new Set();
       for (const a of pending) {
         const d = JSON.parse(a.data);
+        while (sent.length && sent[0] < Date.now() - 3600_000) sent.shift();
+        if (sent.length >= MAX_CHANGES_PER_HOUR) {
+          // Held, not dropped: they go out as the hour frees up.
+          const message = `Waiting: Nextly sends at most ${MAX_CHANGES_PER_HOUR} changes an hour to Incident IQ.`;
+          if (d.message !== message) write([record(a.id, 'iiq-action', { ...d, message }, a.hlc)]);
+          continue;
+        }
         let result;
         try {
+          const refusal = await vet(d, done);
+          if (refusal?.wait) {
+            write([record(a.id, 'iiq-action', { ...d, message: refusal.wait }, a.hlc)]);
+            continue;
+          }
+          if (refusal) {
+            console.log(`Incident IQ: refused ${d.type} on ticket #${getNumber(d)}: ${refusal}`);
+            write([record(a.id, 'iiq-action', { ...d, state: 'failed', message: refusal, finishedAt: now().toISOString() }, a.hlc)]);
+            continue;
+          }
+          done.add(`${d.type}:${d.ticketId}`);
+          sent.push(Date.now());
+          console.log(`Incident IQ: ${d.type} on ticket #${getNumber(d)}`); // what, not the text
           if (d.type === 'comment') {
             await client.comment(d.ticketId, String(d.text ?? '').slice(0, 10000));
             result = { state: 'done', message: 'Posted to Incident IQ as an internal comment.' };
@@ -487,13 +588,13 @@ export function createIiq({ db, applyChanges, onChange, cfg, client = cfg && cre
           } else if (d.type === 'resolve') {
             // Resolution action first (required by many districts), then the
             // district's own close request if it needs one.
-            const actionId = d.resolutionActionId || cfg.resolutionActionId;
+            const actionId = cfg.resolutionActionId; // set on the server only, never by a device
             if (actionId) await client.resolution(d.ticketId, actionId, d.text || 'Resolved in Nextly.');
             if (cfg.resolve) await client.call(cfg.resolve.method ?? 'POST', fill(cfg.resolve.path, d), fill(cfg.resolve.body ?? {}, d));
             if (actionId || cfg.resolve) {
               result = { state: 'done', message: 'Resolved in Incident IQ.' };
             } else {
-              await client.comment(d.ticketId, 'Marked done in Nextly.');
+              await client.comment(d.ticketId, d.text ? `Marked done in Nextly: ${d.text}` : 'Marked done in Nextly.');
               result = { state: 'manual', message: 'Close this ticket in Incident IQ. Nextly can’t close tickets until IIQ_RESOLUTION_ACTION_ID is set (docs/incident-iq.md).' };
             }
           } else {

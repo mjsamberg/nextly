@@ -15,7 +15,7 @@ if (!cfg) {
   console.log('Incident IQ isn’t set up: set IIQ_URL, IIQ_SITE_ID and IIQ_TOKEN in .env.');
   process.exit(1);
 }
-const client = createClient(cfg);
+const client = createClient(cfg, fetch, { readOnly: true }); // this tool never changes anything
 const GUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const FLAGS = ['IsClosed', 'IsResolved', 'IsResolution', 'IsCanceled', 'IsDefault', 'IsActive', 'IsDeleted', 'RequiresNotes'];
 

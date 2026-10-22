@@ -334,6 +334,19 @@ h1, h2 { font-family: var(--display); font-weight: 600; text-transform: uppercas
 .iiq-state { font: 800 10px/1 var(--body); text-transform: uppercase; letter-spacing: .05em; padding: 3px 6px; border-radius: 999px; background: var(--hover); color: var(--ink-2); }
 .iiq-state.s-done { background: var(--doing-bg); color: var(--doing); }
 .iiq-state.s-manual { background: var(--today-bg); color: var(--today); }
+.dialog-scrim { position: fixed; inset: 0; background: rgba(10, 14, 24, .45); display: grid; place-items: center; padding: calc(16px + var(--safe-t)) calc(16px + var(--safe-r)) calc(16px + var(--safe-b)) calc(16px + var(--safe-l)); z-index: 20; }
+.dialog { background: var(--paper); border-radius: 12px; padding: 18px; width: min(460px, 100%); display: grid; gap: 8px; box-shadow: 0 20px 50px -15px rgba(0, 0, 0, .5); border-top: 4px solid var(--navy); }
+.dialog h2 { font-size: 20px; color: var(--navy); }
+.dialog p { margin: 0; }
+.dialog-label { font-weight: 700; font-size: 12.5px; margin-top: 4px; }
+.dialog textarea { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; resize: vertical; background: var(--paper); min-height: 110px; }
+.dialog textarea:focus { border-color: var(--navy); }
+.dialog-btns { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
+.dialog-btns button { border-radius: 8px; padding: 7px 16px; font-weight: 700; min-height: 36px; }
+.dialog-btns .ghost { color: var(--ink-2); }
+.dialog-btns .pri { background: var(--navy); color: #fff; }
+@media (prefers-color-scheme: dark) { .dialog h2 { color: var(--next); } }
+[data-platform="ios"] .dialog-btns button { min-height: 44px; }
 .iiq-state.s-failed { background: var(--blocked-bg); color: var(--danger); }
 .warn-note { border: 1px solid var(--plum); background: var(--blocked-bg); border-radius: 8px; padding: 10px 12px; font-size: 13px; }
 .warn-note strong { color: var(--blocked); }

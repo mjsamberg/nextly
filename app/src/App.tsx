@@ -3,6 +3,7 @@ import Sidebar from './Sidebar';
 import TaskList from './TaskList';
 import Detail from './Detail';
 import Settings from './Settings';
+import ResolveDialog from './ResolveDialog';
 import { deleteTask, setFlag, toggleDone, useStore } from './store';
 import { onCaptured } from './capture';
 import { useEdgeSwipeBack } from './edgeSwipe';
@@ -101,6 +102,7 @@ export default function App() {
           ? <Detail key={task.id} task={task} onOpen={open} onClose={close} onDelete={remove} />
           : <div className="empty-detail">Select a task to see its details.</div>}
       </aside>
+      <ResolveDialog />
       {toast && (
         <div className="toast" role="status">
           <span>{toast.text}</span>

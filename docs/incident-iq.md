@@ -11,7 +11,10 @@ Open tickets assigned to you in Incident IQ (IIQ) show up as tasks in an
 | Ticket reopened | Task comes back to the Inbox |
 | **Post to Incident IQ** (in the task's Incident IQ panel) | Internal comment on the ticket |
 | Mark the task **In Progress** | Ticket is started |
-| Finish the task | Ticket is resolved with your resolution action (or, until that's set, gets an internal note and you close it in IIQ) |
+| Finish the task (Nextly asks for resolution notes) | Ticket is resolved with your resolution action and those notes (or, until that's set, gets an internal note and you close it in IIQ) |
+
+The widget and Siri never change tickets: completing a ticket's task there
+is refused, so you resolve it in the app with notes.
 
 It runs on the Nextly server, which checks IIQ every 2 minutes. Your IIQ
 token stays on the server; devices only send "post this comment / start /
@@ -106,6 +109,40 @@ and `{Now}` are filled in:
 ```bash
 IIQ_RESOLVE_REQUEST={"method":"POST","path":"/api/v1.0/tickets/{TicketId}/…","body":{…}}
 ```
+
+It must be a POST or PUT to `/api/v1.0/tickets/{TicketId}/…` or
+`/services/tickets/{TicketId}/…`; anything else is ignored (see Safeguards).
+
+## Safeguards
+
+Your IIQ token carries your full IIQ rights (an admin's, in your case), so
+the server limits what it will do with it, to keep a bug, a lost device or a
+leaked sync token from reaching beyond your own tickets:
+
+- **Reads on their own never change anything.** Syncing only reads. Changes
+  happen only when you post a comment, mark a task In Progress, or finish
+  one with notes, and each shows in the task's Incident IQ panel.
+- **One ticket per change, on a short list of paths.** The server refuses to
+  send IIQ anything but reads, the ticket searches, and three single-ticket
+  changes (comment, start, resolve). Bulk paths, other records (users,
+  assets), deletes, and a change whose body names a different ticket are
+  blocked before they leave the server.
+- **Only your open tickets, checked live.** Before each change the server
+  looks the ticket up and refuses if it's closed or no longer assigned to
+  you. The request must also match the ticket task the server itself
+  created.
+- **No replays or repeats.** Requests older than 3 days are refused, and a
+  ticket is started or resolved at most once per batch.
+- **Rate limit.** At most 30 changes an hour; the rest wait their turn.
+- **Settings stay on the server.** Devices can't choose the resolution
+  action or the close request; those come only from `.env`.
+- **Read-only tools.** `iiq-probe.js` and `iiq-options.js` can't send any
+  change at all.
+- **A log.** The server log records each change (ticket number and kind,
+  not the text) and each refusal: `docker compose logs nextly | grep "Incident IQ"`.
+
+The token is still your own, with your rights in IIQ itself. Keep `.env`
+readable only by you on the server.
 
 ## Other settings
 

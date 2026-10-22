@@ -197,10 +197,26 @@ export function queueIiq(taskId: string, type: IiqAction['type'], text?: string)
  * Scheduled; un-completing it removes that copy again if it's still open.
  */
 export function toggleDone(id: string) {
+  // Completing an open Incident IQ ticket's task resolves the ticket, which
+  // needs notes: ask first (ResolveDialog), and finish from there.
+  const t = rawTask(id);
+  if (t && !t.done && t.external?.source === 'iiq' && !t.external.closed) { resolving = id; bump(); return; }
   finish(id, false);
 }
 
-function finish(id: string, viaParent: boolean) {
+let resolving: string | null = null;
+/** The Incident IQ task waiting for resolution notes, if any. */
+export const resolvingId = () => resolving;
+export function resolveWithNotes(id: string, notes: string) {
+  resolving = null;
+  finish(id, false, notes.trim() || undefined);
+}
+export function cancelResolve() {
+  resolving = null;
+  bump();
+}
+
+function finish(id: string, viaParent: boolean, notes?: string) {
   const t = rawTask(id);
   if (!t) return;
   const done = !t.done;
@@ -212,7 +228,7 @@ function finish(id: string, viaParent: boolean) {
   // Subtasks finished along with a repeating parent come back with its copy.
   const nextId = t.repeat && !viaParent ? spawnNext(id, t) : null;
   // Finishing an Incident IQ ticket's task resolves the ticket (if it isn't already closed there).
-  if (t.external?.source === 'iiq' && !t.external.closed && !viaParent) queueIiq(id, 'resolve');
+  if (t.external?.source === 'iiq' && !t.external.closed && !viaParent) queueIiq(id, 'resolve', notes);
   saveTask(id, { ...t, done, doneAt: new Date().toISOString(), nextId });
   for (const c of view().children(id)) if (!c.done) finish(c.id, true);
   for (const w of view().blocks(id)) {

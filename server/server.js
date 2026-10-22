@@ -115,7 +115,7 @@ function readBody(req, limit) {
 
 const lastSeq = () => db.prepare('SELECT COALESCE(MAX(seq), 0) AS s FROM records').get().s;
 const live = createLive({ token: TOKEN, authorized, lastSeq });
-const taskApi = createTaskApi({ db, applyChanges, onChange: () => live.changed('server'), onIiqAction: () => void iiq.processActions() });
+const taskApi = createTaskApi({ db, applyChanges, onChange: () => live.changed('server') });
 const iiq = createIiq({ db, applyChanges, onChange: () => live.changed('iiq'), cfg: iiqConfig() });
 
 /** Returns how many changes were newer than what the server had. */

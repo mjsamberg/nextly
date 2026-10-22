@@ -16,7 +16,7 @@ import { daysBetween, localToday, nextStart, shiftDate, validRepeat } from './re
 const LISTS = new Set(['doing', 'today', 'next', 'inbox', 'someday']);
 const MAX_ITEMS = 12;
 
-export function createTaskApi({ db, applyChanges, onChange, onIiqAction = () => {} }) {
+export function createTaskApi({ db, applyChanges, onChange }) {
   const allTasks = db.prepare("SELECT id, hlc, data FROM records WHERE kind = 'task' AND deleted = 0");
   const allProjects = db.prepare("SELECT id, data FROM records WHERE kind = 'project' AND deleted = 0");
 
@@ -102,6 +102,11 @@ export function createTaskApi({ db, applyChanges, onChange, onIiqAction = () => 
     const target = byId.get(id);
     if (!target) return { status: 404, body: { error: 'That task no longer exists.' } };
     if (target.done) return { status: 200, body: { ok: true } };
+    // Resolving an Incident IQ ticket needs notes, which only the app asks
+    // for; the widget and Siri never change tickets.
+    if (target.external?.source === 'iiq' && !target.external.closed) {
+      return { status: 409, body: { error: 'This is an Incident IQ ticket. Open Nextly to resolve it with notes.' } };
+    }
 
     const now = new Date().toISOString();
     const changed = new Map();
@@ -125,14 +130,8 @@ export function createTaskApi({ db, applyChanges, onChange, onIiqAction = () => 
       }
     }
     const rows = [...changed.values()].map(record);
-    // An Incident IQ ticket finished from the widget or Siri: ask IIQ to resolve it too.
-    if (target.external?.source === 'iiq' && target.external.id) {
-      rows.push({ id: crypto.randomUUID(), kind: 'iiq-action', hlc: hlcAfter(null), deleted: false,
-        data: { type: 'resolve', taskId: id, ticketId: target.external.id, state: 'pending', createdAt: now } });
-    }
     applyChanges(rows);
     onChange();
-    if (rows.some((r) => r.kind === 'iiq-action')) onIiqAction();
     return { status: 200, body: { ok: true, changed: changed.size, nextId } };
   }
 

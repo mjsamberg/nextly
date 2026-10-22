@@ -13,7 +13,7 @@ if (!cfg) {
   console.log('Incident IQ isn’t set up: set IIQ_URL, IIQ_SITE_ID and IIQ_TOKEN in .env.');
   process.exit(1);
 }
-const client = createClient(cfg);
+const client = createClient(cfg, fetch, { readOnly: true }); // this tool never changes anything
 
 // Values that are safe to show: names of statuses, steps, states and types.
 const SAFE = /(Status|State|Step|Workflow|Type|Priority|Is[A-Z]|Has[A-Z]|Count|Product|Schema)/;
