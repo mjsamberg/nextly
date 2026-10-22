@@ -75,8 +75,16 @@ only after its own ticket is looked up and found closed or reassigned.
 ## 4. Turn on resolving from Nextly
 
 Many districts require a **resolution action** to close a ticket, so Nextly
-needs the ID of the one to use (for example "Resolved" or "Repaired"). To find
-it:
+needs the ID of the one to use (for example "Resolved" or "Repaired"). The
+quickest way to find it is to list your site's resolution actions and ticket
+statuses with their IDs (read-only; prints configuration names, not tickets
+or people):
+
+```bash
+docker compose exec nextly node iiq-options.js
+```
+
+If that doesn't find them, use the browser instead:
 
 1. In Incident IQ, open a test ticket assigned to you, with your browser's
    developer tools open on the **Network** tab.
