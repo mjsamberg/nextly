@@ -13,7 +13,10 @@ const byCreated = (a: TaskItem, b: TaskItem) => a.createdAt.localeCompare(b.crea
  * A task with no flag, project or parent would otherwise be lost, so it shows
  * in Inbox, unless it's waiting for a start date (then it's in Scheduled).
  */
-const inInbox = (t: TaskItem) => t.flag === 'inbox' || (t.flag === null && !t.projectId && !t.parentId && !t.startOn);
+// Incident IQ tickets stay in their project, never the Inbox (servers
+// before 2026-10-22 filed them there).
+const inInbox = (t: TaskItem) => t.external?.source !== 'iiq'
+  && (t.flag === 'inbox' || (t.flag === null && !t.projectId && !t.parentId && !t.startOn));
 
 /** In the All list, what you're doing comes first and Someday last. */
 const FLAG_RANK: Record<string, number> = { doing: 0, today: 1, next: 2, inbox: 3, null: 4, someday: 5 };

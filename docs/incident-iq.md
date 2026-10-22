@@ -5,10 +5,10 @@ Open tickets assigned to you in Incident IQ (IIQ) show up as tasks in an
 
 | In Nextly | In Incident IQ |
 | --- | --- |
-| New ticket assigned to you | Task in the Inbox, with requester, location, issue and description in its notes |
+| New ticket assigned to you | Task in the Incident IQ project (never the Inbox), with requester, location, issue and description in its notes |
 | Ticket's status or subject changes | Task's status chip and title update (the title stops following IIQ once you rename it) |
 | Ticket closed, or reassigned to someone else | Task is completed |
-| Ticket reopened | Task comes back to the Inbox |
+| Ticket reopened | Task is open again in the Incident IQ project |
 | **Post to Incident IQ** (in the task's Incident IQ panel) | Internal comment on the ticket |
 | Mark the task **In Progress** | Ticket is started |
 | Finish the task (Nextly asks for resolution notes) | Ticket is resolved with your resolution action and those notes (or, until that's set, gets an internal note and you close it in IIQ) |

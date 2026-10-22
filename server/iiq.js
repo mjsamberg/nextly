@@ -5,7 +5,7 @@
 // you become tasks (id "iiq-<TicketId>") in the "Incident IQ" project.
 // Status, requester and location stay current; the title follows IIQ until
 // you rename the task. Closed or reassigned in IIQ → task done; reopened →
-// task back in the Inbox.
+// task open again. Ticket tasks stay in their project, never the Inbox.
 //
 // Nextly → IIQ: devices write "iiq-action" records (comment, start, resolve)
 // through normal sync; this module carries them out and writes back the
@@ -428,7 +428,7 @@ export function createIiq({ db, applyChanges, onChange, cfg, client = cfg && cre
     if (tk.description) notes.push({ id: `iiq-${tk.id}-desc`, type: 'quote', text: tk.description });
     if (tk.sensitive) notes.push({ id: `iiq-${tk.id}-sens`, type: 'paragraph', text: 'Incident IQ marks this ticket as holding sensitive information, so its requester and description stay in Incident IQ.' });
     return {
-      title: titleOf(tk), flag: 'inbox', projectId: PROJECT_ID, parentId: null, deadline: null,
+      title: titleOf(tk), flag: null, projectId: PROJECT_ID, parentId: null, deadline: null,
       startOn: null, repeat: null, nextId: null, done: false, doneAt: null,
       order: Date.now(), dependsOn: [], notes, createdAt: now().toISOString(),
       external: external(tk, titleOf(tk)),
@@ -468,13 +468,16 @@ export function createIiq({ db, applyChanges, onChange, cfg, client = cfg && cre
         // Reopen only if IIQ had closed it. A task you finished in Nextly
         // while the ticket is still open in IIQ stays done.
         const reopened = d.done && ext.closed === true;
+        // Tickets live in their project, not the Inbox (earlier versions put them there).
+        const outOfInbox = d.flag === 'inbox';
         const changed = ext.status !== tk.status || ext.modified !== tk.modified || (ext.created ?? null) !== tk.created || ext.requester !== tk.requester || ext.location !== tk.location
-          || (titleFollowsIiq && d.title !== titleOf(tk)) || reopened;
+          || (titleFollowsIiq && d.title !== titleOf(tk)) || reopened || outOfInbox;
         if (!changed) continue;
         rows.push(record(cur.id, 'task', {
           ...d,
           title: titleFollowsIiq ? titleOf(tk) : d.title,
-          ...(reopened ? { done: false, doneAt: null, flag: 'inbox' } : {}),
+          ...(outOfInbox ? { flag: null } : {}),
+          ...(reopened ? { done: false, doneAt: null, flag: null } : {}),
           external: external(tk, titleFollowsIiq ? titleOf(tk) : ext.syncedTitle),
         }, cur.hlc));
       }
