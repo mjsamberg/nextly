@@ -28,7 +28,7 @@ export interface AllGroup { areaId: string | null; title: string; projects: { pr
 
 export function allGrouped(v: V): AllGroup[] {
   const tasks = tasksFor(v, 'all');
-  const inProject = (pid: string) => tasks.filter((t) => t.projectId === pid);
+  const inProject = (pid: string) => newestTicketsFirst(tasks.filter((t) => t.projectId === pid));
   const knownArea = (id: string | null) => !!id && v.areas.some((a) => a.id === id);
   const projectsIn = (areaId: string | null) => v.projects
     .filter((p) => (areaId ? p.areaId === areaId : !knownArea(p.areaId)))
@@ -43,6 +43,16 @@ export function allGrouped(v: V): AllGroup[] {
   const noProject = tasks.filter((t) => !t.projectId || !known.has(t.projectId));
   if (noProject.length) groups.push({ areaId: null, title: 'No project', projects: [{ projectId: null, title: '', tasks: noProject }] });
   return groups;
+}
+
+/**
+ * A list of Incident IQ tickets (every task has a submitted date) goes newest
+ * submitted first; any other list keeps its order.
+ */
+function newestTicketsFirst(tasks: TaskItem[]): TaskItem[] {
+  if (!tasks.length || !tasks.every((t) => t.external?.created)) return tasks;
+  const when = (t: TaskItem) => Date.parse(t.external!.created!) || 0;
+  return [...tasks].sort((a, b) => when(b) - when(a));
 }
 
 /** The date a task is filed under in Scheduled: its start date, else its deadline. */
@@ -67,7 +77,7 @@ export function tasksFor(v: V, view: View, query = ''): TaskItem[] {
     }
     default: {
       const pid = view.slice('project:'.length);
-      return ts.filter((t) => open(t) && t.projectId === pid && !t.parentId).sort(byOrder);
+      return newestTicketsFirst(ts.filter((t) => open(t) && t.projectId === pid && !t.parentId).sort(byOrder));
     }
   }
 }

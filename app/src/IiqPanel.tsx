@@ -24,7 +24,7 @@ export default function IiqPanel({ task: t }: { task: TaskItem }) {
         {ext.url && <button className="link iiq-open" onClick={() => openExternal(ext.url!)}>Open in Incident IQ ↗</button>}
       </div>
       <p className="muted small iiq-meta">
-        {[ext.requester && `Requested by ${ext.requester}`, ext.location, ext.issue, ext.priority && `Priority ${ext.priority}`].filter(Boolean).join(' · ') || 'Ticket details appear after the next sync.'}
+        {[ext.created && `Submitted ${new Date(ext.created).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`, ext.requester && `Requested by ${ext.requester}`, ext.location, ext.issue, ext.priority && `Priority ${ext.priority}`].filter(Boolean).join(' · ') || 'Ticket details appear after the next sync.'}
       </p>
       {needsYou && <p className={needsYou.state === 'failed' ? 'error' : 'iiq-note'}>{needsYou.message}</p>}
 

@@ -48,6 +48,8 @@ export interface External {
   location: string | null;
   issue: string | null;
   priority: string | null;
+  /** When the ticket was submitted (ISO date), if IIQ says. */
+  created?: string | null;
   syncedAt: string | null;
 }
 

@@ -316,6 +316,7 @@ export function readTicket(t, cfg) {
     status: pick(t.WorkflowStep?.StepName, t.WorkflowStepName, t.TicketStatusName, t.Status?.Name, typeof t.Status === 'string' ? t.Status : undefined, t.TicketState) ?? null,
     closed: Boolean(pick(t.IsClosed, closedDate ? true : undefined, false)),
     modified: pick(t.ModifiedDate, t.TicketModifiedDate, t.LastActivityDate) ?? null,
+    created: pick(t.CreatedDate, t.TicketCreatedDate, t.SubmittedDate, t.OpenedDate) ?? null, // when it was submitted
     assignedTo: assigned ? String(assigned) : null,
     assignedEmail: assignedEmail ? String(assignedEmail).toLowerCase() : null,
     // Tickets IIQ marks as holding sensitive information keep the requester
@@ -436,7 +437,7 @@ export function createIiq({ db, applyChanges, onChange, cfg, client = cfg && cre
   const titleOf = (tk) => `#${tk.number ?? '?'} ${tk.subject}`;
   const external = (tk, syncedTitle) => ({
     source: 'iiq', id: tk.id, number: tk.number ?? null, url: tk.url, status: tk.status, closed: tk.closed,
-    modified: tk.modified, requester: tk.requester, location: tk.location, issue: tk.issue, priority: tk.priority,
+    modified: tk.modified, created: tk.created, requester: tk.requester, location: tk.location, issue: tk.issue, priority: tk.priority,
     syncedTitle, syncedAt: now().toISOString(),
   });
 
@@ -467,7 +468,7 @@ export function createIiq({ db, applyChanges, onChange, cfg, client = cfg && cre
         // Reopen only if IIQ had closed it. A task you finished in Nextly
         // while the ticket is still open in IIQ stays done.
         const reopened = d.done && ext.closed === true;
-        const changed = ext.status !== tk.status || ext.modified !== tk.modified || ext.requester !== tk.requester || ext.location !== tk.location
+        const changed = ext.status !== tk.status || ext.modified !== tk.modified || (ext.created ?? null) !== tk.created || ext.requester !== tk.requester || ext.location !== tk.location
           || (titleFollowsIiq && d.title !== titleOf(tk)) || reopened;
         if (!changed) continue;
         rows.push(record(cur.id, 'task', {
