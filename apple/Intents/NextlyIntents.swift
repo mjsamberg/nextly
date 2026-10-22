@@ -35,7 +35,7 @@ struct AddTaskIntent: AppIntent {
 
 struct ListTasksIntent: AppIntent {
     static var title: LocalizedStringResource = "Show List"
-    static var description = IntentDescription("Reads out what’s in Today or Next.")
+    static var description = IntentDescription("Reads out what’s In Progress, in Today, or in Next.")
 
     @Parameter(title: "List", default: .today)
     var list: NextlyList
@@ -50,10 +50,11 @@ struct ListTasksIntent: AppIntent {
         let tasks: [WidgetTask]
         let total: Int
         switch list {
+        case .inProgress: tasks = data.inProgress; total = data.inProgressCount
         case .today: tasks = data.today; total = data.counts.today
         case .next: tasks = data.next; total = data.counts.next
         case .inbox, .someday:
-            throw NextlyError.message("Siri can read out Today and Next. Open Nextly to see \(list.label).")
+            throw NextlyError.message("Siri can read out In Progress, Today and Next. Open Nextly to see \(list.label).")
         }
         let titles = tasks.map(\.title)
         let stale = fresh ? "" : " (from the last time Nextly synced)"

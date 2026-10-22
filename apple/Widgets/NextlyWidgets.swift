@@ -13,6 +13,7 @@ extension Color {
     static let nextlyPlum = Color(red: 122 / 255, green: 60 / 255, blue: 89 / 255)
     static let nextlyNavy = Color(red: 19 / 255, green: 65 / 255, blue: 105 / 255)
     static let nextlyGold = Color(red: 1, green: 182 / 255, blue: 0)
+    static let nextlyTeal = Color(red: 31 / 255, green: 122 / 255, blue: 106 / 255) // In Progress
 }
 
 // MARK: - Complete from the widget
@@ -82,8 +83,9 @@ enum ListKind {
     var tint: Color { self == .today ? .nextlyGold : .nextlyNavy }
     var empty: String { self == .today ? "Nothing for today." : "Next is empty." }
 
-    func tasks(_ d: WidgetData) -> [WidgetTask] { self == .today ? d.today : d.next }
-    func count(_ d: WidgetData) -> Int { self == .today ? d.counts.today : d.counts.next }
+    /// Today leads with what's In Progress, as in the app.
+    func tasks(_ d: WidgetData) -> [WidgetTask] { self == .today ? d.inProgress + d.today : d.next }
+    func count(_ d: WidgetData) -> Int { self == .today ? d.inProgressCount + d.counts.today : d.counts.next }
 }
 
 struct ListWidgetView: View {
@@ -188,7 +190,8 @@ struct ListWidgetView: View {
     private func row(_ t: WidgetTask) -> some View {
         HStack(spacing: 8) {
             Button(intent: CompleteTaskIntent(taskId: t.id)) {
-                Image(systemName: "circle").foregroundStyle(t.blocked ? Color.secondary : kind.tint)
+                Image(systemName: t.flag == "doing" ? "play.circle" : "circle")
+                    .foregroundStyle(t.blocked ? Color.secondary : t.flag == "doing" ? Color.nextlyTeal : kind.tint)
             }
             .buttonStyle(.plain)
             .disabled(t.blocked)

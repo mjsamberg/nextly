@@ -5,7 +5,7 @@
 import { useSyncExternalStore } from 'react';
 import * as db from './db';
 import * as hlc from './hlc';
-import { normTask, openBlockers, orderBetween, uid, wouldCycle } from './logic';
+import { daysBetween, nextStart, normTask, openBlockers, orderBetween, shiftDate, uid, wouldCycle, ymd } from './logic';
 import type { Area, AreaItem, Block, Flag, Kind, Project, ProjectItem, Rec, Task, TaskItem } from './types';
 
 const records = new Map<string, Rec>();
@@ -152,6 +152,7 @@ export function createTask(p: Partial<Task>): string {
   const id = uid();
   const t: Task = {
     title: '', flag: 'inbox', projectId: null, parentId: null, deadline: null,
+    startOn: null, repeat: null, nextId: null,
     done: false, doneAt: null, order: 0, dependsOn: [], notes: [],
     createdAt: new Date().toISOString(), ...p,
   };
@@ -173,19 +174,74 @@ export function setFlag(id: string, flag: Flag) {
 
 /**
  * Completing a task also completes its open subtasks. Any task that was
- * waiting on it and is now free moves to Next (unless it's already in Today).
+ * waiting on it and is now free moves to Next (unless it's already in Today
+ * or In Progress). Completing a repeating task files its next copy under
+ * Scheduled; un-completing it removes that copy again if it's still open.
  */
 export function toggleDone(id: string) {
+  finish(id, false);
+}
+
+function finish(id: string, viaParent: boolean) {
   const t = rawTask(id);
   if (!t) return;
   const done = !t.done;
-  saveTask(id, { ...t, done, doneAt: done ? new Date().toISOString() : null });
-  if (!done) return;
-  for (const c of view().children(id)) if (!c.done) toggleDone(c.id);
+  if (!done) {
+    if (t.nextId && rawTask(t.nextId) && !rawTask(t.nextId)!.done) deleteTask(t.nextId);
+    saveTask(id, { ...t, done, doneAt: null, nextId: null });
+    return;
+  }
+  // Subtasks finished along with a repeating parent come back with its copy.
+  const nextId = t.repeat && !viaParent ? spawnNext(id, t) : null;
+  saveTask(id, { ...t, done, doneAt: new Date().toISOString(), nextId });
+  for (const c of view().children(id)) if (!c.done) finish(c.id, true);
   for (const w of view().blocks(id)) {
-    if (w.done || w.flag === 'today') continue;
+    if (w.done || w.flag === 'today' || w.flag === 'doing') continue;
     if (view().blockers(w).length === 0) setFlag(w.id, 'next');
   }
+}
+
+/** The next copy of a repeating task: same title, notes and subtasks, all unchecked. */
+function spawnNext(id: string, t: Task): string {
+  const today = ymd(new Date());
+  const start = nextStart(t.repeat!, t, today);
+  // Keep the deadline the same distance from the start as before.
+  const offset = t.deadline ? daysBetween(t.startOn ?? t.deadline, t.deadline) : 0;
+  const reset = (notes: Block[]) => notes.map((b) => ({ ...b, id: uid(), ...(b.type === 'checklist' ? { checked: false } : {}) }));
+  const copyId = createTask({
+    ...t,
+    flag: null,
+    startOn: start,
+    deadline: t.deadline ? shiftDate(start, offset) : null,
+    done: false, doneAt: null, nextId: null, dependsOn: [], order: 0,
+    notes: reset(t.notes),
+    createdAt: new Date().toISOString(),
+  });
+  for (const c of view().children(id)) {
+    const raw = rawTask(c.id);
+    if (raw) createTask({ ...raw, parentId: copyId, done: false, doneAt: null, nextId: null, dependsOn: [], order: 0, notes: reset(raw.notes), createdAt: new Date().toISOString() });
+  }
+  return copyId;
+}
+
+/**
+ * Moves tasks whose start date has arrived into Today (In Progress stays put).
+ * Runs on every device; they all make the same change, so sync agrees.
+ */
+export function promoteDue(today = ymd(new Date())) {
+  for (const t of view().tasks) {
+    if (t.done || !t.startOn || t.startOn > today) continue;
+    updateTask(t.id, { flag: t.flag === 'doing' ? 'doing' : 'today', startOn: null });
+  }
+}
+
+/** Sets or clears a start date. A future date takes the task off its list until then. */
+export function setStartOn(id: string, startOn: string | null, today = ymd(new Date())) {
+  const t = rawTask(id);
+  if (!t) return;
+  if (!startOn) { saveTask(id, { ...t, startOn: null, flag: t.flag ?? (t.parentId || t.projectId ? null : 'inbox') }); return; }
+  if (startOn <= today) { saveTask(id, { ...t, startOn: null, flag: t.flag === 'doing' ? 'doing' : 'today' }); return; }
+  saveTask(id, { ...t, startOn, flag: t.parentId ? t.flag : null });
 }
 
 /** Soft-deletes a task and its subtasks. Returns a function that undoes it. */

@@ -1,8 +1,22 @@
 # Nextly
 
 A Things-style task manager for Windows, macOS and iOS. Tasks are organized by
-**Today** and **Next** flags; deadlines are optional. Tasks support subtasks,
-dependencies, block-based notes with attachments, and Gmail links.
+**In Progress**, **Today** and **Next** flags; deadlines are optional. Tasks
+support subtasks, dependencies, repeats, block-based notes with attachments,
+and Gmail links.
+
+- **In Progress** is what you're working on right now. It has its own list and
+  heads the Today list. Swipe a Today task right (or press Ctrl/⌘+D) to start
+  it; swipe left to put it back in Today.
+- **Start dates** ("Today on") hold a task in Scheduled until that day, then it
+  moves into Today by itself.
+- **Repeats**: every day, weekday, week, 2 weeks, month, year, or every N
+  days/weeks/months/years, counted on schedule or from when you finish it.
+  Finishing a repeating task files the next copy (with its subtasks and
+  checklist unchecked) under Scheduled, and it moves into Today on its date.
+  This works the same when you finish it from the widget or Siri.
+- **Quick add**: `!p` In Progress, `!t` Today, `!n` Next, `@mon` start date,
+  `^fri` deadline, `*weekly` / `*weekdays` / `*3d` repeat.
 
 | Folder | What's in it |
 | --- | --- |

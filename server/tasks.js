@@ -2,14 +2,18 @@
 // sync engine. The server makes the change itself (as device "server") and
 // stores it like any other sync, so live updates reach every app right away.
 //
-//   GET  /widget          Today and Next, ready to show
+//   GET  /widget?today=YYYY-MM-DD   In Progress, Today and Next, ready to show
 //   POST /tasks           { title, list } -> { id }
-//   POST /tasks/:id/done  complete a task (and its open subtasks); tasks that
-//                         were only waiting on it move to Next, as in the app
+//   POST /tasks/:id/done  { today? } complete a task (and its open subtasks).
+//                         As in the app: tasks only waiting on it move to Next,
+//                         and a repeating task's next copy is filed for its date.
+//
+// "today" is the device's local date (repeat.js explains the fallback).
 
 import crypto from 'node:crypto';
+import { daysBetween, localToday, nextStart, shiftDate, validRepeat } from './repeat.js';
 
-const LISTS = new Set(['today', 'next', 'inbox', 'someday']);
+const LISTS = new Set(['doing', 'today', 'next', 'inbox', 'someday']);
 const MAX_ITEMS = 12;
 
 export function createTaskApi({ db, applyChanges, onChange }) {
@@ -29,7 +33,8 @@ export function createTaskApi({ db, applyChanges, onChange }) {
     return { id, kind: 'task', hlc: hlcAfter(hlc), deleted: false, data };
   };
 
-  function widget() {
+  function widget(clientToday) {
+    const today = localToday(clientToday);
     const tasks = load();
     const byId = new Map(tasks.map((t) => [t.id, t]));
     const projects = new Map(allProjects.all().map((p) => [p.id, JSON.parse(p.data).title]));
@@ -44,13 +49,17 @@ export function createTaskApi({ db, applyChanges, onChange }) {
       project: projects.get(t.projectId) ?? (t.parentId ? byId.get(t.parentId)?.title ?? null : null),
     });
     const byOrder = (a, b) => (a.order ?? 0) - (b.order ?? 0);
-    const today = open.filter((t) => t.flag === 'today').sort(byOrder);
-    const next = open.filter((t) => t.flag === 'next').sort(byOrder);
-    const inbox = open.filter((t) => t.flag === 'inbox' || (!t.flag && !t.projectId && !t.parentId));
+    // A start date that has arrived counts as Today even before an app moves it.
+    const due = (t) => t.startOn && t.startOn <= today;
+    const doing = open.filter((t) => t.flag === 'doing').sort(byOrder);
+    const todayList = open.filter((t) => t.flag !== 'doing' && (t.flag === 'today' || due(t))).sort(byOrder);
+    const next = open.filter((t) => t.flag === 'next' && !due(t)).sort(byOrder);
+    const inbox = open.filter((t) => t.flag === 'inbox' || (!t.flag && !t.projectId && !t.parentId && !t.startOn));
     return {
-      today: today.slice(0, MAX_ITEMS).map(view),
+      doing: doing.slice(0, MAX_ITEMS).map(view),
+      today: todayList.slice(0, MAX_ITEMS).map(view),
       next: next.slice(0, MAX_ITEMS).map(view),
-      counts: { today: today.length, next: next.length, inbox: inbox.length },
+      counts: { doing: doing.length, today: todayList.length, next: next.length, inbox: inbox.length },
       updatedAt: new Date().toISOString(),
     };
   }
@@ -63,6 +72,7 @@ export function createTaskApi({ db, applyChanges, onChange }) {
     const now = new Date().toISOString();
     const rec = record({
       id, title: t, flag, projectId: null, parentId: null, deadline: null,
+      startOn: null, repeat: null, nextId: null,
       done: false, doneAt: null, order: Date.now(), dependsOn: [], notes: [], createdAt: now,
     });
     applyChanges([rec]);
@@ -70,7 +80,23 @@ export function createTaskApi({ db, applyChanges, onChange }) {
     return { status: 201, body: { id, flag } };
   }
 
-  function complete(id) {
+  /** The next copy of a repeating task and its subtasks, all unchecked, waiting for their date. */
+  function spawn(t, children, today, now) {
+    const start = nextStart(t.repeat, t, today);
+    const offset = t.deadline ? daysBetween(t.startOn ?? t.deadline, t.deadline) : 0;
+    const reset = (notes = []) => notes.map((b) => ({ ...b, id: crypto.randomUUID(), ...(b.type === 'checklist' ? { checked: false } : {}) }));
+    const copyId = crypto.randomUUID();
+    const base = { done: false, doneAt: null, nextId: null, dependsOn: [], order: Date.now(), createdAt: now };
+    const copies = [{
+      ...t, ...base, id: copyId, hlc: null, flag: null, startOn: start,
+      deadline: t.deadline ? shiftDate(start, offset) : null, notes: reset(t.notes),
+    }];
+    for (const c of children) copies.push({ ...c, ...base, id: crypto.randomUUID(), hlc: null, parentId: copyId, notes: reset(c.notes) });
+    return { copyId, copies };
+  }
+
+  function complete(id, { today: clientToday } = {}) {
+    const today = localToday(clientToday);
     const tasks = load();
     const byId = new Map(tasks.map((t) => [t.id, t]));
     const target = byId.get(id);
@@ -79,14 +105,20 @@ export function createTaskApi({ db, applyChanges, onChange }) {
 
     const now = new Date().toISOString();
     const changed = new Map();
-    const finish = (t) => { changed.set(t.id, { ...t, done: true, doneAt: now }); };
-    finish(target);
-    for (const t of tasks) if (t.parentId === id && !t.done) finish(t);
+    const children = tasks.filter((t) => t.parentId === id);
+    let nextId = null;
+    if (validRepeat(target.repeat)) {
+      const s = spawn(target, children, today, now);
+      nextId = s.copyId;
+      for (const c of s.copies) changed.set(c.id, c);
+    }
+    changed.set(id, { ...target, done: true, doneAt: now, nextId });
+    for (const t of children) if (!t.done) changed.set(t.id, { ...t, done: true, doneAt: now });
 
     const isDone = (tid) => changed.get(tid)?.done ?? byId.get(tid)?.done ?? true;
     let order = Math.max(0, ...tasks.filter((t) => t.flag === 'next').map((t) => t.order ?? 0));
     for (const t of tasks) {
-      if (t.done || changed.has(t.id) || t.flag === 'today' || !(t.dependsOn || []).includes(id)) continue;
+      if (t.done || changed.has(t.id) || t.flag === 'today' || t.flag === 'doing' || !(t.dependsOn || []).includes(id)) continue;
       if ((t.dependsOn || []).every(isDone) && t.flag !== 'next') {
         order += 1000;
         changed.set(t.id, { ...t, flag: 'next', order });
@@ -94,7 +126,7 @@ export function createTaskApi({ db, applyChanges, onChange }) {
     }
     applyChanges([...changed.values()].map(record));
     onChange();
-    return { status: 200, body: { ok: true, changed: changed.size } };
+    return { status: 200, body: { ok: true, changed: changed.size, nextId } };
   }
 
   return { widget, create, complete };

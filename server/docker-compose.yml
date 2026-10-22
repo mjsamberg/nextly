@@ -22,6 +22,8 @@ services:
     environment:
       NEXTLY_TOKEN: ${NEXTLY_TOKEN:?set NEXTLY_TOKEN in .env}
       NEXTLY_DATA: /data
+      # Your time zone, for "today" when repeating tasks are finished from the widget or Siri.
+      NEXTLY_TZ: ${NEXTLY_TZ:-America/New_York}
       PORT: "8080"
     volumes:
       - nextly-data:/data

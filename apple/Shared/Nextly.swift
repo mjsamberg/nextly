@@ -49,6 +49,7 @@ struct WidgetCounts: Codable, Hashable {
     let today: Int
     let next: Int
     let inbox: Int
+    var doing: Int? = nil // missing from servers older than In Progress
 }
 
 struct WidgetData: Codable, Hashable {
@@ -56,6 +57,10 @@ struct WidgetData: Codable, Hashable {
     let next: [WidgetTask]
     let counts: WidgetCounts
     let updatedAt: String?
+    var doing: [WidgetTask]? = nil // In Progress; missing from older servers
+
+    var inProgress: [WidgetTask] { doing ?? [] }
+    var inProgressCount: Int { counts.doing ?? inProgress.count }
 
     static let empty = WidgetData(today: [], next: [], counts: WidgetCounts(today: 0, next: 0, inbox: 0), updatedAt: nil)
 
@@ -84,10 +89,11 @@ struct PendingTask: Codable {
 // MARK: - Lists
 
 enum NextlyList: String, AppEnum {
-    case today, next, inbox, someday
+    case inProgress = "doing", today, next, inbox, someday
 
     static var typeDisplayRepresentation = TypeDisplayRepresentation(name: "List")
     static var caseDisplayRepresentations: [NextlyList: DisplayRepresentation] = [
+        .inProgress: "In Progress",
         .today: "Today",
         .next: "Next",
         .inbox: "Inbox",
@@ -96,6 +102,7 @@ enum NextlyList: String, AppEnum {
 
     var label: String {
         switch self {
+        case .inProgress: return "In Progress"
         case .today: return "Today"
         case .next: return "Next"
         case .inbox: return "Inbox"
@@ -121,6 +128,15 @@ enum NextlyError: LocalizedError {
 enum AddOutcome { case added, savedForLater }
 
 enum NextlyAPI {
+    /// The device's local date, so the server files repeats and start dates by your day, not UTC.
+    static var localToday: String {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.timeZone = .current
+        f.dateFormat = "yyyy-MM-dd"
+        return f.string(from: Date())
+    }
+
     static var config: SyncConfig? {
         guard let c = AppGroup.read("config.json", as: SyncConfig.self), !c.url.isEmpty, !c.token.isEmpty else { return nil }
         return c
@@ -155,7 +171,7 @@ enum NextlyAPI {
     /// Fresh lists from the server, falling back to the app's last snapshot.
     static func lists() async -> (WidgetData, fresh: Bool) {
         do {
-            let data = try await request("/widget")
+            let data = try await request("/widget?today=\(localToday)")
             let lists = try JSONDecoder().decode(WidgetData.self, from: data)
             AppGroup.write(lists, to: "snapshot.json")
             return (lists, true)
@@ -180,6 +196,6 @@ enum NextlyAPI {
     }
 
     static func complete(taskId: String) async throws {
-        _ = try await request("/tasks/\(taskId)/done", method: "POST")
+        _ = try await request("/tasks/\(taskId)/done", method: "POST", json: ["today": localToday])
     }
 }

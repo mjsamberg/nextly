@@ -20,6 +20,8 @@ export const Folder = (p: P) => <S {...p}><path {...stroke} d="M1.5 4.5v8h13v-7H
 export const File = (p: P) => <S {...p}><path {...stroke} d="M4 1.5h5l3.5 3.5v9.5H4zM9 1.5V5h3.5" /></S>;
 export const Search = (p: P) => <S {...p}><circle cx="7" cy="7" r="4.5" {...stroke} /><path {...stroke} d="M10.5 10.5L14 14" /></S>;
 export const Gear = (p: P) => <S {...p}><circle cx="8" cy="8" r="2.2" {...stroke} /><path {...stroke} d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4" /></S>;
+export const Play = (p: P) => <S {...p}><path fill="currentColor" d="M4.5 2.8v10.4L13 8z" /></S>;
+export const Repeat = (p: P) => <S {...p}><path {...stroke} d="M2.5 7.5V6a2.5 2.5 0 012.5-2.5h7.5M10.5 1.5l2 2-2 2M13.5 8.5V10a2.5 2.5 0 01-2.5 2.5H3.5M5.5 14.5l-2-2 2-2" /></S>;
 export const Chevron = (p: P) => <S {...p}><path {...stroke} strokeWidth={1.8} d="M6 3l5 5-5 5" /></S>;
 export const Back = (p: P) => <S {...p}><path {...stroke} strokeWidth={1.8} d="M10 3L5 8l5 5" /></S>;
 export const Plus = (p: P) => <S {...p}><path {...stroke} strokeWidth={1.8} d="M8 3v10M3 8h10" /></S>;

@@ -1,6 +1,20 @@
 // One flag per task. null means "no list of its own": a subtask that lives
-// under its parent, or a task that lives only in its project.
-export type Flag = 'inbox' | 'today' | 'next' | 'someday' | null;
+// under its parent, a task that lives only in its project, or one waiting for
+// its start date (startOn). 'doing' is In Progress.
+export type Flag = 'inbox' | 'doing' | 'today' | 'next' | 'someday' | null;
+
+/**
+ * How a task repeats. Finishing it creates the next copy, which waits in
+ * Scheduled and moves into Today on its date. `weekdays` (0 = Sunday) picks
+ * days of the week instead of a plain interval. `from`: count the interval
+ * from the scheduled date, or from the day it was finished.
+ */
+export interface Repeat {
+  every: number;
+  unit: 'day' | 'week' | 'month' | 'year';
+  weekdays?: number[];
+  from: 'schedule' | 'completion';
+}
 
 export type BlockType =
   | 'heading' | 'paragraph' | 'checklist' | 'quote' | 'divider'
@@ -28,6 +42,9 @@ export interface Task {
   projectId: string | null;
   parentId: string | null;
   deadline: string | null; // YYYY-MM-DD, optional and never used for sorting Today/Next
+  startOn: string | null; // YYYY-MM-DD: waits in Scheduled, moves into Today on this day
+  repeat: Repeat | null;
+  nextId: string | null; // the copy created when this repeating task was finished
   done: boolean;
   doneAt: string | null;
   order: number; // position in Next
@@ -64,5 +81,5 @@ export type ProjectItem = WithId<Project>;
 export type AreaItem = WithId<Area>;
 
 export type View =
-  | 'inbox' | 'today' | 'next' | 'scheduled' | 'someday' | 'logbook' | 'search'
+  | 'inbox' | 'doing' | 'today' | 'next' | 'scheduled' | 'someday' | 'logbook' | 'search'
   | `project:${string}`;

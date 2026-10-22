@@ -1,7 +1,7 @@
 import { useRef, useState, type PointerEvent, type RefObject } from 'react';
 import * as I from './icons';
-import { createTask, moveInNext, setFlag, toggleDone, useStore } from './store';
-import { deadlineLabel, defer, parseQuickAdd, promote, uid } from './logic';
+import { createTask, moveInNext, setFlag, setStartOn, toggleDone, useStore } from './store';
+import { deadlineLabel, defer, parseQuickAdd, promote, repeatLabel, uid } from './logic';
 import { tasksFor, viewTitle } from './lists';
 import { mod, platform } from './net';
 import { EDGE_SWIPE_ZONE } from './edgeSwipe';
@@ -19,7 +19,7 @@ interface Props {
 
 /** What a task added from this list starts as. */
 function defaultsFor(view: View): { flag: Flag; projectId: string | null } {
-  if (view === 'today' || view === 'next' || view === 'someday') return { flag: view, projectId: null };
+  if (view === 'today' || view === 'next' || view === 'someday' || view === 'doing') return { flag: view, projectId: null };
   if (view.startsWith('project:')) return { flag: null, projectId: view.slice(8) };
   return { flag: 'inbox', projectId: null };
 }
@@ -34,13 +34,16 @@ export default function TaskList({ view, query, selected, onOpen, onBack, onGo, 
     const q = parseQuickAdd(draft);
     if (!q.title && !q.emailUrl) return;
     const d = defaultsFor(view);
-    createTask({
+    const id = createTask({
       title: q.title || 'Email',
       flag: q.flag !== undefined ? q.flag : d.flag,
       projectId: d.projectId,
       deadline: q.deadline ?? null,
+      repeat: q.repeat ?? null,
       notes: q.emailUrl ? [{ id: uid(), type: 'email', url: q.emailUrl, subject: q.title }] : [],
     });
+    // @date: waits in Scheduled (or goes straight to Today if it's today or past).
+    if (q.startOn) setStartOn(id, q.startOn);
     setDraft('');
   };
 
@@ -64,7 +67,7 @@ export default function TaskList({ view, query, selected, onOpen, onBack, onGo, 
             ref={quickRef}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            placeholder={platform === 'ios' ? 'New task…  !t Today  ^fri deadline' : `New task…  ${mod}N  ·  !t Today  !n Next  ^fri deadline`}
+            placeholder={platform === 'ios' ? 'New task…  !t Today  @mon  *weekly' : `New task…  ${mod}N  ·  !t Today  !p In Progress  @mon start  *weekly`}
             autoComplete="off"
           />
         </form>
@@ -91,10 +94,18 @@ function TodayBody({ tasks, selected, onOpen, onGo }: { tasks: TaskItem[]; selec
   }
   const keys = [...groups.keys()].sort((a, b) => (a === '' ? -1 : b === '' ? 1 : a.localeCompare(b)));
   const next = tasksFor(v, 'next');
+  const doing = tasksFor(v, 'doing');
 
   return (
     <>
-      {tasks.length === 0 && <Empty view="today" />}
+      {doing.length > 0 && (
+        <section className="doing">
+          <div className="sec sec-doing">In progress · {doing.length}</div>
+          <div className="rows">{doing.map((t) => <Row key={t.id} t={t} view="doing" selected={selected === t.id} onOpen={onOpen} />)}</div>
+        </section>
+      )}
+      {tasks.length === 0 && doing.length === 0 && <Empty view="today" />}
+      {tasks.length > 0 && doing.length > 0 && keys[0] === '' && <div className="sec">Today</div>}
       {keys.map((k) => (
         <section key={k || 'none'}>
           {k && <div className="sec">{k}</div>}
@@ -140,8 +151,9 @@ function NextBody({ tasks, selected, onOpen }: { tasks: TaskItem[]; selected: st
 const EMPTY: Record<string, string> = {
   inbox: 'Nothing in your Inbox. New tasks land here until you give them a flag or a project.',
   today: 'Nothing flagged for today. Pull something up from Next, or add a task above.',
+  doing: 'Nothing in progress. Swipe a Today task right, or flag it In Progress, when you start on it.',
   next: 'Next is empty. Flag tasks as Next to line up what comes after Today.',
-  scheduled: 'No tasks have deadlines. Deadlines are optional, so this list is often empty.',
+  scheduled: 'Nothing scheduled. Tasks with a start date, a deadline or a repeat show up here.',
   someday: 'No Someday tasks.',
   logbook: 'Finished tasks show up here.',
   search: 'Type to search task titles and notes.',
@@ -161,12 +173,12 @@ export function Row({ t, view, selected, onOpen, grip }: { t: TaskItem; view: Vi
   const parent = t.parentId ? v.task(t.parentId) : undefined;
   const hasMail = t.notes.some((b) => b.type === 'email');
   const files = t.notes.filter((b) => b.type === 'file' || b.type === 'image').length;
-  const showFlag = !['today', 'next', 'someday', 'inbox'].includes(view);
+  const showFlag = !['doing', 'today', 'next', 'someday', 'inbox'].includes(view);
   const swipe = useSwipe(t);
 
   return (
-    <div className={`row-wrap ${swipe.dir}`}>
-      <span className="swipe-label left">★ Today</span>
+    <div className={`row-wrap ${swipe.dir} ${promote(t.flag) === 'doing' ? 'to-doing' : ''}`}>
+      <span className="swipe-label left">{labelFor(promote(t.flag))}</span>
       <span className="swipe-label right">{labelFor(defer(t.flag))}</span>
       <div
         className={`row ${selected ? 'sel' : ''} ${blockers.length && !t.done ? 'blocked' : ''} ${t.done ? 'done' : ''}`}
@@ -192,24 +204,27 @@ export function Row({ t, view, selected, onOpen, grip }: { t: TaskItem; view: Vi
           {hasMail && <I.Mail />}
           {files > 0 && <span className="chip"><I.Clip />{files > 1 ? files : ''}</span>}
           {blockers.length > 0 && !t.done && <span className="flag f-blocked"><I.Lock width={11} height={11} />Waiting on {blockers.length}</span>}
+          {showFlag && t.flag === 'doing' && <span className="flag f-doing"><I.Play width={10} height={10} />In Progress</span>}
           {showFlag && t.flag === 'today' && <span className="flag f-today"><I.Star width={11} height={11} />Today</span>}
           {showFlag && t.flag === 'next' && <span className="flag f-next">Next</span>}
-          {t.deadline && <span className="flag f-date">{deadlineLabel(t.deadline)}</span>}
+          {t.repeat && <span className="chip" title={repeatLabel(t.repeat)}><I.Repeat /></span>}
+          {t.startOn && <span className="flag f-start" title="Moves into Today on this day"><I.Star width={10} height={10} />{deadlineLabel(t.startOn)}</span>}
+          {t.deadline && <span className="flag f-date">{t.startOn ? 'Due ' : ''}{deadlineLabel(t.deadline)}</span>}
         </span>
       </div>
     </div>
   );
 }
 
-const labelFor = (f: Flag) => (f === 'next' ? '→ Next' : f === 'someday' ? 'Someday' : 'Later');
+const labelFor = (f: Flag) => (f === 'doing' ? '▶ In Progress' : f === 'today' ? '★ Today' : f === 'next' ? '→ Next' : f === 'someday' ? 'Someday' : 'Later');
 
-/** Touch-only swipe: right promotes to Today, left defers one step. Never sets a date. */
+/** Touch-only swipe: right promotes (→ Today → In Progress), left defers one step. Never sets a date. */
 function useSwipe(t: TaskItem) {
   const start = useRef<{ x: number; y: number; id: number } | null>(null);
   const moved = useRef(false);
   const [dx, setDx] = useState(0);
   const end = () => {
-    if (dx > 80 && t.flag !== 'today') setFlag(t.id, promote(t.flag));
+    if (dx > 80 && promote(t.flag) !== t.flag) setFlag(t.id, promote(t.flag));
     else if (dx < -80) setFlag(t.id, defer(t.flag));
     start.current = null; setDx(0);
     setTimeout(() => { moved.current = false; }, 0);

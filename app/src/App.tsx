@@ -67,6 +67,7 @@ export default function App() {
       if (mod && k === 'n') { e.preventDefault(); if (settingsOpen || pane !== 'list') { setSettingsOpen(false); setPane('list'); } setTimeout(() => quickRef.current?.focus()); }
       else if (mod && k === 'k') { e.preventDefault(); setPane(narrow() ? 'nav' : pane); setTimeout(() => searchRef.current?.focus()); }
       else if (mod && k === 't' && selected) { e.preventDefault(); setFlag(selected, e.shiftKey ? 'next' : 'today'); }
+      else if (mod && k === 'd' && selected) { e.preventDefault(); setFlag(selected, 'doing'); }
       else if (mod && k === 'enter' && selected) { e.preventDefault(); toggleDone(selected); }
       else if (mod && k === ',') { e.preventDefault(); setSettingsOpen(true); setPane('list'); }
       else if (k === 'escape' && !typing) { if (selected) close(); }

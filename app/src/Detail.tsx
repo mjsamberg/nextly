@@ -2,10 +2,10 @@ import { useState } from 'react';
 import * as I from './icons';
 import Notes from './Notes';
 import {
-  addDependency, createTask, removeDependency, setFlag, toggleDone, updateTask, useStore,
+  addDependency, createTask, removeDependency, setFlag, setStartOn, toggleDone, updateTask, useStore,
 } from './store';
-import { deadlineLabel } from './logic';
-import type { Flag, TaskItem } from './types';
+import { deadlineLabel, normRepeat, repeatLabel } from './logic';
+import type { Flag, Repeat, TaskItem } from './types';
 
 interface Props {
   task: TaskItem;
@@ -16,6 +16,7 @@ interface Props {
 
 const FLAGS: { f: Flag; label: string; cls: string }[] = [
   { f: 'inbox', label: 'Inbox', cls: '' },
+  { f: 'doing', label: '▶ In Progress', cls: 'on-doing' },
   { f: 'today', label: '★ Today', cls: 'on-today' },
   { f: 'next', label: 'Next', cls: 'on-next' },
   { f: 'someday', label: 'Someday', cls: 'on-someday' },
@@ -70,6 +71,15 @@ export default function Detail({ task: t, onOpen, onClose, onDelete }: Props) {
       </div>
 
       <div className="fields">
+        <label className="field">
+          <I.Star />
+          <span>Today on</span>
+          <input id={`start-${t.id}`} type="date" value={t.startOn ?? ''} onChange={(e) => setStartOn(t.id, e.target.value || null)} />
+          {t.startOn
+            ? <><span className="muted">{deadlineLabel(t.startOn)}</span><button className="link" onClick={() => setStartOn(t.id, null)}>Clear</button></>
+            : <span className="muted">optional</span>}
+        </label>
+        <RepeatField task={t} />
         <label className="field">
           <I.Calendar />
           <span>Deadline</span>
@@ -148,6 +158,95 @@ export default function Detail({ task: t, onOpen, onClose, onDelete }: Props) {
         <span className="muted">Added {new Date(t.createdAt).toLocaleDateString()}{t.doneAt ? ` · Done ${new Date(t.doneAt).toLocaleDateString()}` : ''}</span>
         <button className="danger" onClick={() => onDelete(t.id)}>Delete</button>
       </footer>
+    </div>
+  );
+}
+
+// ---------- repeat ----------
+
+type Preset = 'none' | 'daily' | 'weekdays' | 'weekly' | 'biweekly' | 'monthly' | 'yearly' | 'custom';
+
+const PRESETS: Record<Exclude<Preset, 'none' | 'custom'>, Omit<Repeat, 'from'>> = {
+  daily: { every: 1, unit: 'day' },
+  weekdays: { every: 1, unit: 'week', weekdays: [1, 2, 3, 4, 5] },
+  weekly: { every: 1, unit: 'week' },
+  biweekly: { every: 2, unit: 'week' },
+  monthly: { every: 1, unit: 'month' },
+  yearly: { every: 1, unit: 'year' },
+};
+
+function presetOf(r: Repeat | null): Preset {
+  if (!r) return 'none';
+  for (const [k, p] of Object.entries(PRESETS)) {
+    if (p.every === r.every && p.unit === r.unit && (p.weekdays ?? []).join() === (r.weekdays ?? []).join()) return k as Preset;
+  }
+  return 'custom';
+}
+
+/** Repeat picker: common choices, or every N days/weeks/months/years. */
+function RepeatField({ task: t }: { task: TaskItem }) {
+  const preset = presetOf(t.repeat);
+  const set = (r: Partial<Repeat> | null) =>
+    updateTask(t.id, { repeat: r ? normRepeat({ from: t.repeat?.from ?? 'schedule', ...r }) : null });
+
+  return (
+    <div className="field repeat-field">
+      <I.Repeat />
+      <span>Repeat</span>
+      <select
+        id={`repeat-${t.id}`}
+        aria-label="Repeat"
+        value={preset}
+        onChange={(e) => {
+          const p = e.target.value as Preset;
+          if (p === 'none') set(null);
+          else if (p === 'custom') set({ every: t.repeat?.every ?? 3, unit: t.repeat?.unit ?? 'day', weekdays: undefined });
+          else set(PRESETS[p]);
+        }}
+      >
+        <option value="none">Never</option>
+        <option value="daily">Every day</option>
+        <option value="weekdays">Every weekday</option>
+        <option value="weekly">Every week</option>
+        <option value="biweekly">Every 2 weeks</option>
+        <option value="monthly">Every month</option>
+        <option value="yearly">Every year</option>
+        <option value="custom">Custom…</option>
+      </select>
+      {preset === 'custom' && t.repeat && (
+        <span className="repeat-custom">
+          every
+          <input
+            id={`repeat-every-${t.id}`}
+            aria-label="Repeat every"
+            type="number" min={1} max={365} inputMode="numeric"
+            value={t.repeat.every}
+            onChange={(e) => set({ ...t.repeat!, every: Number(e.target.value) || 1 })}
+          />
+          <select id={`repeat-unit-${t.id}`} aria-label="Repeat unit" value={t.repeat.unit} onChange={(e) => set({ ...t.repeat!, unit: e.target.value as Repeat['unit'], weekdays: undefined })}>
+            <option value="day">days</option>
+            <option value="week">weeks</option>
+            <option value="month">months</option>
+            <option value="year">years</option>
+          </select>
+        </span>
+      )}
+      {t.repeat && (
+        <select
+          id={`repeat-from-${t.id}`}
+          aria-label="Count from"
+          value={t.repeat.from}
+          onChange={(e) => set({ ...t.repeat!, from: e.target.value as Repeat['from'] })}
+        >
+          <option value="schedule">on schedule</option>
+          <option value="completion">after I finish it</option>
+        </select>
+      )}
+      {t.repeat && (
+        <p className="muted small repeat-note">
+          {repeatLabel(t.repeat)}{t.repeat.from === 'completion' ? ', counted from when you finish it' : ''}. Finishing it files the next one under Scheduled; it moves into Today on its date.
+        </p>
+      )}
     </div>
   );
 }

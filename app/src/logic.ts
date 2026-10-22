@@ -1,6 +1,6 @@
 // Pure rules shared by the store and the UI. No storage, no React, so they
 // can be unit-tested with plain Node (see logic.test.ts).
-import type { Block, Flag, Task, TaskItem } from './types';
+import type { Block, Flag, Repeat, Task, TaskItem } from './types';
 
 export function uid(): string {
   // randomUUID needs a secure context; getRandomValues doesn't.
@@ -16,13 +16,30 @@ function normBlock(b: any, i: number): Block {
   return { ...b, id: String(b?.id ?? `b${i}`), type };
 }
 
+const FLAGS = ['inbox', 'doing', 'today', 'next', 'someday'];
+const UNITS = ['day', 'week', 'month', 'year'];
+
+export function normRepeat(r: any): Repeat | null {
+  if (!r || !UNITS.includes(r.unit)) return null;
+  const every = Math.min(365, Math.max(1, Math.round(Number(r.every) || 1)));
+  const weekdays = Array.isArray(r.weekdays)
+    ? [...new Set(r.weekdays.map(Number).filter((n: number) => n >= 0 && n <= 6))].sort() as number[]
+    : [];
+  return {
+    every,
+    unit: r.unit,
+    ...(r.unit === 'week' && weekdays.length ? { weekdays } : {}),
+    from: r.from === 'completion' ? 'completion' : 'schedule',
+  };
+}
+
 // Tolerates older or partial records (for example ones written by the capture page).
 export function normTask(d: any): Task {
   const notes: Block[] = Array.isArray(d?.notes) ? d.notes.map(normBlock) : [];
   if (Array.isArray(d?.links)) {
     for (const l of d.links) notes.push({ id: uid(), type: 'email', url: l.url, subject: l.subject });
   }
-  const flag: Flag = ['inbox', 'today', 'next', 'someday'].includes(d?.flag)
+  const flag: Flag = FLAGS.includes(d?.flag)
     ? d.flag
     : d?.list === 'inbox' ? 'inbox' : null;
   return {
@@ -31,6 +48,9 @@ export function normTask(d: any): Task {
     projectId: d?.projectId ?? null,
     parentId: d?.parentId ?? null,
     deadline: typeof d?.deadline === 'string' ? d.deadline : null,
+    startOn: typeof d?.startOn === 'string' ? d.startOn : null,
+    repeat: normRepeat(d?.repeat),
+    nextId: typeof d?.nextId === 'string' ? d.nextId : null,
     done: !!d?.done,
     doneAt: d?.doneAt ?? null,
     order: typeof d?.order === 'number' ? d.order : Date.parse(d?.createdAt ?? '') || 0,
@@ -71,11 +91,12 @@ export function orderBetween(before: number | undefined, after: number | undefin
   return (before + after) / 2;
 }
 
-/** Swipe right promotes, swipe left defers. Never touches dates. */
-export function promote(_f: Flag): Flag {
-  return 'today';
+/** Swipe right promotes (… → Today → In Progress), swipe left defers. Never touches dates. */
+export function promote(f: Flag): Flag {
+  return f === 'today' || f === 'doing' ? 'doing' : 'today';
 }
 export function defer(f: Flag): Flag {
+  if (f === 'doing') return 'today';
   if (f === 'today') return 'next';
   if (f === 'next') return 'someday';
   if (f === 'inbox' || f === null) return 'next';
@@ -119,6 +140,90 @@ export function parseDateWord(word: string, now = new Date()): string | null {
   return null;
 }
 
+// ---------- repeating tasks ----------
+
+const DAY_MS = 86400000;
+
+/** Moves a YYYY-MM-DD date by n days. */
+export function shiftDate(s: string, n: number): string {
+  const d = parseYmd(s);
+  return ymd(new Date(d.getFullYear(), d.getMonth(), d.getDate() + n));
+}
+
+/** Adds months, keeping the day but clamping to the month's end (Jan 31 + 1 month = Feb 28/29). */
+function addMonths(s: string, n: number): string {
+  const d = parseYmd(s);
+  const first = new Date(d.getFullYear(), d.getMonth() + n, 1);
+  const last = new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate();
+  return ymd(new Date(first.getFullYear(), first.getMonth(), Math.min(d.getDate(), last)));
+}
+
+/** The first date after `after` that the rule lands on. */
+export function nextOccurrence(r: Repeat, after: string): string {
+  if (r.unit === 'week' && r.weekdays?.length) {
+    // Next chosen weekday; with every > 1, skip whole weeks once the week's days are used.
+    let d = after;
+    for (let i = 1; i <= 7; i++) {
+      d = shiftDate(after, i);
+      if (r.weekdays.includes(parseYmd(d).getDay())) break;
+    }
+    if (r.every > 1 && parseYmd(d).getDay() <= parseYmd(after).getDay()) d = shiftDate(d, 7 * (r.every - 1));
+    return d;
+  }
+  if (r.unit === 'day') return shiftDate(after, r.every);
+  if (r.unit === 'week') return shiftDate(after, 7 * r.every);
+  if (r.unit === 'month') return addMonths(after, r.every);
+  return addMonths(after, 12 * r.every);
+}
+
+/**
+ * When the next copy of a finished repeating task should move into Today.
+ * "schedule" counts from where this one was scheduled (start date, else
+ * deadline) and skips any dates already past; "completion" counts from today.
+ */
+export function nextStart(r: Repeat, t: { startOn: string | null; deadline: string | null }, today: string): string {
+  const base = r.from === 'completion' ? today : (t.startOn ?? t.deadline ?? today);
+  let next = nextOccurrence(r, base);
+  for (let i = 0; next <= today && i < 1000; i++) next = nextOccurrence(r, next);
+  return next;
+}
+
+/** Days between two YYYY-MM-DD dates. */
+export function daysBetween(a: string, b: string): number {
+  return Math.round((parseYmd(b).getTime() - parseYmd(a).getTime()) / DAY_MS);
+}
+
+const WEEKDAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+export function repeatLabel(r: Repeat): string {
+  if (r.unit === 'week' && r.weekdays?.length) {
+    const days = r.weekdays.join(',');
+    const what = days === '1,2,3,4,5' ? 'weekday' : r.weekdays.map((d) => WEEKDAY_NAMES[d]).join(', ');
+    return r.every === 1 ? `Every ${what}` : `Every ${r.every} weeks on ${what === 'weekday' ? 'weekdays' : what}`;
+  }
+  const unit = r.every === 1 ? r.unit : `${r.every} ${r.unit}s`;
+  return `Every ${unit}`;
+}
+
+const REPEAT_WORDS: Record<string, Omit<Repeat, 'from'>> = {
+  daily: { every: 1, unit: 'day' },
+  weekdays: { every: 1, unit: 'week', weekdays: [1, 2, 3, 4, 5] },
+  weekly: { every: 1, unit: 'week' },
+  biweekly: { every: 2, unit: 'week' },
+  monthly: { every: 1, unit: 'month' },
+  yearly: { every: 1, unit: 'year' },
+};
+
+/** "*daily", "*weekdays", "*weekly", "*monthly", "*yearly", "*3d", "*2w", "*6m", "*1y". */
+export function parseRepeatWord(word: string): Repeat | null {
+  const w = word.toLowerCase();
+  if (REPEAT_WORDS[w]) return { ...REPEAT_WORDS[w], from: 'schedule' };
+  const m = w.match(/^(\d{1,3})([dwmy])$/);
+  if (!m || +m[1] < 1) return null;
+  const unit = ({ d: 'day', w: 'week', m: 'month', y: 'year' } as const)[m[2] as 'd' | 'w' | 'm' | 'y'];
+  return { every: +m[1], unit, from: 'schedule' };
+}
+
 /** Short label for a deadline chip: "Today", "Fri", "Oct 23". */
 export function deadlineLabel(s: string, now = new Date()): string {
   const d = parseYmd(s);
@@ -136,16 +241,23 @@ export interface QuickAdd {
   title: string;
   flag?: Flag;
   deadline?: string;
+  startOn?: string;
+  repeat?: Repeat;
   emailUrl?: string;
 }
 
 const FLAG_TOKENS: Record<string, Flag> = {
   t: 'today', today: 'today', n: 'next', next: 'next',
   s: 'someday', someday: 'someday', i: 'inbox', inbox: 'inbox',
+  p: 'doing', progress: 'doing', doing: 'doing',
 };
 
 /**
  * "Reply to Ortiz !t ^fri" -> { title: "Reply to Ortiz", flag: "today", deadline: <friday> }
+ *   !t !n !p !s !i   flag (Today, Next, In Progress, Someday, Inbox)
+ *   ^fri             deadline
+ *   @mon             start date: waits in Scheduled, moves into Today that day
+ *   *weekly *3d      repeat
  * A pasted Gmail link becomes an email block instead of part of the title.
  */
 export function parseQuickAdd(input: string, now = new Date()): QuickAdd {
@@ -158,6 +270,14 @@ export function parseQuickAdd(input: string, now = new Date()): QuickAdd {
     if (w.startsWith('^')) {
       const d = parseDateWord(w.slice(1), now);
       if (d) { out.deadline = d; continue; }
+    }
+    if (w.startsWith('@')) {
+      const d = parseDateWord(w.slice(1), now);
+      if (d) { out.startOn = d; continue; }
+    }
+    if (w.startsWith('*')) {
+      const r = parseRepeatWord(w.slice(1));
+      if (r) { out.repeat = r; continue; }
     }
     if (/^https:\/\/mail\.google\.com\//.test(w) || /^message:/.test(w)) { out.emailUrl = w; continue; }
     words.push(w);

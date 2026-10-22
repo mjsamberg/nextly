@@ -29,12 +29,14 @@ function snapshot() {
     blocked: v.blockers(t).length > 0,
     project: v.project(t.projectId)?.title ?? (t.parentId ? v.task(t.parentId)?.title ?? null : null),
   });
+  const doing = tasksFor(v, 'doing');
   const today = tasksFor(v, 'today');
   const next = tasksFor(v, 'next');
   return {
+    doing: doing.slice(0, 12).map(item),
     today: today.slice(0, 12).map(item),
     next: next.slice(0, 12).map(item),
-    counts: { today: today.length, next: next.length, inbox: tasksFor(v, 'inbox').length },
+    counts: { doing: doing.length, today: today.length, next: next.length, inbox: tasksFor(v, 'inbox').length },
     updatedAt: new Date().toISOString(),
   };
 }
@@ -79,7 +81,7 @@ async function importPending() {
     for (const p of items) {
       const title = String(p.title ?? '').trim();
       if (!title) continue;
-      const flag: Flag = p.list === 'today' || p.list === 'next' || p.list === 'someday' ? p.list : 'inbox';
+      const flag: Flag = p.list === 'doing' || p.list === 'today' || p.list === 'next' || p.list === 'someday' ? p.list : 'inbox';
       createTask({ title, flag, createdAt: p.createdAt ?? new Date().toISOString() });
     }
   } catch (e) {

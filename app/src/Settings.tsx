@@ -128,6 +128,7 @@ export default function Settings({ onBack }: { onBack: () => void }) {
         <dl className="keys">
           <dt>{mod}N</dt><dd>New task</dd>
           <dt>{mod}K</dt><dd>Search</dd>
+          <dt>{mod}D</dt><dd>Mark selected task In Progress</dd>
           <dt>{mod}T</dt><dd>Flag selected task Today</dd>
           <dt>{mod}Shift+T</dt><dd>Flag selected task Next</dd>
           <dt>{mod}Enter</dt><dd>Complete selected task</dd>
@@ -135,7 +136,7 @@ export default function Settings({ onBack }: { onBack: () => void }) {
           <dt>Esc</dt><dd>Close details</dd>
           <dt>{mod},</dt><dd>Settings</dd>
         </dl>
-        <p className="muted small">In quick add, <code>!t</code> <code>!n</code> <code>!s</code> <code>!i</code> set the flag and <code>^fri</code>, <code>^tom</code> or <code>^10/23</code> set a deadline. A pasted Gmail link becomes an email card.</p>
+        <p className="muted small">In quick add, <code>!t</code> <code>!p</code> <code>!n</code> <code>!s</code> <code>!i</code> set Today, In Progress, Next, Someday or Inbox. <code>@mon</code> holds a task in Scheduled until that day, <code>^fri</code> sets a deadline, and <code>*daily</code>, <code>*weekdays</code>, <code>*weekly</code>, <code>*monthly</code> or <code>*3d</code> / <code>*2w</code> make it repeat. A pasted Gmail link becomes an email card.</p>
       </section>
 
       <section className="panel">

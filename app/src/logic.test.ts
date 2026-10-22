@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { blockedByAccess, checkHeaders, defer, headerObject, normTask, openBlockers, orderBetween, parseCaptureLink, parseDateWord, parseQuickAdd, wouldCycle } from './logic.ts';
+import { blockedByAccess, checkHeaders, daysBetween, defer, headerObject, nextOccurrence, nextStart, normRepeat, normTask, openBlockers, orderBetween, parseCaptureLink, parseDateWord, parseQuickAdd, parseRepeatWord, promote, repeatLabel, wouldCycle } from './logic.ts';
 import type { TaskItem } from './types.ts';
 
 // Tuesday, Oct 20 2026
@@ -112,4 +112,61 @@ test('nextly:// capture links from the bookmarklet', () => {
   assert.equal(parseCaptureLink('https://add?title=x'), null);
   assert.equal(parseCaptureLink('nextly://add'), null);
   assert.equal(parseCaptureLink('nextly://add?title=' + 'a'.repeat(900))?.title.length, 500);
+});
+
+test('In Progress in quick add and swipes', () => {
+  assert.equal(parseQuickAdd('Write report !p', NOW).flag, 'doing');
+  assert.equal(promote('next'), 'today');
+  assert.equal(promote('today'), 'doing');
+  assert.equal(defer('doing'), 'today');
+});
+
+test('quick add start dates and repeats', () => {
+  const q = parseQuickAdd('Water plants @mon *weekly', NOW);
+  assert.equal(q.title, 'Water plants');
+  assert.equal(q.startOn, '2026-10-26');
+  assert.deepEqual(q.repeat, { every: 1, unit: 'week', from: 'schedule' });
+  assert.deepEqual(parseRepeatWord('3d'), { every: 3, unit: 'day', from: 'schedule' });
+  assert.deepEqual(parseRepeatWord('weekdays'), { every: 1, unit: 'week', weekdays: [1, 2, 3, 4, 5], from: 'schedule' });
+  assert.equal(parseRepeatWord('0d'), null);
+  assert.equal(parseQuickAdd('Email *nonsense', NOW).title, 'Email *nonsense');
+});
+
+test('next occurrence', () => {
+  const r = (x: object) => normRepeat({ every: 1, from: 'schedule', ...x })!;
+  assert.equal(nextOccurrence(r({ unit: 'day' }), '2026-10-20'), '2026-10-21');
+  assert.equal(nextOccurrence(r({ unit: 'week', every: 2 }), '2026-10-20'), '2026-11-03');
+  // Month end clamps: Jan 31 -> Feb 28 (2027 isn't a leap year), Mar 31 -> Apr 30.
+  assert.equal(nextOccurrence(r({ unit: 'month' }), '2027-01-31'), '2027-02-28');
+  assert.equal(nextOccurrence(r({ unit: 'month' }), '2026-03-31'), '2026-04-30');
+  assert.equal(nextOccurrence(r({ unit: 'year' }), '2028-02-29'), '2029-02-28');
+  // Weekdays: Fri Oct 23 -> Mon Oct 26; Tue -> Wed.
+  const wk = r({ unit: 'week', weekdays: [1, 2, 3, 4, 5] });
+  assert.equal(nextOccurrence(wk, '2026-10-23'), '2026-10-26');
+  assert.equal(nextOccurrence(wk, '2026-10-20'), '2026-10-21');
+  // Mon/Thu every 2 weeks: Mon -> Thu same week; Thu -> Mon two weeks later.
+  const mt = r({ unit: 'week', every: 2, weekdays: [1, 4] });
+  assert.equal(nextOccurrence(mt, '2026-10-19'), '2026-10-22');
+  assert.equal(nextOccurrence(mt, '2026-10-22'), '2026-11-02');
+});
+
+test('next start: from schedule skips missed dates; from completion counts from today', () => {
+  const today = '2026-10-20';
+  const weekly = normRepeat({ every: 1, unit: 'week', from: 'schedule' })!;
+  // Was due Oct 5, finished late on Oct 20: next is the first Monday-cadence date after today.
+  assert.equal(nextStart(weekly, { startOn: '2026-10-05', deadline: null }, today), '2026-10-26');
+  assert.equal(nextStart(weekly, { startOn: null, deadline: '2026-10-19' }, today), '2026-10-26');
+  const after = normRepeat({ every: 3, unit: 'day', from: 'completion' })!;
+  assert.equal(nextStart(after, { startOn: '2026-10-01', deadline: null }, today), '2026-10-23');
+  assert.equal(daysBetween('2026-10-20', '2026-10-26'), 6);
+});
+
+test('repeat labels and cleanup', () => {
+  assert.equal(repeatLabel(normRepeat({ every: 1, unit: 'day' })!), 'Every day');
+  assert.equal(repeatLabel(normRepeat({ every: 2, unit: 'week' })!), 'Every 2 weeks');
+  assert.equal(repeatLabel(normRepeat({ every: 1, unit: 'week', weekdays: [5, 1, 2, 3, 4] })!), 'Every weekday');
+  assert.equal(repeatLabel(normRepeat({ every: 1, unit: 'week', weekdays: [1, 4] })!), 'Every Mon, Thu');
+  assert.equal(normRepeat({ unit: 'fortnight' }), null);
+  assert.equal(normRepeat({ every: 9999, unit: 'day' })!.every, 365);
+  assert.equal(normTask({ title: 'x', flag: 'doing' }).flag, 'doing');
 });

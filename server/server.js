@@ -169,7 +169,7 @@ const server = http.createServer(async (req, res) => {
       return send(res, 200, { ok: true, serverId: SERVER_ID, ...r, files, liveDevices: live.count() });
     }
 
-    if (url.pathname === '/widget' && req.method === 'GET') return send(res, 200, taskApi.widget());
+    if (url.pathname === '/widget' && req.method === 'GET') return send(res, 200, taskApi.widget(url.searchParams.get('today')));
 
     if (url.pathname === '/tasks' && req.method === 'POST') {
       const r = taskApi.create(JSON.parse((await readBody(req, 64 * 1024)).toString() || '{}'));
@@ -178,7 +178,7 @@ const server = http.createServer(async (req, res) => {
 
     const done = url.pathname.match(/^\/tasks\/([\w-]{1,64})\/done$/);
     if (done && req.method === 'POST') {
-      const r = taskApi.complete(done[1]);
+      const r = taskApi.complete(done[1], JSON.parse((await readBody(req, 4096)).toString() || '{}'));
       return send(res, r.status, r.body);
     }
 

@@ -17,6 +17,7 @@ interface Props {
 
 const MAIN: { id: View; label: string; icon: JSX.Element; cls?: string }[] = [
   { id: 'inbox', label: 'Inbox', icon: <I.Inbox /> },
+  { id: 'doing', label: 'In Progress', icon: <I.Play />, cls: 'ic-doing' },
   { id: 'today', label: 'Today', icon: <I.Star />, cls: 'ic-today' },
   { id: 'next', label: 'Next', icon: <I.Next />, cls: 'ic-next' },
   { id: 'scheduled', label: 'Scheduled', icon: <I.Calendar /> },

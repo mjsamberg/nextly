@@ -8,7 +8,7 @@ import '@fontsource/oswald/600.css';
 import './styles.css';
 import './platform.css';
 import App from './App';
-import { load } from './store';
+import { load, promoteDue } from './store';
 import { initSync } from './sync';
 import { initApple } from './apple';
 import { initCapture } from './capture';
@@ -21,8 +21,21 @@ void hasMica().then((m) => { if (m) document.documentElement.dataset.mica = ''; 
 const root = createRoot(document.getElementById('root')!);
 
 load()
+  .then(startDailyCheck)
   .then(initSync)
   .then(initApple)
   .then(() => root.render(<React.StrictMode><App /></React.StrictMode>))
   .then(() => initCapture())
   .catch((e) => root.render(<p className="fatal">Nextly couldn’t open its local database: {String(e)}</p>));
+
+/**
+ * Tasks with a start date (including the next copy of a repeating task) move
+ * into Today on that day: check at launch, when the app comes back to the
+ * front, and every minute in case the date rolls over while it's open.
+ */
+function startDailyCheck() {
+  promoteDue();
+  window.addEventListener('focus', () => promoteDue());
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) promoteDue(); });
+  setInterval(() => promoteDue(), 60_000);
+}
