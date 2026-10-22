@@ -6,14 +6,17 @@ import '@fontsource/mulish/800.css';
 import '@fontsource/oswald/500.css';
 import '@fontsource/oswald/600.css';
 import './styles.css';
+import './platform.css';
 import App from './App';
 import { load } from './store';
 import { initSync } from './sync';
 import { initApple } from './apple';
 import { initCapture } from './capture';
-import { platform } from './net';
+import { hasMica, inTauri, platform } from './net';
 
 document.documentElement.dataset.platform = platform;
+if (inTauri) document.documentElement.dataset.app = '';
+void hasMica().then((m) => { if (m) document.documentElement.dataset.mica = ''; });
 
 const root = createRoot(document.getElementById('root')!);
 

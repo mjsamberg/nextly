@@ -78,6 +78,8 @@ export default function App() {
 
   return (
     <div className="app" data-pane={pane} data-detail={task ? 'open' : 'closed'}>
+      {/* macOS: the title bar is hidden; this strip lets you drag the window. */}
+      <div className="drag-strip" data-tauri-drag-region aria-hidden="true" />
       <Sidebar
         view={settingsOpen ? null : view}
         onGo={go}

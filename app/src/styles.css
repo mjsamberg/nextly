@@ -163,7 +163,7 @@ h1, h2 { font-family: var(--display); font-weight: 600; text-transform: uppercas
 .detail-top { display: flex; justify-content: space-between; align-items: center; min-height: 0; }
 .detail-top .back { width: auto; }
 @media (min-width: 761px) { .detail-top { justify-content: flex-end; margin-bottom: -10px; } }
-@media (max-width: 760px) { .close-x { display: none; } .detail { padding-left: max(16px, var(--safe-l)); padding-right: max(16px, var(--safe-r)); } }
+@media (max-width: 760px) { .detail-top .close-x { display: none; } .detail { padding-left: max(16px, var(--safe-l)); padding-right: max(16px, var(--safe-r)); } }
 .icon-btn { color: var(--ink-3); display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 5px; flex: none; }
 .icon-btn:hover { background: var(--hover); color: var(--ink); }
 .parent-link { display: inline-flex; gap: 5px; align-items: center; color: var(--next); font-size: 12.5px; justify-self: start; }

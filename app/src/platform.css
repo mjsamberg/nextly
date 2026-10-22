@@ -1,0 +1,205 @@
+/* Platform design languages, layered over styles.css.
+   html[data-platform] is mac | win | ios | other (net.ts).
+   Brand colors and fonts stay (Chatham County Schools guide); what changes is
+   structure, materials, control shapes, density and navigation patterns.
+     mac  – Things/Finder: hidden title bar, tinted sidebar, compact rows,
+            rounded-square checkboxes, macOS segmented control.
+     win  – Windows 11 Fluent: Mica backdrop (Win 11), navigation pane with a
+            selection pill, content on rounded layer cards, 4px controls,
+            accent underline on focused text boxes, Pivot-style tabs.
+     ios  – inset grouped lists, large titles, iOS search field and
+            segmented control, round checkboxes, 44pt targets. */
+
+.drag-strip, .chev { display: none; }
+
+/* ======================================================================
+   macOS
+   ====================================================================== */
+[data-platform="mac"] {
+  --side: #e8e8ec; --sel: rgba(19, 65, 105, .16); --field: #ffffff; --ctl: rgba(0, 0, 0, .06);
+  --line: #dcdce1; --hover: rgba(0, 0, 0, .05); --bg: #ffffff;
+}
+@media (prefers-color-scheme: dark) {
+  [data-platform="mac"] {
+    --side: #2a2a2e; --sel: rgba(143, 180, 224, .24); --field: #1e1e21; --ctl: rgba(255, 255, 255, .08);
+    --line: #3a3a3f; --hover: rgba(255, 255, 255, .06); --bg: #1e1e21; --paper: #1e1e21;
+  }
+}
+[data-platform="mac"] body { font-size: 13px; }
+[data-platform="mac"] .drag-strip { display: block; position: fixed; top: 0; left: 0; right: 0; height: 40px; z-index: 20; }
+/* Room for the traffic lights and the drag strip. */
+[data-platform="mac"] .sidebar { padding-top: 48px; background: var(--side); border-right: 1px solid var(--line); }
+[data-platform="mac"] .list { padding-top: 48px; }
+[data-platform="mac"] .detail { padding-top: 48px; }
+[data-platform="mac"] .search { height: 26px; border-radius: 7px; border: 0; background: var(--ctl); }
+[data-platform="mac"] .nav { padding: 4px 8px; border-radius: 6px; font-size: 13px; min-height: 26px; }
+[data-platform="mac"] .nav.on { background: var(--sel); box-shadow: none; font-weight: 600; }
+[data-platform="mac"] .grp { font-size: 11px; letter-spacing: .02em; text-transform: none; font-weight: 700; color: var(--ink-3); }
+[data-platform="mac"] .list-h h1 { font-size: 24px; }
+[data-platform="mac"] .quick { border: 1px solid var(--line); border-style: solid; border-radius: 6px; background: var(--field); padding: 5px 8px; }
+[data-platform="mac"] .quick:focus-within { border-color: var(--navy); box-shadow: 0 0 0 3px rgba(19, 65, 105, .25); }
+[data-platform="mac"] .row { padding: 4px 8px; border-radius: 6px; background: transparent; }
+[data-platform="mac"] .list-pane .row { background: transparent; }
+[data-platform="mac"] .row.sel { background: var(--sel); }
+[data-platform="mac"] .cb { border-radius: 4px; width: 15px; height: 15px; }
+[data-platform="mac"] .cb.checked { background: var(--navy); border-color: var(--navy); }
+[data-platform="mac"] .detail-pane { background: var(--paper); }
+[data-platform="mac"] .seg { border: 0; border-radius: 7px; background: var(--ctl); padding: 2px; gap: 2px; }
+[data-platform="mac"] .seg button { border: 0; border-radius: 5px; padding: 3px 0; }
+[data-platform="mac"] .seg button[aria-checked="true"] { box-shadow: 0 1px 2px rgba(0, 0, 0, .18), 0 0 0 .5px rgba(0, 0, 0, .06); }
+[data-platform="mac"] .seg .on, [data-platform="mac"] .seg .on-someday { background: var(--paper); }
+[data-platform="mac"] .row-btns button, [data-platform="mac"] .org-row button[type="submit"] { border-radius: 6px; padding: 3px 12px; font-weight: 600; box-shadow: 0 1px 1px rgba(0, 0, 0, .08); }
+[data-platform="mac"] input:focus-visible, [data-platform="mac"] select:focus-visible, [data-platform="mac"] textarea:focus-visible { outline: 3px solid rgba(19, 65, 105, .3); outline-offset: 0; }
+[data-platform="mac"] .settings .panel { border-radius: 10px; background: var(--hover); border: 1px solid var(--line); }
+
+/* ======================================================================
+   Windows 11 (Fluent)
+   ====================================================================== */
+[data-platform="win"] {
+  --win-base: #f3f3f3; --win-layer: #fbfbfb; --win-stroke: rgba(0, 0, 0, .0578);
+  --hover: rgba(0, 0, 0, .037); --sel: rgba(0, 0, 0, .037); --ctl: #ffffff;
+  --line: rgba(0, 0, 0, .08);
+}
+@media (prefers-color-scheme: dark) {
+  [data-platform="win"] {
+    --win-base: #202020; --win-layer: #272727; --win-stroke: rgba(0, 0, 0, .1);
+    --hover: rgba(255, 255, 255, .06); --sel: rgba(255, 255, 255, .06); --ctl: rgba(255, 255, 255, .06);
+    --line: rgba(255, 255, 255, .08);
+  }
+}
+/* Mica (Windows 11 only): the backdrop shows through; layers are translucent. */
+[data-platform="win"][data-mica] { --win-base: transparent; --win-layer: rgba(255, 255, 255, .5); }
+@media (prefers-color-scheme: dark) {
+  [data-platform="win"][data-mica] { --win-layer: rgba(58, 58, 58, .3); }
+}
+[data-platform="win"] body { background: var(--win-base); }
+[data-platform="win"] .app { background: var(--win-base); }
+[data-platform="win"] .sidebar { background: transparent; border-right: 0; padding: 8px 4px 8px 6px; }
+[data-platform="win"] .search { height: 32px; border-radius: 4px; border: 1px solid var(--win-stroke); border-bottom-color: rgba(0, 0, 0, .45); background: var(--ctl); }
+[data-platform="win"] .search:focus-within { border-bottom: 2px solid var(--navy); }
+[data-platform="win"] .nav { position: relative; min-height: 36px; padding: 0 12px; border-radius: 4px; }
+[data-platform="win"] .nav:hover { background: var(--hover); }
+[data-platform="win"] .nav.on { background: var(--sel); box-shadow: none; font-weight: 600; }
+/* The Fluent selection pill. */
+[data-platform="win"] .nav.on::before { content: ""; position: absolute; left: 0; top: 50%; width: 3px; height: 16px; margin-top: -8px; border-radius: 2px; background: var(--navy); }
+@media (prefers-color-scheme: dark) { [data-platform="win"] .nav.on::before { background: var(--next); } }
+[data-platform="win"] .grp { text-transform: none; letter-spacing: 0; font-size: 12px; font-weight: 600; color: var(--ink-2); }
+/* Content sits on layer cards, like Windows Settings. */
+[data-platform="win"] .list-pane { background: var(--win-layer); border: 1px solid var(--win-stroke); border-right: 0; border-bottom: 0; border-top-left-radius: 8px; margin-top: 2px; }
+[data-platform="win"] .detail-pane { background: var(--win-layer); border-left: 1px solid var(--win-stroke); margin-top: 2px; }
+[data-platform="win"] .list-pane .row { background: transparent; }
+[data-platform="win"] .row { border-radius: 4px; min-height: 40px; }
+[data-platform="win"] .row:hover { background: var(--hover); }
+[data-platform="win"] .row.sel { background: var(--sel); box-shadow: inset 3px 0 0 var(--navy); }
+[data-platform="win"] .cb { border-radius: 50%; width: 18px; height: 18px; }
+[data-platform="win"] .cb.checked { background: var(--navy); border-color: var(--navy); }
+[data-platform="win"] .list-h h1 { font-size: 28px; }
+[data-platform="win"] .quick { border: 1px solid var(--win-stroke); border-bottom-color: rgba(0, 0, 0, .45); border-radius: 4px; background: var(--ctl); }
+[data-platform="win"] .quick:focus-within { border-color: var(--win-stroke); border-bottom: 2px solid var(--navy); color: var(--navy); }
+[data-platform="win"] .field input, [data-platform="win"] .field select,
+[data-platform="win"] .form input, [data-platform="win"] .org-row input, [data-platform="win"] .org-row select,
+[data-platform="win"] .dep-add input, [data-platform="win"] .header-row input {
+  border-radius: 4px; border: 1px solid var(--win-stroke); border-bottom-color: rgba(0, 0, 0, .45); background: var(--ctl);
+}
+[data-platform="win"] .field input:focus, [data-platform="win"] .form input:focus, [data-platform="win"] .dep-add input:focus { border-bottom: 2px solid var(--navy); }
+/* Pivot-style flag picker: text tabs with an accent underline. */
+[data-platform="win"] .seg { border: 0; border-radius: 0; gap: 4px; }
+[data-platform="win"] .seg button { border: 0; border-radius: 4px; position: relative; padding: 8px 0; }
+[data-platform="win"] .seg button:hover { background: var(--hover); }
+[data-platform="win"] .seg button[aria-checked="true"] { background: transparent; color: var(--ink); font-weight: 800; }
+[data-platform="win"] .seg button[aria-checked="true"]::after { content: ""; position: absolute; left: 30%; right: 30%; bottom: 0; height: 3px; border-radius: 2px; background: var(--navy); }
+[data-platform="win"] .seg .on-today[aria-checked="true"]::after { background: var(--gold); }
+[data-platform="win"] .row-btns button, [data-platform="win"] .org-row button[type="submit"] { border-radius: 4px; border: 1px solid var(--win-stroke); border-bottom-color: rgba(0, 0, 0, .16); background: var(--ctl); font-weight: 600; padding: 5px 12px; }
+[data-platform="win"] .row-btns .pri { background: var(--navy); border-color: var(--navy); }
+[data-platform="win"] .settings .panel { border-radius: 8px; background: var(--win-layer); border: 1px solid var(--win-stroke); }
+[data-platform="win"] .toast { border-radius: 8px; }
+[data-platform="win"] ::-webkit-scrollbar { width: 6px; height: 6px; }
+[data-platform="win"] ::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, .35); border-radius: 3px; }
+
+/* ======================================================================
+   iOS
+   ====================================================================== */
+[data-platform="ios"] {
+  --ios-bg: #f2f2f7; --ios-cell: #ffffff; --ios-sep: rgba(60, 60, 67, .29); --ios-fill: rgba(118, 118, 128, .12);
+  --bg: var(--ios-bg); --paper: var(--ios-cell); --line: var(--ios-sep);
+}
+@media (prefers-color-scheme: dark) {
+  [data-platform="ios"] {
+    --ios-bg: #000000; --ios-cell: #1c1c1e; --ios-sep: rgba(84, 84, 88, .65); --ios-fill: rgba(118, 118, 128, .24);
+  }
+}
+[data-platform="ios"] body { font-size: 17px; background: var(--ios-bg); }
+[data-platform="ios"] .chev { display: block; width: 14px; height: 14px; color: var(--ink-3); opacity: .6; margin-left: auto; flex: none; }
+[data-platform="ios"] .nav .ct + .chev { margin-left: 8px; }
+[data-platform="ios"] .nav .ct { font-size: 17px; }
+
+/* Lists home: large title, search field, inset grouped sections. */
+[data-platform="ios"] .sidebar { background: var(--ios-bg); padding-top: calc(12px + var(--safe-t)); gap: 0; }
+[data-platform="ios"] .sidebar::before { content: "Nextly"; font: 600 34px/1.15 var(--display); text-transform: uppercase; padding: 8px 4px 10px; }
+[data-platform="ios"] .search { height: 36px; border: 0; border-radius: 10px; background: var(--ios-fill); margin-bottom: 18px; font-size: 17px; }
+[data-platform="ios"] .nav-list, [data-platform="ios"] .nav-group { background: var(--ios-cell); border-radius: 10px; overflow: hidden; margin: 0 0 22px; padding: 0; }
+[data-platform="ios"] .nav-group .grp { background: var(--ios-bg); margin: 0; padding: 0 16px 7px; font-size: 13px; font-weight: 400; letter-spacing: 0; text-transform: uppercase; }
+[data-platform="ios"] .nav { min-height: 44px; padding: 0 16px; border-radius: 0; gap: 14px; font-size: 17px; position: relative; }
+[data-platform="ios"] .nav + .nav::before { content: ""; position: absolute; top: 0; left: 50px; right: 0; border-top: .5px solid var(--ios-sep); }
+[data-platform="ios"] .nav.on { background: transparent; box-shadow: none; font-weight: 400; }
+[data-platform="ios"] .nav:active { background: var(--ios-fill); }
+[data-platform="ios"] .nav svg:first-child, [data-platform="ios"] .nav > span:first-child svg { width: 20px; height: 20px; }
+[data-platform="ios"] .side-foot { background: var(--ios-cell); border-radius: 10px; padding: 0; margin-top: 0; }
+[data-platform="ios"] .side-foot .nav { flex: 1; }
+[data-platform="ios"] .sync-dot { margin-right: 16px; }
+[data-platform="ios"] .nav.muted { background: transparent; color: var(--navy); }
+
+/* List screen: navigation bar with back button, large title, plain list. */
+[data-platform="ios"] .list-pane { background: var(--ios-cell); }
+[data-platform="ios"] .back { font-size: 17px; color: var(--navy); min-height: 44px; }
+@media (prefers-color-scheme: dark) { [data-platform="ios"] .back, [data-platform="ios"] .nav.muted { color: var(--next); } }
+[data-platform="ios"] .list-h { gap: 2px; }
+[data-platform="ios"] .list-h h1 { font-size: 34px; width: 100%; }
+[data-platform="ios"] .quick { border: 0; border-radius: 10px; background: var(--ios-fill); padding: 10px 12px; color: var(--navy); }
+[data-platform="ios"] .quick input { font-size: 17px; }
+[data-platform="ios"] .rows { gap: 0; }
+[data-platform="ios"] .row-wrap { border-radius: 0; }
+[data-platform="ios"] .row { min-height: 48px; padding: 10px 4px; border-radius: 0; font-size: 17px; background: var(--ios-cell); }
+[data-platform="ios"] .list-pane .row { background: var(--ios-cell); }
+[data-platform="ios"] .row-wrap + .row-wrap .row::before, [data-platform="ios"] .drag + .drag .row::before { content: ""; position: absolute; top: 0; left: 40px; right: 0; border-top: .5px solid var(--ios-sep); }
+[data-platform="ios"] .row:hover { background: var(--ios-cell); }
+[data-platform="ios"] .row:active, [data-platform="ios"] .row.sel { background: var(--ios-fill); }
+[data-platform="ios"] .cb { border-radius: 50%; width: 22px; height: 22px; border-width: 1.5px; }
+[data-platform="ios"] .cb svg { width: 14px; height: 14px; }
+[data-platform="ios"] .cb.checked { background: var(--navy); border-color: var(--navy); }
+[data-platform="ios"] .cb.small { width: 20px; height: 20px; }
+[data-platform="ios"] .sec { font-size: 13px; font-weight: 600; letter-spacing: 0; text-transform: uppercase; padding-top: 22px; }
+[data-platform="ios"] .sec::after { display: none; }
+
+/* Task details: grouped sections, like Settings or Reminders. */
+[data-platform="ios"] .detail-pane { background: var(--ios-bg); }
+[data-platform="ios"] .detail { gap: 22px; }
+[data-platform="ios"] .detail > section, [data-platform="ios"] .detail > .fields, [data-platform="ios"] .detail > .d-title-row {
+  background: var(--ios-cell); border-radius: 10px; padding: 12px 16px;
+}
+[data-platform="ios"] .detail > .notes { border-top: 0; }
+[data-platform="ios"] .detail .lbl { font-size: 13px; font-weight: 400; letter-spacing: 0; color: var(--ink-3); }
+[data-platform="ios"] .d-title { font-size: 20px; }
+[data-platform="ios"] .field { min-height: 36px; font-size: 17px; }
+[data-platform="ios"] .field input, [data-platform="ios"] .field select { border: 0; background: var(--ios-fill); border-radius: 8px; padding: 6px 10px; font-size: 17px; }
+[data-platform="ios"] .seg { border: 0; border-radius: 9px; background: var(--ios-fill); padding: 2px; gap: 0; }
+[data-platform="ios"] .seg button { border: 0; border-radius: 7px; padding: 7px 0; font-size: 13px; }
+[data-platform="ios"] .seg button[aria-checked="true"] { box-shadow: 0 3px 8px rgba(0, 0, 0, .12), 0 3px 1px rgba(0, 0, 0, .04); }
+[data-platform="ios"] .seg .on, [data-platform="ios"] .seg .on-someday { background: var(--ios-cell); }
+[data-platform="ios"] .sub-row { min-height: 44px; font-size: 17px; }
+[data-platform="ios"] .dep { border: 0; background: var(--ios-fill); border-radius: 10px; min-height: 44px; font-size: 15px; }
+[data-platform="ios"] .dep-add input { border: 0; background: var(--ios-fill); border-radius: 10px; padding: 10px 12px; font-size: 17px; }
+[data-platform="ios"] .blk textarea, [data-platform="ios"] .blk input { font-size: 17px; }
+[data-platform="ios"] .d-foot { border-top: 0; justify-content: center; flex-direction: column; gap: 14px; }
+[data-platform="ios"] .danger { background: var(--ios-cell); border-radius: 10px; width: 100%; min-height: 44px; font-size: 17px; font-weight: 400; }
+
+/* Settings: inset grouped. */
+[data-platform="ios"] .settings { background: var(--ios-bg); }
+[data-platform="ios"] .list-pane:has(.settings) { background: var(--ios-bg); }
+[data-platform="ios"] .settings .panel { border: 0; border-radius: 10px; background: var(--ios-cell); }
+[data-platform="ios"] .form input, [data-platform="ios"] .org-row input, [data-platform="ios"] .org-row select, [data-platform="ios"] .header-row input {
+  border: 0; background: var(--ios-fill); border-radius: 8px; padding: 10px 12px; font-size: 17px;
+}
+[data-platform="ios"] .row-btns button, [data-platform="ios"] .org-row button[type="submit"] { border: 0; border-radius: 12px; padding: 10px 16px; font-size: 17px; background: var(--ios-fill); color: var(--navy); }
+[data-platform="ios"] .row-btns .pri { background: var(--navy); color: #fff; }
+[data-platform="ios"] .toast { border-radius: 14px; padding: 12px 16px; font-size: 15px; }

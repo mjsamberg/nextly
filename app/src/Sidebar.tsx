@@ -3,7 +3,7 @@ import * as I from './icons';
 import { createProject, useStore } from './store';
 import { useSyncStatus } from './sync';
 import { counts } from './lists';
-import { mod } from './net';
+import { mod, platform } from './net';
 import type { View } from './types';
 
 interface Props {
@@ -40,13 +40,14 @@ export default function Sidebar({ view, onGo, query, onQuery, searchRef, onSetti
     <nav className="sidebar" aria-label="Lists">
       <label className="search">
         <I.Search />
-        <input id="search" ref={searchRef} value={query} placeholder={`Search  (${mod}K)`} onChange={(e) => onQuery(e.target.value)} />
+        <input id="search" ref={searchRef} value={query} placeholder={platform === 'ios' ? 'Search' : `Search  (${mod}K)`} onChange={(e) => onQuery(e.target.value)} />
       </label>
       <div className="nav-list">
         {MAIN.map((m) => (
           <button key={m.id} className={`nav ${view === m.id ? 'on' : ''}`} onClick={() => onGo(m.id)} aria-current={view === m.id}>
             <span className={m.cls}>{m.icon}</span>{m.label}
             {c[m.id as keyof typeof c] ? <span className="ct">{c[m.id as keyof typeof c]}</span> : null}
+            <I.Chevron className="chev" />
           </button>
         ))}
       </div>
@@ -61,7 +62,7 @@ export default function Sidebar({ view, onGo, query, onQuery, searchRef, onSetti
             const n = v.tasks.filter((t) => t.projectId === p.id && !t.done && !t.parentId).length;
             return (
               <button key={p.id} className={`nav proj ${view === id ? 'on' : ''}`} onClick={() => onGo(id)}>
-                <I.Folder />{p.title || 'Untitled project'}{n ? <span className="ct">{n}</span> : null}
+                <I.Folder />{p.title || 'Untitled project'}{n ? <span className="ct">{n}</span> : null}<I.Chevron className="chev" />
               </button>
             );
           })}
@@ -77,7 +78,7 @@ export default function Sidebar({ view, onGo, query, onQuery, searchRef, onSetti
       )}
 
       <div className="side-foot">
-        <button className="nav" onClick={onSettings}><I.Gear />Settings</button>
+        <button className="nav" onClick={onSettings}><I.Gear />Settings<I.Chevron className="chev" /></button>
         <span className={`sync-dot ${sync.state}`} title={sync.message} aria-label={`Sync: ${sync.message}`} />
       </div>
     </nav>
