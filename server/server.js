@@ -17,6 +17,7 @@
 //   WS   /events        live updates: {"type":"changed"} after another device syncs (live.js)
 //   POST /events/ticket one-minute WebSocket ticket, for browsers that can't send headers
 //   GET  /widget, POST /tasks, POST /tasks/:id/done   for the widget and Siri (tasks.js)
+//   GET  /iiq/status    Incident IQ sync status, when IIQ_* is set (iiq.js)
 
 import http from 'node:http';
 import fs from 'node:fs';
@@ -25,6 +26,7 @@ import crypto from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 import { createLive } from './live.js';
 import { createTaskApi } from './tasks.js';
+import { createIiq, iiqConfig } from './iiq.js';
 
 const TOKEN = process.env.NEXTLY_TOKEN;
 const DATA = process.env.NEXTLY_DATA || './data';
@@ -113,7 +115,8 @@ function readBody(req, limit) {
 
 const lastSeq = () => db.prepare('SELECT COALESCE(MAX(seq), 0) AS s FROM records').get().s;
 const live = createLive({ token: TOKEN, authorized, lastSeq });
-const taskApi = createTaskApi({ db, applyChanges, onChange: () => live.changed('server') });
+const taskApi = createTaskApi({ db, applyChanges, onChange: () => live.changed('server'), onIiqAction: () => void iiq.processActions() });
+const iiq = createIiq({ db, applyChanges, onChange: () => live.changed('iiq'), cfg: iiqConfig() });
 
 /** Returns how many changes were newer than what the server had. */
 function applyChanges(changes) {
@@ -170,6 +173,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (url.pathname === '/widget' && req.method === 'GET') return send(res, 200, taskApi.widget(url.searchParams.get('today')));
+    if (url.pathname === '/iiq/status' && req.method === 'GET') return send(res, 200, iiq.status());
 
     if (url.pathname === '/tasks' && req.method === 'POST') {
       const r = taskApi.create(JSON.parse((await readBody(req, 64 * 1024)).toString() || '{}'));
@@ -189,6 +193,8 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname === '/sync' && req.method === 'POST') {
       const { cursor = 0, changes = [], deviceId = '' } = JSON.parse((await readBody(req, 10 * 1024 * 1024)).toString() || '{}');
       if (applyChanges(changes) > 0) live.changed(String(deviceId));
+      // A device asked for something in Incident IQ (comment, start, resolve).
+      if (changes.some((c) => c.kind === 'iiq-action')) void iiq.processActions();
       const rows = since.all(Number(cursor)).map((r) => ({ ...r, deleted: !!r.deleted, data: JSON.parse(r.data) }));
       const newCursor = rows.length ? rows[rows.length - 1].seq : Number(cursor);
       return send(res, 200, { serverId: SERVER_ID, lastSeq: lastSeq(), cursor: newCursor, changes: rows, more: rows.length === 5000 });
@@ -230,4 +236,7 @@ server.on('upgrade', (req, socket) => {
   if (!live.upgrade(req, socket)) socket.destroy();
 });
 
-server.listen(PORT, () => console.log(`Nextly sync listening on :${PORT}`));
+server.listen(PORT, () => {
+  console.log(`Nextly sync listening on :${PORT}`);
+  if (iiq.state.enabled) { console.log('Incident IQ sync on.'); iiq.start(); }
+});

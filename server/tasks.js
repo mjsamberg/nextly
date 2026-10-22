@@ -16,7 +16,7 @@ import { daysBetween, localToday, nextStart, shiftDate, validRepeat } from './re
 const LISTS = new Set(['doing', 'today', 'next', 'inbox', 'someday']);
 const MAX_ITEMS = 12;
 
-export function createTaskApi({ db, applyChanges, onChange }) {
+export function createTaskApi({ db, applyChanges, onChange, onIiqAction = () => {} }) {
   const allTasks = db.prepare("SELECT id, hlc, data FROM records WHERE kind = 'task' AND deleted = 0");
   const allProjects = db.prepare("SELECT id, data FROM records WHERE kind = 'project' AND deleted = 0");
 
@@ -124,8 +124,15 @@ export function createTaskApi({ db, applyChanges, onChange }) {
         changed.set(t.id, { ...t, flag: 'next', order });
       }
     }
-    applyChanges([...changed.values()].map(record));
+    const rows = [...changed.values()].map(record);
+    // An Incident IQ ticket finished from the widget or Siri: ask IIQ to resolve it too.
+    if (target.external?.source === 'iiq' && target.external.id) {
+      rows.push({ id: crypto.randomUUID(), kind: 'iiq-action', hlc: hlcAfter(null), deleted: false,
+        data: { type: 'resolve', taskId: id, ticketId: target.external.id, state: 'pending', createdAt: now } });
+    }
+    applyChanges(rows);
     onChange();
+    if (rows.some((r) => r.kind === 'iiq-action')) onIiqAction();
     return { status: 200, body: { ok: true, changed: changed.size, nextId } };
   }
 

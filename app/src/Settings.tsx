@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import * as I from './icons';
 import { createArea, deleteArea, deleteProject, deviceId, updateArea, updateProject, useStore } from './store';
-import { checkConnection, getSettings, saveSettings, syncNow, useSyncStatus } from './sync';
+import { checkConnection, getSettings, iiqStatus, saveSettings, syncNow, useSyncStatus, type IiqStatus } from './sync';
 import { checkHeaders, type HeaderRow } from './logic';
 import { mod } from './net';
 import { useShareStatus, widgetSharingEnabled } from './apple';
@@ -94,6 +94,8 @@ export default function Settings({ onBack }: { onBack: () => void }) {
         <p className="muted small">Nextly <code>{__APP_VERSION__}</code> · This device: <code>{deviceId}</code></p>
       </section>
 
+      <IiqSection />
+
       <section className="panel">
         <h2>Areas and projects</h2>
         <p className="muted">Areas group projects in the sidebar, like Classroom or Tech committee.</p>
@@ -144,5 +146,42 @@ export default function Settings({ onBack }: { onBack: () => void }) {
         <p className="muted">Notes and attachments sync to your own server, not a district system. Keep student records such as grades, IEP or 504 details out of Nextly. Directory information, like a name on a conference list, is the most you should store.</p>
       </section>
     </div>
+  );
+}
+
+/** Incident IQ: set up on the server; this shows whether it's working. */
+function IiqSection() {
+  const sync = useSyncStatus();
+  const [s, setS] = useState<IiqStatus | null | undefined>(undefined);
+  useEffect(() => { let live = true; void iiqStatus().then((r) => { if (live) setS(r); }); return () => { live = false; }; }, [sync.lastSync]);
+  return (
+    <section className="panel">
+      <h2>Incident IQ</h2>
+      {s === undefined && <p className="muted">Checking…</p>}
+      {(s === null || s?.enabled === false) && (
+        <p className="muted">Not set up. Tickets assigned to you can sync into an “Incident IQ” project once the server has your district’s Incident IQ details. See docs/incident-iq.md.</p>
+      )}
+      {s?.enabled && (
+        <>
+          <p className={`sync-line ${s.lastError ? 'error' : ''}`}>
+            <span className={`sync-dot ${s.lastError ? 'error' : s.lastSync ? 'idle' : 'syncing'}`} />
+            {s.lastError
+              ? s.lastError
+              : s.lastSync
+                ? `${s.tickets} open ticket${s.tickets === 1 ? '' : 's'} assigned to you · checked ${new Date(s.lastSync).toLocaleTimeString()} · every ${Math.round((s.pollSeconds ?? 120) / 60)} min`
+                : 'First sync in progress…'}
+          </p>
+          {!s.knowsUser && <p className="muted small">The server can’t tell which Incident IQ user you are from the token, so it syncs every assigned ticket on your list. Set IIQ_USER_ID on the server to limit it to yours.</p>}
+          <p className="muted small">
+            {s.canResolve
+              ? 'Finishing a ticket’s task resolves the ticket in Incident IQ.'
+              : 'Finishing a ticket’s task adds an internal note; close the ticket in Incident IQ. Set IIQ_RESOLUTION_ACTION_ID on the server to resolve tickets from Nextly.'}
+          </p>
+        </>
+      )}
+      <p className="warn-note">
+        <strong>Student information.</strong> Ticket tasks can include more than directory information about students, such as names with device problems and ticket descriptions. They’re stored on your Nextly server and devices. Follow district guidance on where student information may be kept.
+      </p>
+    </section>
   );
 }

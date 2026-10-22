@@ -289,3 +289,26 @@ export async function fileLink(sha: string, name: string, mime: string): Promise
   check(res, 'Couldn’t open the file');
   return base() + (await res.json() as { url: string }).url;
 }
+
+export interface IiqStatus {
+  enabled: boolean;
+  lastSync?: string | null;
+  lastError?: string | null;
+  tickets?: number;
+  pollSeconds?: number;
+  canResolve?: boolean;
+  knowsUser?: boolean;
+}
+
+/** The server's Incident IQ sync status (server/iiq.js), or null if the server doesn't say. */
+export async function iiqStatus(): Promise<IiqStatus | null> {
+  if (notReady()) return null;
+  try {
+    const res = await request(`${base()}/iiq/status`, {}, 15_000);
+    if (res.status === 404) return null; // older server
+    check(res, 'Incident IQ status');
+    return await res.json() as IiqStatus;
+  } catch {
+    return null;
+  }
+}

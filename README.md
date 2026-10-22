@@ -15,6 +15,9 @@ and Gmail links.
   Finishing a repeating task files the next copy (with its subtasks and
   checklist unchecked) under Scheduled, and it moves into Today on its date.
   This works the same when you finish it from the widget or Siri.
+- **Incident IQ**: tickets assigned to you sync into an Incident IQ project;
+  comments, In Progress and finishing a task go back to the ticket
+  ([docs/incident-iq.md](docs/incident-iq.md)).
 - **Quick add**: `!p` In Progress, `!t` Today, `!n` Next, `@mon` start date,
   `^fri` deadline, `*weekly` / `*weekdays` / `*3d` repeat.
 
@@ -24,7 +27,7 @@ and Gmail links.
 | `server/` | Sync server (Node 24, no dependencies) and its Docker Compose file |
 | `capture/` | Gmail bookmarklet for Chrome and Safari (hands emails to the app) |
 | `apple/` | Widget and Siri extensions (Swift) for macOS and iOS |
-| `docs/` | Cloudflare and Apple signing setup |
+| `docs/` | Cloudflare, Apple signing and Incident IQ setup |
 | `wireframes.html` | The original wireframes |
 
 ## Get the apps

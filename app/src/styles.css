@@ -316,3 +316,24 @@ h1, h2 { font-family: var(--display); font-weight: 600; text-transform: uppercas
 .proj-h { width: 100%; text-align: left; cursor: pointer; }
 .proj-h svg { flex: none; }
 .proj-h:hover { color: var(--ink-2); }
+
+/* ---------- Incident IQ ---------- */
+.f-iiq { background: var(--hover); color: var(--ink-2); }
+.iiq { border: 1px solid var(--line); border-left: 3px solid var(--navy); border-radius: 8px; padding: 10px 12px; display: grid; gap: 6px; }
+.iiq-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.iiq-badge { font: 800 10px/1 var(--body); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
+.iiq-open { margin-left: auto; }
+.iiq-meta { margin: 0; }
+.iiq-note { margin: 0; font-size: 12.5px; color: var(--today); }
+.iiq-comment { display: grid; gap: 6px; }
+.iiq-comment textarea { border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; resize: vertical; background: var(--paper); }
+.iiq-comment button { justify-self: end; border-radius: 7px; padding: 5px 12px; font-weight: 700; font-size: 12.5px; background: var(--navy); color: #fff; }
+.iiq-comment button:disabled { opacity: .45; }
+.iiq-log { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; font-size: 12.5px; }
+.iiq-log li { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.iiq-state { font: 800 10px/1 var(--body); text-transform: uppercase; letter-spacing: .05em; padding: 3px 6px; border-radius: 999px; background: var(--hover); color: var(--ink-2); }
+.iiq-state.s-done { background: var(--doing-bg); color: var(--doing); }
+.iiq-state.s-manual { background: var(--today-bg); color: var(--today); }
+.iiq-state.s-failed { background: var(--blocked-bg); color: var(--danger); }
+.warn-note { border: 1px solid var(--plum); background: var(--blocked-bg); border-radius: 8px; padding: 10px 12px; font-size: 13px; }
+.warn-note strong { color: var(--blocked); }

@@ -236,6 +236,7 @@ export function Row({ t, view, selected, onOpen, grip }: { t: TaskItem; view: Vi
           {showFlag && t.flag === 'doing' && <span className="flag f-doing"><I.Play width={10} height={10} />In Progress</span>}
           {showFlag && t.flag === 'today' && <span className="flag f-today"><I.Star width={11} height={11} />Today</span>}
           {showFlag && t.flag === 'next' && <span className="flag f-next">Next</span>}
+          {t.external?.source === 'iiq' && <span className="flag f-iiq" title={`Incident IQ ticket${t.external.status ? ` · ${t.external.status}` : ''}`}>IIQ{t.external.status ? ` · ${t.external.status.length > 14 ? t.external.status.slice(0, 13) + '…' : t.external.status}` : ''}</span>}
           {t.repeat && <span className="chip" title={repeatLabel(t.repeat)}><I.Repeat /></span>}
           {t.startOn && <span className="flag f-start" title="Moves into Today on this day"><I.Star width={10} height={10} />{deadlineLabel(t.startOn)}</span>}
           {t.deadline && <span className="flag f-date">{t.startOn ? 'Due ' : ''}{deadlineLabel(t.deadline)}</span>}

@@ -36,6 +36,33 @@ export interface Block {
   from?: string;
 }
 
+/** An Incident IQ ticket a task mirrors (server/iiq.js). */
+export interface External {
+  source: 'iiq';
+  id: string;
+  number: number | string | null;
+  url: string | null;
+  status: string | null;
+  closed: boolean;
+  requester: string | null;
+  location: string | null;
+  issue: string | null;
+  priority: string | null;
+  syncedAt: string | null;
+}
+
+/** A request for the server to carry out in Incident IQ, and its result. */
+export interface IiqAction {
+  type: 'comment' | 'start' | 'resolve';
+  taskId: string;
+  ticketId: string;
+  text?: string;
+  state: 'pending' | 'done' | 'manual' | 'failed';
+  message?: string;
+  createdAt: string;
+  finishedAt?: string | null;
+}
+
 export interface Task {
   title: string;
   flag: Flag;
@@ -45,6 +72,7 @@ export interface Task {
   startOn: string | null; // YYYY-MM-DD: waits in Scheduled, moves into Today on this day
   repeat: Repeat | null;
   nextId: string | null; // the copy created when this repeating task was finished
+  external: External | null; // a linked ticket in another system (the server keeps it current)
   done: boolean;
   doneAt: string | null;
   order: number; // position in Next
@@ -64,7 +92,7 @@ export interface Area {
   order: number;
 }
 
-export type Kind = 'task' | 'project' | 'area';
+export type Kind = 'task' | 'project' | 'area' | 'iiq-action';
 
 // The unit of sync. Matches the rows the server stores.
 export interface Rec<T = unknown> {

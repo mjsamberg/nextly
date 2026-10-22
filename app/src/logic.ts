@@ -51,6 +51,7 @@ export function normTask(d: any): Task {
     startOn: typeof d?.startOn === 'string' ? d.startOn : null,
     repeat: normRepeat(d?.repeat),
     nextId: typeof d?.nextId === 'string' ? d.nextId : null,
+    external: d?.external?.source === 'iiq' && d.external.id ? { number: null, url: null, status: null, closed: false, requester: null, location: null, issue: null, priority: null, syncedAt: null, ...d.external } : null,
     done: !!d?.done,
     doneAt: d?.doneAt ?? null,
     order: typeof d?.order === 'number' ? d.order : Date.parse(d?.createdAt ?? '') || 0,

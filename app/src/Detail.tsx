@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import * as I from './icons';
 import Notes from './Notes';
+import IiqPanel from './IiqPanel';
 import {
   addDependency, createTask, removeDependency, setFlag, setStartOn, toggleDone, updateTask, useStore,
 } from './store';
@@ -63,6 +64,8 @@ export default function Detail({ task: t, onOpen, onClose, onDelete }: Props) {
           autoFocus={!t.title}
         />
       </div>
+
+      {t.external?.source === 'iiq' && <IiqPanel task={t} />}
 
       <div className="seg" role="radiogroup" aria-label="When">
         {FLAGS.map(({ f, label, cls }) => (

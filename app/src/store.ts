@@ -6,7 +6,7 @@ import { useSyncExternalStore } from 'react';
 import * as db from './db';
 import * as hlc from './hlc';
 import { daysBetween, nextStart, normTask, openBlockers, orderBetween, shiftDate, uid, wouldCycle, ymd } from './logic';
-import type { Area, AreaItem, Block, Flag, Kind, Project, ProjectItem, Rec, Task, TaskItem } from './types';
+import type { Area, AreaItem, Block, Flag, IiqAction, Kind, Project, ProjectItem, Rec, Task, TaskItem } from './types';
 
 const records = new Map<string, Rec>();
 const outbox = new Set<string>();
@@ -96,6 +96,8 @@ interface ViewData {
   children: (id: string) => TaskItem[];
   blockers: (t: TaskItem) => TaskItem[];
   blocks: (id: string) => TaskItem[];
+  /** Incident IQ requests for a task, newest first. */
+  iiqActions: (taskId: string) => (IiqAction & { id: string })[];
 }
 
 let cacheVersion = -1;
@@ -106,11 +108,13 @@ export function view(): ViewData {
   const tasks: TaskItem[] = [];
   const projects: ProjectItem[] = [];
   const areas: AreaItem[] = [];
+  const actionsMap = new Map<string, (IiqAction & { id: string })[]>();
   for (const r of records.values()) {
     if (r.deleted) continue;
     if (r.kind === 'task') tasks.push({ id: r.id, ...normTask(r.data) });
     else if (r.kind === 'project') projects.push({ id: r.id, ...(r.data as Project) });
     else if (r.kind === 'area') areas.push({ id: r.id, ...(r.data as Area) });
+    else if (r.kind === 'iiq-action') { const a = { id: r.id, ...(r.data as IiqAction) }; actionsMap.set(a.taskId, [...(actionsMap.get(a.taskId) ?? []), a]); }
   }
   const byId = new Map(tasks.map((t) => [t.id, t]));
   const kids = new Map<string, TaskItem[]>();
@@ -130,6 +134,7 @@ export function view(): ViewData {
     children: (id) => kids.get(id) ?? [],
     blockers: (t) => openBlockers(t, task),
     blocks: (id) => blocksMap.get(id) ?? [],
+    iiqActions: (id) => (actionsMap.get(id) ?? []).sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
   };
   cacheVersion = version;
   return cache;
@@ -152,7 +157,7 @@ export function createTask(p: Partial<Task>): string {
   const id = uid();
   const t: Task = {
     title: '', flag: 'inbox', projectId: null, parentId: null, deadline: null,
-    startOn: null, repeat: null, nextId: null,
+    startOn: null, repeat: null, nextId: null, external: null,
     done: false, doneAt: null, order: 0, dependsOn: [], notes: [],
     createdAt: new Date().toISOString(), ...p,
   };
@@ -170,6 +175,19 @@ export function setFlag(id: string, flag: Flag) {
   const t = rawTask(id);
   if (!t || t.flag === flag) return;
   saveTask(id, { ...t, flag, order: flag === 'next' ? nextOrderEnd() : t.order });
+  // Starting work on an Incident IQ ticket starts it there too.
+  if (flag === 'doing' && t.external?.source === 'iiq' && !t.external.closed) queueIiq(id, 'start');
+}
+
+/**
+ * Asks the server to do something in Incident IQ (server/iiq.js). It's a
+ * synced record, so it works offline; the server writes back the result.
+ */
+export function queueIiq(taskId: string, type: IiqAction['type'], text?: string) {
+  const t = rawTask(taskId);
+  if (t?.external?.source !== 'iiq') return;
+  const action: IiqAction = { type, taskId, ticketId: t.external.id, state: 'pending', createdAt: new Date().toISOString(), ...(text ? { text } : {}) };
+  write('iiq-action', uid(), action);
 }
 
 /**
@@ -193,6 +211,8 @@ function finish(id: string, viaParent: boolean) {
   }
   // Subtasks finished along with a repeating parent come back with its copy.
   const nextId = t.repeat && !viaParent ? spawnNext(id, t) : null;
+  // Finishing an Incident IQ ticket's task resolves the ticket (if it isn't already closed there).
+  if (t.external?.source === 'iiq' && !t.external.closed && !viaParent) queueIiq(id, 'resolve');
   saveTask(id, { ...t, done, doneAt: new Date().toISOString(), nextId });
   for (const c of view().children(id)) if (!c.done) finish(c.id, true);
   for (const w of view().blocks(id)) {
@@ -213,7 +233,7 @@ function spawnNext(id: string, t: Task): string {
     flag: null,
     startOn: start,
     deadline: t.deadline ? shiftDate(start, offset) : null,
-    done: false, doneAt: null, nextId: null, dependsOn: [], order: 0,
+    done: false, doneAt: null, nextId: null, external: null, dependsOn: [], order: 0,
     notes: reset(t.notes),
     createdAt: new Date().toISOString(),
   });
