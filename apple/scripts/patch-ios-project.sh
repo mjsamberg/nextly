@@ -30,6 +30,12 @@ fi
 /usr/libexec/PlistBuddy -c "Delete :com.apple.security.application-groups" "$entitlements" 2>/dev/null || true
 /usr/libexec/PlistBuddy -c "Add :com.apple.security.application-groups array" -c "Add :com.apple.security.application-groups:0 string $group" "$entitlements"
 
+# `tauri icon` writes iPhone icons into the Xcode project only if it already
+# exists; on a fresh `tauri ios init` the project starts with Tauri's default
+# icon. Regenerate now. iOS rounds icons itself and shows transparency as
+# black, so fill the background with the tile's plum.
+(cd "$app_dir" && npx tauri icon icon.svg --ios-color "#7a3c59" >/dev/null)
+
 export NEXTLY_VERSION="$(node -p "require('$app_dir/src-tauri/tauri.conf.json').version")"
 export APPLE_DEVELOPMENT_TEAM="${APPLE_DEVELOPMENT_TEAM:-}"
 (cd "$gen" && xcodegen generate --spec project.yml)

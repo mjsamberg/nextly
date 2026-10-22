@@ -1,6 +1,6 @@
-import { useState, type RefObject } from 'react';
+import { useRef, useState, type RefObject } from 'react';
 import * as I from './icons';
-import { createProject, useStore } from './store';
+import { createArea, createProject, useStore } from './store';
 import { useSyncStatus } from './sync';
 import { counts } from './lists';
 import { mod, platform } from './net';
@@ -28,8 +28,8 @@ const MAIN: { id: View; label: string; icon: JSX.Element; cls?: string }[] = [
 export default function Sidebar({ view, onGo, query, onQuery, searchRef, onSettings }: Props) {
   const v = useStore();
   const sync = useSyncStatus();
-  const [adding, setAdding] = useState(false);
-  const [name, setName] = useState('');
+  // Where a new project or area is being typed: an area id, NO_AREA, NEW_AREA, or null.
+  const [adding, setAdding] = useState<string | null>(null);
   const c = counts(v);
 
   const groups = [
@@ -53,11 +53,11 @@ export default function Sidebar({ view, onGo, query, onQuery, searchRef, onSetti
         ))}
       </div>
 
-      {groups.map((g) => (g.area || g.projects.length) ? (
+      {groups.map((g) => (g.area || g.projects.length || adding === NO_AREA) ? (
         <div key={g.area?.id ?? 'none'} className="nav-group">
-          {g.area && <div className="grp">{g.area.title}</div>}
-          {!g.area && v.areas.length > 0 && g.projects.length > 0 && <div className="grp">Other projects</div>}
-          {!g.area && v.areas.length === 0 && <div className="grp">Projects</div>}
+          {g.area && <GroupHeader title={g.area.title} onAdd={() => setAdding(g.area!.id)} />}
+          {!g.area && v.areas.length > 0 && (g.projects.length > 0 || adding === NO_AREA) && <GroupHeader title="Other projects" onAdd={() => setAdding(NO_AREA)} />}
+          {!g.area && v.areas.length === 0 && <GroupHeader title="Projects" onAdd={() => setAdding(NO_AREA)} />}
           {g.projects.map((p) => {
             const id: View = `project:${p.id}`;
             const n = v.tasks.filter((t) => t.projectId === p.id && !t.done && !t.parentId).length;
@@ -67,21 +67,62 @@ export default function Sidebar({ view, onGo, query, onQuery, searchRef, onSetti
               </button>
             );
           })}
+          {adding === (g.area?.id ?? NO_AREA) && (
+            <NameForm
+              id={`new-project-${g.area?.id ?? 'none'}`}
+              placeholder={g.area ? `New project in ${g.area.title}` : 'Project name'}
+              onDone={(name) => { setAdding(null); if (name) onGo(`project:${createProject(name, g.area?.id ?? null)}`); }}
+            />
+          )}
         </div>
       ) : null)}
 
-      {adding ? (
-        <form className="new-proj" onSubmit={(e) => { e.preventDefault(); if (name.trim()) onGo(`project:${createProject(name.trim(), null)}`); setName(''); setAdding(false); }}>
-          <input id="new-project" autoFocus value={name} placeholder="Project name" onChange={(e) => setName(e.target.value)} onBlur={() => !name && setAdding(false)} />
-        </form>
-      ) : (
-        <button className="nav muted" onClick={() => setAdding(true)}><I.Plus />New project</button>
+      {adding === NEW_AREA && (
+        <NameForm id="new-area-side" placeholder="Area name, like Classroom" onDone={(name) => { setAdding(null); if (name) createArea(name); }} />
       )}
+      <div className="side-add">
+        <button className="nav muted" onClick={() => setAdding(NO_AREA)}><I.Plus />New project</button>
+        <button className="nav muted" onClick={() => setAdding(NEW_AREA)}><I.Plus />New area</button>
+      </div>
 
       <div className="side-foot">
         <button className="nav" onClick={onSettings}><I.Gear />Settings<I.Chevron className="chev" /></button>
         <span className={`sync-dot ${sync.state}`} title={sync.message} aria-label={`Sync: ${sync.message}`} />
       </div>
     </nav>
+  );
+}
+
+const NO_AREA = '__no-area__';
+const NEW_AREA = '__new-area__';
+
+/** An area heading with a "+" that starts a new project in that area. */
+function GroupHeader({ title, onAdd }: { title: string; onAdd: () => void }) {
+  return (
+    <div className="grp">
+      <span className="grp-title">{title}</span>
+      <button className="grp-add" onClick={onAdd} aria-label={`New project in ${title}`} title={`New project in ${title}`}><I.Plus /></button>
+    </div>
+  );
+}
+
+/** Inline name field: Enter saves, Esc or leaving it empty cancels. */
+function NameForm({ id, placeholder, onDone }: { id: string; placeholder: string; onDone: (name: string | null) => void }) {
+  const [name, setName] = useState('');
+  // Enter closes the field, and some browsers then also report a blur; finish once.
+  const finished = useRef(false);
+  const finish = (value: string | null) => { if (finished.current) return; finished.current = true; onDone(value); };
+  return (
+    <form className="new-proj" onSubmit={(e) => { e.preventDefault(); finish(name.trim() || null); }}>
+      <input
+        id={id}
+        autoFocus
+        value={name}
+        placeholder={placeholder}
+        onChange={(e) => setName(e.target.value)}
+        onKeyDown={(e) => { if (e.key === 'Escape') finish(null); }}
+        onBlur={() => finish(name.trim() || null)}
+      />
+    </form>
   );
 }

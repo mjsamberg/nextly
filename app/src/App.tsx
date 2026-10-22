@@ -9,7 +9,9 @@ import { useEdgeSwipeBack } from './edgeSwipe';
 import type { View } from './types';
 
 type Pane = 'nav' | 'list' | 'detail';
-const narrow = () => window.matchMedia('(max-width: 760px)').matches;
+// Compact width (a phone, or a foldable folded): one screen at a time.
+// Wider (unfolded, or a phone held sideways): panes side by side.
+const narrow = () => window.matchMedia('(max-width: 599px)').matches;
 
 export default function App() {
   const v = useStore();

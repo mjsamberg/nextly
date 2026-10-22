@@ -231,3 +231,30 @@
 [data-platform="ios"] .toast button { min-height: 44px; padding: 0 8px; }
 [data-platform="ios"] .fab { width: 58px; height: 58px; }
 [data-platform="ios"] .swipe-label { font-size: 13px; }
+@media (prefers-color-scheme: dark) {
+  [data-platform="ios"] .row-btns button:not(.pri), [data-platform="ios"] .org-row button[type="submit"] { color: var(--next); }
+}
+/* iOS: the area "+" is a full-size tap target in the section header. */
+[data-platform="ios"] .grp-add { width: 44px; height: 36px; margin-right: -12px; opacity: 1; color: var(--navy); }
+[data-platform="ios"] .grp-add svg { width: 18px; height: 18px; }
+@media (prefers-color-scheme: dark) { [data-platform="ios"] .grp-add { color: var(--next); } }
+[data-platform="ios"] .nav-group .grp { padding-right: 16px; }
+[data-platform="ios"] .side-add { background: var(--ios-cell); border-radius: 10px; margin-bottom: 22px; overflow: hidden; }
+[data-platform="ios"] .side-add .nav + .nav::before { display: none; }
+[data-platform="ios"] .new-proj input { font-size: 17px; border: 0; background: var(--ios-fill); border-radius: 10px; padding: 10px 12px; }
+[data-platform="ios"] .nav-group .new-proj { padding: 8px 12px; }
+
+/* iOS on wide screens (unfolded foldable, landscape, iPad): iOS text is
+   larger, so give the sidebar and the task pane more room than on desktop. */
+@media (min-width: 600px) and (max-width: 899px) {
+  [data-platform="ios"] .app { grid-template-columns: 260px minmax(0, 1fr); }
+  [data-platform="ios"] .app[data-detail="open"] { grid-template-columns: minmax(0, 1fr) minmax(340px, 50%); }
+}
+@media (min-width: 900px) {
+  [data-platform="ios"] .app { grid-template-columns: 280px minmax(0, 1fr) minmax(370px, 36%); }
+}
+@media (min-width: 600px) {
+  [data-platform="ios"] .sidebar { border-right: .5px solid var(--ios-sep); }
+  [data-platform="ios"] .detail-pane { border-left: .5px solid var(--ios-sep); }
+  [data-platform="ios"] .nav { white-space: nowrap; }
+}

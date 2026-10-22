@@ -49,14 +49,17 @@ h1, h2 { font-family: var(--display); font-weight: 600; text-transform: uppercas
 @media (max-width: 1100px) {
   .app { grid-template-columns: 210px minmax(0, 1fr) 340px; }
 }
-@media (max-width: 900px) and (min-width: 761px) {
-  .app { grid-template-columns: 200px minmax(0, 1fr); }
-  .app[data-detail="open"] { grid-template-columns: 0 minmax(0, 1fr) 360px; }
+/* Two panes (an unfolded foldable, a phone held sideways, a narrow window):
+   lists + list, or list + task once one is open. The hidden pane takes no
+   grid column, so only two columns are defined. */
+@media (max-width: 899px) and (min-width: 600px) {
+  .app { grid-template-columns: 220px minmax(0, 1fr); }
+  .app[data-detail="open"] { grid-template-columns: minmax(0, 1fr) minmax(320px, 46%); }
   .app[data-detail="open"] .sidebar { display: none; }
   .app[data-detail="closed"] .detail-pane { display: none; }
 }
 /* Phone: one pane at a time, like Things for iPhone. */
-@media (max-width: 760px) {
+@media (max-width: 599px) {
   .app { grid-template-columns: 1fr; }
   .app > .sidebar, .app > .list-pane, .app > .detail-pane { display: none; }
   .app[data-pane="nav"] .sidebar, .app[data-pane="list"] .list-pane, .app[data-pane="detail"] .detail-pane { display: flex; }
@@ -101,7 +104,7 @@ h1, h2 { font-family: var(--display); font-weight: 600; text-transform: uppercas
 .list-h h1 { font-size: 28px; line-height: 1.1; }
 .list-h .sub { color: var(--ink-3); font-size: 12.5px; }
 .back { display: none; align-items: center; gap: 2px; color: var(--next); font-size: 15px; width: 100%; }
-@media (max-width: 760px) {
+@media (max-width: 599px) {
   .back { display: inline-flex; }
   .list { padding-left: max(16px, var(--safe-l)); padding-right: max(16px, var(--safe-r)); }
   .list-h h1 { font-size: 32px; }
@@ -141,7 +144,7 @@ h1, h2 { font-family: var(--display); font-weight: 600; text-transform: uppercas
 .grip { color: var(--ink-3); cursor: grab; display: flex; }
 .drag.over { box-shadow: 0 -2px 0 var(--next); }
 .drag.dragging { opacity: .4; }
-@media (max-width: 760px) { .row { padding: 11px 6px; font-size: 15px; } .grip { display: none; } }
+@media (max-width: 599px) { .row { padding: 11px 6px; font-size: 15px; } .grip { display: none; } }
 
 .cb { width: 17px; height: 17px; border: 1.5px solid var(--ink-3); border-radius: 5px; flex: none; display: grid; place-items: center; color: #fff; }
 .cb:hover { border-color: var(--next); }
@@ -160,15 +163,15 @@ h1, h2 { font-family: var(--display); font-weight: 600; text-transform: uppercas
 .f-date { background: var(--hover); color: var(--ink-2); }
 
 .fab { display: none; position: fixed; right: calc(20px + var(--safe-r)); bottom: calc(24px + var(--safe-b)); width: 52px; height: 52px; border-radius: 50%; background: var(--navy); color: #fff; place-items: center; box-shadow: 0 8px 20px -8px rgba(10, 20, 40, .6); }
-@media (max-width: 760px) { .fab { display: grid; } }
+@media (max-width: 599px) { .fab { display: grid; } }
 
 /* ---------- detail ---------- */
 .detail { padding: calc(14px + var(--safe-t)) max(20px, var(--safe-r)) calc(40px + var(--safe-b)) 20px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-content: start; }
 .detail > * { min-width: 0; }
 .detail-top { display: flex; justify-content: space-between; align-items: center; min-height: 0; }
 .detail-top .back { width: auto; }
-@media (min-width: 761px) { .detail-top { justify-content: flex-end; margin-bottom: -10px; } }
-@media (max-width: 760px) { .detail-top .close-x { display: none; } .detail { padding-left: max(16px, var(--safe-l)); padding-right: max(16px, var(--safe-r)); } }
+@media (min-width: 600px) { .detail-top { justify-content: flex-end; margin-bottom: -10px; } }
+@media (max-width: 599px) { .detail-top .close-x { display: none; } .detail { padding-left: max(16px, var(--safe-l)); padding-right: max(16px, var(--safe-r)); } }
 .icon-btn { color: var(--ink-3); display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 5px; flex: none; }
 .icon-btn:hover { background: var(--hover); color: var(--ink); }
 .parent-link { display: inline-flex; gap: 5px; align-items: center; color: var(--next); font-size: 12.5px; justify-self: start; }
@@ -240,7 +243,7 @@ h1, h2 { font-family: var(--display); font-weight: 600; text-transform: uppercas
 .blk-bar button { display: inline-flex; align-items: center; gap: 4px; padding: 4px 7px; border-radius: 6px; color: var(--ink-2); font-size: 12px; }
 .blk-bar button:hover { background: var(--hover); color: var(--ink); }
 .blk-bar svg { width: 13px; height: 13px; }
-@media (max-width: 760px) { .blk-bar-label { display: none; } .blk-bar button { padding: 8px 10px; font-size: 15px; } }
+@media (max-width: 599px) { .blk-bar-label { display: none; } .blk-bar button { padding: 8px 10px; font-size: 15px; } }
 
 /* ---------- settings ---------- */
 .settings .panel { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; margin-bottom: 14px; display: grid; gap: 8px; max-width: 640px; }
@@ -280,3 +283,26 @@ h1, h2 { font-family: var(--display); font-weight: 600; text-transform: uppercas
 .repeat-custom { display: inline-flex; align-items: center; gap: 6px; }
 .repeat-custom input { width: 4.5em; }
 .repeat-note { flex-basis: 100%; margin: 0; }
+
+/* Settings rows: form fields don't shrink by default, and a long area name
+   widens the area picker, which pushed the page sideways on phones. */
+.settings, .settings .panel, .org-row { min-width: 0; }
+.org-row input, .org-row select { min-width: 0; }
+.org-row select { flex: 0 1 auto; max-width: 45%; text-overflow: ellipsis; }
+@media (max-width: 520px) {
+  .org-row:has(select) { flex-wrap: wrap; }
+  .org-row:has(select) input { flex: 1 1 100%; }
+  .org-row:has(select) select { flex: 1 1 auto; max-width: none; }
+}
+
+/* Area headings with a "+" for a new project in that area. */
+.grp { display: flex; align-items: center; gap: 6px; }
+.grp-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.grp-add { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 5px; color: var(--ink-3); opacity: .55; flex: none; }
+.grp-add svg { width: 12px; height: 12px; }
+.nav-group:hover .grp-add, .grp-add:focus-visible { opacity: 1; }
+.grp-add:hover { background: var(--hover); color: var(--ink); }
+@media (hover: none) { .grp-add { opacity: 1; } }
+.side-add { display: flex; flex-wrap: wrap; }
+.side-add .nav { width: auto; flex: 1 1 auto; }
+.nav-group .new-proj input { margin-top: 2px; }
