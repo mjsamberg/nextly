@@ -19,6 +19,10 @@ jobs:
         working-directory: app
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # the whole history: set-version counts the day's commits
+      - name: Stamp the date-based version
+        run: node ../scripts/set-version.mjs
       - uses: actions/setup-node@v7
         with:
           node-version: 22
@@ -36,6 +40,10 @@ jobs:
         working-directory: app
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # the whole history: set-version counts the day's commits
+      - name: Stamp the date-based version
+        run: node ../scripts/set-version.mjs
       - uses: actions/setup-node@v7
         with:
           node-version: 22
@@ -71,6 +79,10 @@ jobs:
       HAS_CERT: ${{ secrets.APPLE_CERTIFICATE != '' && secrets.APPLE_SIGNING_IDENTITY != '' && secrets.APPLE_DEVELOPMENT_TEAM != '' }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # the whole history: set-version counts the day's commits
+      - name: Stamp the date-based version
+        run: node ../scripts/set-version.mjs
       - uses: actions/setup-node@v7
         with:
           node-version: 22
@@ -138,6 +150,10 @@ jobs:
       EXPORT_METHOD: ${{ secrets.IOS_EXPORT_METHOD || 'debugging' }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # the whole history: set-version counts the day's commits
+      - name: Stamp the date-based version
+        run: node ../scripts/set-version.mjs
       - uses: actions/setup-node@v7
         with:
           node-version: 22

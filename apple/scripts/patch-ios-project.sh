@@ -37,6 +37,8 @@ fi
 (cd "$app_dir" && npx tauri icon icon.svg --ios-color "#7a3c59" >/dev/null)
 
 export NEXTLY_VERSION="$(node -p "require('$app_dir/src-tauri/tauri.conf.json').version")"
+# Extensions must carry the app's build number (scripts/set-version.mjs).
+export NEXTLY_BUILD="$(node -p "const c = require('$app_dir/src-tauri/tauri.conf.json'); c.bundle?.iOS?.bundleVersion ?? c.bundle?.macOS?.bundleVersion ?? c.version")"
 export APPLE_DEVELOPMENT_TEAM="${APPLE_DEVELOPMENT_TEAM:-}"
 (cd "$gen" && xcodegen generate --spec project.yml)
 echo "Added NextlyWidgets and NextlyIntents to $target (version $NEXTLY_VERSION)."

@@ -7,6 +7,8 @@ const host = process.env.TAURI_DEV_HOST;
 export default defineConfig({
   plugins: [react()],
   clearScreen: false,
+  // CalVer label from scripts/set-version.mjs (CI); "dev" for local builds.
+  define: { __APP_VERSION__: JSON.stringify(process.env.NEXTLY_VERSION_LABEL || 'dev') },
   server: {
     port: 5173,
     strictPort: true,

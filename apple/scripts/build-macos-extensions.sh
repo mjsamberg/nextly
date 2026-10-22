@@ -19,6 +19,8 @@ app_dir="$(cd "$apple_dir/../app" && pwd)"
 out="$apple_dir/build/macos"
 
 export NEXTLY_VERSION="$(node -p "require('$app_dir/src-tauri/tauri.conf.json').version")"
+# Extensions must carry the app's build number (scripts/set-version.mjs).
+export NEXTLY_BUILD="$(node -p "const c = require('$app_dir/src-tauri/tauri.conf.json'); c.bundle?.iOS?.bundleVersion ?? c.bundle?.macOS?.bundleVersion ?? c.version")"
 export APPLE_DEVELOPMENT_TEAM="${APPLE_DEVELOPMENT_TEAM:-}"
 # Developer ID apps must use a Team ID prefixed App Group on macOS.
 export NEXTLY_APP_GROUP="${NEXTLY_APP_GROUP:-${APPLE_DEVELOPMENT_TEAM:-UNSIGNED}.com.mjsamberg.nextly}"

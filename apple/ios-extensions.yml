@@ -16,7 +16,7 @@ targets:
       properties:
         CFBundleDisplayName: Nextly
         CFBundleShortVersionString: "${NEXTLY_VERSION}"
-        CFBundleVersion: "${NEXTLY_VERSION}"
+        CFBundleVersion: "${NEXTLY_BUILD}"
         NextlyAppGroup: group.com.mjsamberg.nextly
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
@@ -51,7 +51,7 @@ targets:
       properties:
         CFBundleDisplayName: Nextly
         CFBundleShortVersionString: "${NEXTLY_VERSION}"
-        CFBundleVersion: "${NEXTLY_VERSION}"
+        CFBundleVersion: "${NEXTLY_BUILD}"
         NextlyAppGroup: group.com.mjsamberg.nextly
         EXAppExtensionAttributes:
           EXExtensionPointIdentifier: com.apple.appintents-extension

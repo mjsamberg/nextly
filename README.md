@@ -55,7 +55,26 @@ Signing setup for both: [docs/apple-signing.md](docs/apple-signing.md).
   15 minutes, or sooner when you use the widget). Changes from Siri and the
   widget reach your other devices right away through live updates.
 
-Pushing a tag like `v0.1.0` also creates a draft GitHub release with all of them.
+Pushing a tag like `v2026.10.22.3` also creates a draft GitHub release with all of them.
+
+### Versions
+
+Versions are date-based and stamped automatically by
+[scripts/set-version.mjs](scripts/set-version.mjs) on every build: the
+commit's date (New York time) plus how many commits were made that day.
+Settings shows it, for example **2026.10.22.3** for the third build on
+October 22, 2026. Re-running a build gives the same number. Each platform
+gets a form it accepts, and every one always increases, so updates install
+over older builds:
+
+| Where | Example |
+| --- | --- |
+| Shown in Settings | `2026.10.22.3` |
+| App version | `2026.10.22` |
+| iOS/macOS build number (app and extensions) | `2026102203` |
+| Windows MSI version (parts must stay under 256) | `26.10.2203` |
+
+The version in `tauri.conf.json` is only a placeholder; local builds show "dev".
 
 ## Email to task
 

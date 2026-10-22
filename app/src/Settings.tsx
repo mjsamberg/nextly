@@ -91,7 +91,7 @@ export default function Settings({ onBack }: { onBack: () => void }) {
           {LIVE_LABEL[sync.live]}{sync.liveDetail ? ` · ${sync.liveDetail}` : ''}
         </p>
         {widgetSharingEnabled && <WidgetShareLine />}
-        <p className="muted small">This device: <code>{deviceId}</code></p>
+        <p className="muted small">Nextly <code>{__APP_VERSION__}</code> · This device: <code>{deviceId}</code></p>
       </section>
 
       <section className="panel">
