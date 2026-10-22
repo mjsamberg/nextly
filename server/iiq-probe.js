@@ -6,7 +6,7 @@
 //   docker compose exec nextly node iiq-probe.js
 //   docker compose exec nextly node iiq-probe.js --steps   (also the first ticket's next steps)
 
-import { createClient, iiqConfig, readTicket, userIdFromToken } from './iiq.js';
+import { createClient, iiqConfig, isMine, readTicket, resolveMe } from './iiq.js';
 
 const cfg = iiqConfig();
 if (!cfg) {
@@ -33,18 +33,28 @@ function shape(v, key = '', depth = 0) {
 }
 
 console.log(`Site: ${cfg.url}`);
-const me = cfg.userId ?? userIdFromToken(cfg.token);
-console.log(`Your user id: ${me ? 'found' + (cfg.userId ? ' (IIQ_USER_ID)' : ' in the token') : 'not found in the token; set IIQ_USER_ID'}`);
+let me = null;
+try {
+  const r = await resolveMe(cfg, client);
+  me = r.id;
+  console.log(`Your user id: ${me ? `found from ${r.how}` : 'not found; set IIQ_USER_EMAIL'}`);
+} catch (e) {
+  console.log(`Your user id: ${e.message}`);
+}
 console.log('\nWays of listing your tickets (status and count only):');
 for (const w of await client.tryListWays(me)) console.log(`  ${w.name}: ${w.result}`);
 
 try {
   const list = await client.myOpenTickets(me);
   const read = list.map((t) => readTicket(t, cfg));
-  const assigned = read.filter((t) => t.assignedTo);
-  const open = read.filter((t) => !t.closed).length;
-  console.log(`\nUsing the first that works: ${list.length} tickets (${open} open, ${list.length - open} closed), ${assigned.length} with an assignee found, ${me ? read.filter((t) => t.assignedTo?.toLowerCase() === me.toLowerCase()).length : '?'} assigned to you${list.onlyMine ? ' (this search only returns yours)' : ''}`);
-  console.log(`Nextly will sync the ${open} open one${open === 1 ? '' : 's'}.`);
+  const open = read.filter((t) => !t.closed);
+  const named = open.filter((t) => t.assignedTo || t.assignedEmail);
+  const who = { me, email: cfg.userEmail, onlyMine: list.onlyMine };
+  const mine = open.filter((t) => isMine(t, who));
+  console.log(`\nUsing the first that works: ${list.length} tickets (${open.length} open, ${list.length - open.length} closed)${list.onlyMine ? ', filtered to you by Incident IQ' : ''}`);
+  console.log(`Open tickets naming an assignee: ${named.length}; assigned to you: ${named.filter((t) => isMine(t, who)).length}; to someone else: ${named.filter((t) => !isMine(t, who)).length}`);
+  console.log(`Nextly will sync ${mine.length} open ticket${mine.length === 1 ? '' : 's'}.`);
+  if (list.onlyMine && named.length && named.some((t) => !isMine(t, who))) console.log('Note: Incident IQ ignored the "you" filter; Nextly drops the other people’s tickets itself.');
   if (!list.length) process.exit(0);
   // Show an open ticket if there is one: closed ones leave out fields like the assignee.
   const i = Math.max(0, read.findIndex((t) => !t.closed));

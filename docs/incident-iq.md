@@ -35,7 +35,13 @@ and create (or copy) your **API token**. Use your own token, because
 IIQ_URL=https://chathamnc.incidentiq.com
 IIQ_SITE_ID=…
 IIQ_TOKEN=…
+IIQ_USER_EMAIL=you@chatham.k12.nc.us
 ```
+
+`IIQ_USER_EMAIL` is your Incident IQ login email. Nextly looks up that user
+and keeps only tickets assigned to them, which matters for admins, who can
+see every ticket. If the lookup fails, sync stops with an error rather than
+pulling everyone's tickets; set `IIQ_USER_ID` instead.
 
 Then restart:
 
@@ -91,7 +97,8 @@ IIQ_RESOLVE_REQUEST={"method":"POST","path":"/api/v1.0/tickets/{TicketId}/…","
 
 | Setting | Default | What it does |
 | --- | --- | --- |
-| `IIQ_USER_ID` | from the token | Your IIQ user ID, if the probe says it can't find it in the token |
+| `IIQ_USER_EMAIL` | none | Your IIQ email; only tickets assigned to this user sync |
+| `IIQ_USER_ID` | from the email | Your IIQ user ID, if the email lookup doesn't find you (wins over the email) |
 | `IIQ_POLL_SECONDS` | `120` | How often to check IIQ (minimum 30) |
 | `IIQ_PROJECT` | `Incident IQ` | Name of the project tickets go into |
 | `IIQ_TICKET_URL` | `<IIQ_URL>/agent/tickets/{TicketId}` | Where **Open in Incident IQ** goes |

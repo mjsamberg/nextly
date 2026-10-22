@@ -171,7 +171,7 @@ function IiqSection() {
                 ? `${s.tickets} open ticket${s.tickets === 1 ? '' : 's'} assigned to you · checked ${new Date(s.lastSync).toLocaleTimeString()} · every ${Math.round((s.pollSeconds ?? 120) / 60)} min`
                 : 'First sync in progress…'}
           </p>
-          {!s.knowsUser && <p className="muted small">The server can’t tell which Incident IQ user you are from the token, so it syncs every assigned ticket on your list. Set IIQ_USER_ID on the server to limit it to yours.</p>}
+          {!s.knowsUser && <p className="muted small">The server doesn’t know which Incident IQ user you are, so it can’t pick out your tickets. Set IIQ_USER_EMAIL on the server.</p>}
           <p className="muted small">
             {s.canResolve
               ? 'Finishing a ticket’s task resolves the ticket in Incident IQ.'

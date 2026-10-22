@@ -36,6 +36,9 @@ export function iiqConfig(env = process.env) {
     siteId: env.IIQ_SITE_ID.trim(),
     token: env.IIQ_TOKEN.trim().replace(/^Bearer\s+/i, ''),
     userId: (env.IIQ_USER_ID || '').trim() || null,
+    // Admins can see every ticket, so name yourself: the sync looks up this
+    // user and keeps only tickets assigned to them.
+    userEmail: (env.IIQ_USER_EMAIL || '').trim().toLowerCase() || null,
     // Districts can require a resolution action to close a ticket
     // (community.incidentiq.com, "closing tickets via API now requiring
     // resolution action"). Finishing a ticket task in Nextly posts this one.
@@ -51,11 +54,15 @@ export function iiqConfig(env = process.env) {
 
 const query = (page) => `?$p=${page}&$s=100&$o=TicketModifiedDate&$d=Descending`;
 /** Ways to list my open tickets, most specific first. */
+const GUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const LIST_WAYS = [
   { name: 'POST /api/v1.0/tickets/-/-/AssignedToMe_Unassigned', request: (p) => ['POST', `/api/v1.0/tickets/-/-/AssignedToMe_Unassigned${query(p)}`, {}] },
   { name: 'POST /services/tickets/-/-/AssignedToMe_Unassigned', request: (p) => ['POST', `/services/tickets/-/-/AssignedToMe_Unassigned${query(p)}`, {}] },
-  // The general search, filtered to tickets where I'm the agent (closed ones are dropped later).
-  { name: 'POST /api/v1.0/tickets (agent = you)', needsMe: true, onlyMine: true, request: (p, me) => ['POST', `/api/v1.0/tickets${query(p)}`, { Schema: 'All', Filters: [{ Facet: 'agent', Value: me }] }] },
+  // The general search, filtered to tickets where I'm the agent (closed ones
+  // are dropped later). Id facets take "Id", like the documented location
+  // and asset filters; given "Value", a site can ignore the filter and
+  // return everyone's tickets, which isMine() then catches.
+  { name: 'POST /api/v1.0/tickets (agent = you)', needsMe: true, onlyMine: true, request: (p, me) => ['POST', `/api/v1.0/tickets${query(p)}`, { Schema: 'All', Filters: [{ Facet: 'agent', Id: me }] }] },
 ];
 
 export function createClient(cfg, fetchImpl = fetch) {
@@ -146,6 +153,24 @@ export function createClient(cfg, fetchImpl = fetch) {
       }
       return results;
     },
+    /** The user id for an email address, or null if no user has it. */
+    async findUser(email) {
+      const body = { Query: email, Facets: 4, IncludeMatchedItem: true, Limit: 10 }; // facet 4 = users
+      const ways = [
+        ['POST', '/api/v1.0/search/v2', body],
+        ['POST', '/services/search/v2', body],
+        ['POST', `/services/users?$s=10&$filter=(SearchText contains '${email.replace(/'/g, "''")}')`, {}],
+      ];
+      for (const w of ways) {
+        try {
+          const id = findByEmail(await call(...w), email.toLowerCase());
+          if (id) return id;
+        } catch (e) {
+          if (![400, 404, 405].includes(e.status)) throw e;
+        }
+      }
+      return null;
+    },
     ticket: (id) => either('GET', [`/api/v1.0/tickets/${id}`, `/services/tickets/${id}`]).then((r) => r?.Item ?? r),
     comment: (id, text) => call('POST', `/api/v1.0/tickets/${id}/activities/new`, {
       TicketId: id,
@@ -170,6 +195,18 @@ export function createClient(cfg, fetchImpl = fetch) {
   };
 }
 
+/** Somewhere in a search answer, the id of the user whose email is `want`. */
+function findByEmail(v, want, depth = 0) {
+  if (!v || typeof v !== 'object' || depth > 6) return null;
+  if (!Array.isArray(v)) {
+    const email = pick(v.Email, v.EmailAddress, v.PrimaryEmail);
+    const id = pick(v.UserId, v.Id, v.ItemId);
+    if (typeof email === 'string' && email.toLowerCase() === want && GUID.test(String(id ?? ''))) return String(id);
+  }
+  for (const x of Object.values(v)) { const r = findByEmail(x, want, depth + 1); if (r) return r; }
+  return null;
+}
+
 // ---------- reading IIQ's (undocumented) ticket shape ----------
 
 const pick = (...vals) => vals.find((v) => v !== undefined && v !== null && v !== '');
@@ -178,6 +215,7 @@ const name = (o) => (typeof o === 'string' ? o : pick(o?.Name, o?.FullName, [o?.
 export function readTicket(t, cfg) {
   const id = pick(t.TicketId, t.Id);
   const assigned = pick(t.AssignedToUserId, t.AssignedToUser?.UserId, t.AgentId, t.Agent?.UserId, t.AssignedToUser?.Id);
+  const assignedEmail = pick(t.AssignedToUser?.Email, t.Agent?.Email, t.AssignedToUserEmail, t.AgentEmail);
   const closedDate = pick(t.ClosedDate, t.TicketClosedDate);
   return {
     id: id ? String(id) : null,
@@ -187,6 +225,7 @@ export function readTicket(t, cfg) {
     closed: Boolean(pick(t.IsClosed, closedDate ? true : undefined, false)),
     modified: pick(t.ModifiedDate, t.TicketModifiedDate, t.LastActivityDate) ?? null,
     assignedTo: assigned ? String(assigned) : null,
+    assignedEmail: assignedEmail ? String(assignedEmail).toLowerCase() : null,
     // Tickets IIQ marks as holding sensitive information keep the requester
     // and description in IIQ only.
     sensitive: t.HasSensitiveInformation === true,
@@ -201,15 +240,46 @@ export function readTicket(t, cfg) {
   };
 }
 
-/** The user id inside the token (IIQ tokens are JWTs), if it's there. */
+/**
+ * The user id inside the token (IIQ tokens are JWTs), if a claim names it.
+ * Other GUIDs in the token (site, client, token ids) aren't guessed at: the
+ * wrong id here would sync someone else's tickets.
+ */
 export function userIdFromToken(token) {
   try {
     const payload = JSON.parse(Buffer.from(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString());
-    const guid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    for (const k of ['UserId', 'userId', 'userid', 'uid', 'sub', 'nameid']) if (guid.test(String(payload[k] ?? ''))) return String(payload[k]);
-    for (const v of Object.values(payload)) if (guid.test(String(v))) return String(v);
+    for (const k of ['UserId', 'userId', 'userid', 'uid', 'sub', 'nameid']) if (GUID.test(String(payload[k] ?? ''))) return String(payload[k]);
   } catch { /* not a JWT */ }
   return null;
+}
+
+/**
+ * Who "me" is: IIQ_USER_ID, else the user with IIQ_USER_EMAIL, else the
+ * token's user claim. Throws if the email is set but no user has it, so the
+ * sync never falls back to everyone's tickets.
+ */
+export async function resolveMe(cfg, client) {
+  if (cfg.userId) return { id: cfg.userId, how: 'IIQ_USER_ID' };
+  if (cfg.userEmail) {
+    const id = await client.findUser(cfg.userEmail);
+    if (!id) throw new Error('No Incident IQ user has the email in IIQ_USER_EMAIL. Check it, or set IIQ_USER_ID.');
+    return { id, how: 'IIQ_USER_EMAIL' };
+  }
+  const id = userIdFromToken(cfg.token);
+  return { id, how: id ? 'the token' : null };
+}
+
+/**
+ * Whether a listed ticket is mine. A ticket that names its assignee must
+ * name me (by id or email). One that doesn't is trusted only from a list
+ * already filtered to me: the "assigned to me + unassigned" views also hold
+ * unassigned tickets.
+ */
+export function isMine(tk, { me, email, onlyMine }) {
+  if (tk.assignedTo || tk.assignedEmail) {
+    return (!!me && tk.assignedTo?.toLowerCase() === me.toLowerCase()) || (!!email && tk.assignedEmail === email);
+  }
+  return !!onlyMine;
 }
 
 // ---------- sync ----------
@@ -218,7 +288,7 @@ export function createIiq({ db, applyChanges, onChange, cfg, client = cfg && cre
   const state = { enabled: !!cfg, lastSync: null, lastError: null, tickets: 0, running: false };
   if (!cfg) return { state, start() {}, processActions() {}, status: () => ({ enabled: false }) };
 
-  const me = cfg.userId ?? userIdFromToken(cfg.token);
+  let me = null; // resolved on the first sync (resolveMe)
   const getRec = db.prepare('SELECT id, kind, hlc, deleted, data FROM records WHERE id = ?');
   const iiqTasks = db.prepare("SELECT id, hlc, deleted, data FROM records WHERE kind = 'task' AND id LIKE 'iiq-%'");
   const pendingActions = db.prepare("SELECT id, hlc, data FROM records WHERE kind = 'iiq-action' AND deleted = 0 AND json_extract(data, '$.state') = 'pending'");
@@ -260,10 +330,11 @@ export function createIiq({ db, applyChanges, onChange, cfg, client = cfg && cre
     if (state.running) return;
     state.running = true;
     try {
+      me ??= (await resolveMe(cfg, client)).id;
+      if (!me) throw new Error('Nextly can’t tell which tickets are yours. Set IIQ_USER_EMAIL in .env.');
       const raw = await client.myOpenTickets(me);
-      // The list also holds unassigned tickets; keep mine (or any assigned
-      // one if the token doesn't say who "me" is).
-      const mine = raw.map((t) => readTicket(t, cfg)).filter((t) => t.id && !t.closed && (raw.onlyMine || (t.assignedTo && (!me || t.assignedTo.toLowerCase() === me.toLowerCase()))));
+      const who = { me, email: cfg.userEmail, onlyMine: raw.onlyMine };
+      const mine = raw.map((t) => readTicket(t, cfg)).filter((t) => t.id && !t.closed && isMine(t, who));
       const rows = [];
       ensureProject(rows);
       const open = new Set();
@@ -298,8 +369,8 @@ export function createIiq({ db, applyChanges, onChange, cfg, client = cfg && cre
         let status = 'Closed';
         try {
           const tk = readTicket(await client.ticket(d.external.id), cfg);
-          if (!tk.closed && tk.assignedTo && me && tk.assignedTo.toLowerCase() !== me.toLowerCase()) status = 'Reassigned';
-          else if (!tk.closed && !tk.assignedTo) status = 'Unassigned';
+          if (!tk.closed && (tk.assignedTo || tk.assignedEmail) && !isMine(tk, { me, email: cfg.userEmail })) status = 'Reassigned';
+          else if (!tk.closed && !tk.assignedTo && !tk.assignedEmail) status = 'Unassigned';
           else status = tk.status ?? 'Closed';
         } catch { /* gone or unreadable: treat as closed */ }
         rows.push(record(cur.id, 'task', {
@@ -325,7 +396,9 @@ export function createIiq({ db, applyChanges, onChange, cfg, client = cfg && cre
     if (acting) return;
     acting = true;
     try {
-      for (const a of pendingActions.all()) {
+      const pending = pendingActions.all();
+      if (pending.length) me ??= (await resolveMe(cfg, client).catch(() => ({ id: null }))).id; // "start" needs it
+      for (const a of pending) {
         const d = JSON.parse(a.data);
         let result;
         try {
@@ -382,7 +455,7 @@ export function createIiq({ db, applyChanges, onChange, cfg, client = cfg && cre
     processActions,
     status: () => ({
       enabled: true, lastSync: state.lastSync, lastError: state.lastError, tickets: state.tickets,
-      pollSeconds: cfg.pollSeconds, canResolve: !!(cfg.resolutionActionId || cfg.resolve), knowsUser: !!me,
+      pollSeconds: cfg.pollSeconds, canResolve: !!(cfg.resolutionActionId || cfg.resolve), knowsUser: !!(me || cfg.userId || cfg.userEmail),
     }),
   };
 }
