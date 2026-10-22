@@ -42,13 +42,17 @@ try {
   const list = await client.myOpenTickets(me);
   const read = list.map((t) => readTicket(t, cfg));
   const assigned = read.filter((t) => t.assignedTo);
-  console.log(`\nUsing the first that works: ${list.length} tickets, ${assigned.length} with an assignee found, ${me ? read.filter((t) => t.assignedTo?.toLowerCase() === me.toLowerCase()).length : '?'} assigned to you${list.onlyMine ? ' (this search only returns yours)' : ''}`);
+  const open = read.filter((t) => !t.closed).length;
+  console.log(`\nUsing the first that works: ${list.length} tickets (${open} open, ${list.length - open} closed), ${assigned.length} with an assignee found, ${me ? read.filter((t) => t.assignedTo?.toLowerCase() === me.toLowerCase()).length : '?'} assigned to you${list.onlyMine ? ' (this search only returns yours)' : ''}`);
+  console.log(`Nextly will sync the ${open} open one${open === 1 ? '' : 's'}.`);
   if (!list.length) process.exit(0);
-  console.log('\nHow Nextly reads the first ticket (true = found):');
-  const r = read[0];
+  // Show an open ticket if there is one: closed ones leave out fields like the assignee.
+  const i = Math.max(0, read.findIndex((t) => !t.closed));
+  const r = read[i];
+  console.log(`\nHow Nextly reads ${r.closed ? 'the first ticket (none are open)' : 'the first open ticket'}:`);
   for (const [k, v] of Object.entries(r)) console.log(`  ${k}: ${v === null || v === '' ? 'NOT FOUND' : 'found'}`);
-  console.log('\nFirst ticket in the list, shape only:');
-  console.log(shape(list[0]));
+  console.log(`\n${r.closed ? 'That ticket' : 'That open ticket'}, shape only:`);
+  console.log(shape(list[i]));
   if (r.id) {
     // Each of these on its own, so one failure doesn't hide the rest.
     try {

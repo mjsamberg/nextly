@@ -83,10 +83,16 @@ export function createClient(cfg, fetchImpl = fetch) {
 
   async function allPages(way, me) {
     const out = [];
+    const seen = new Set();
     for (let page = 0; page < 20; page++) {
       const batch = items(await call(...way.request(page, me)));
       if (!batch) throw Object.assign(new Error(`${way.name}: the answer had no list of tickets.`), { status: 0 });
-      out.push(...batch);
+      // The search also returns closed tickets, so lists grow past one page.
+      // If a site ignores $p, the same page comes back: stop there.
+      const fresh = batch.filter((t) => !seen.has(t.TicketId ?? t.Id));
+      if (page > 0 && fresh.length === 0) break;
+      for (const t of fresh) seen.add(t.TicketId ?? t.Id);
+      out.push(...fresh);
       if (batch.length < 100) break;
     }
     return out;
@@ -171,7 +177,7 @@ const name = (o) => (typeof o === 'string' ? o : pick(o?.Name, o?.FullName, [o?.
 
 export function readTicket(t, cfg) {
   const id = pick(t.TicketId, t.Id);
-  const assigned = pick(t.AssignedToUserId, t.AssignedToUser?.UserId, t.AgentId, t.AssignedToUser?.Id);
+  const assigned = pick(t.AssignedToUserId, t.AssignedToUser?.UserId, t.AgentId, t.Agent?.UserId, t.AssignedToUser?.Id);
   const closedDate = pick(t.ClosedDate, t.TicketClosedDate);
   return {
     id: id ? String(id) : null,
@@ -181,11 +187,16 @@ export function readTicket(t, cfg) {
     closed: Boolean(pick(t.IsClosed, closedDate ? true : undefined, false)),
     modified: pick(t.ModifiedDate, t.TicketModifiedDate, t.LastActivityDate) ?? null,
     assignedTo: assigned ? String(assigned) : null,
-    requester: name(pick(t.For, t.ForUser, t.Owner)) || [t.ForFirstName, t.ForLastName].filter(Boolean).join(' ') || null,
-    location: [name(t.Location) ?? t.LocationName, name(t.LocationRoom) ?? t.LocationRoomName].filter(Boolean).join(', ') || null,
+    // Tickets IIQ marks as holding sensitive information keep the requester
+    // and description in IIQ only.
+    sensitive: t.HasSensitiveInformation === true,
+    requester: t.HasSensitiveInformation === true ? null
+      : name(pick(t.For, t.ForUser, t.Owner)) || [t.ForFirstName, t.ForLastName].filter(Boolean).join(' ') || null,
+    location: [name(t.Location) ?? t.LocationName, name(t.LocationRoom) ?? t.LocationRoomName, t.LocationDetails].filter(Boolean).join(', ') || null,
     issue: pick(name(t.Issue), t.IssueName, name(t.IssueCategory)) ?? null,
-    priority: pick(t.Priority?.Name, t.PriorityName, typeof t.Priority === 'string' ? t.Priority : undefined) ?? null,
-    description: String(pick(t.IssueDescription, t.Description, '') ?? '').trim().slice(0, 5000),
+    // chathamnc sends Priority as a number with a separate IsUrgent flag.
+    priority: t.IsUrgent === true ? 'Urgent' : pick(t.Priority?.Name, t.PriorityName, typeof t.Priority === 'string' ? t.Priority : undefined) ?? null,
+    description: t.HasSensitiveInformation === true ? '' : String(pick(t.IssueDescription, t.Description, '') ?? '').trim().slice(0, 5000),
     url: id ? cfg.ticketUrl.replace('{TicketId}', id) : null,
   };
 }
@@ -229,6 +240,7 @@ export function createIiq({ db, applyChanges, onChange, cfg, client = cfg && cre
     const notes = [];
     if (details) notes.push({ id: `iiq-${tk.id}-d`, type: 'paragraph', text: details });
     if (tk.description) notes.push({ id: `iiq-${tk.id}-desc`, type: 'quote', text: tk.description });
+    if (tk.sensitive) notes.push({ id: `iiq-${tk.id}-sens`, type: 'paragraph', text: 'Incident IQ marks this ticket as holding sensitive information, so its requester and description stay in Incident IQ.' });
     return {
       title: titleOf(tk), flag: 'inbox', projectId: PROJECT_ID, parentId: null, deadline: null,
       startOn: null, repeat: null, nextId: null, done: false, doneAt: null,
