@@ -6,7 +6,7 @@
 //   docker compose exec nextly node iiq-probe.js
 //   docker compose exec nextly node iiq-probe.js --steps   (also the first ticket's next steps)
 
-import { createClient, iiqConfig, isMine, readTicket, resolveMe } from './iiq.js';
+import { createClient, iiqConfig, isMine, openMineIds, readTicket, resolveMe } from './iiq.js';
 
 const cfg = iiqConfig();
 if (!cfg) {
@@ -55,6 +55,21 @@ try {
   console.log(`Open tickets naming an assignee: ${named.length}; assigned to you: ${named.filter((t) => isMine(t, who)).length}; to someone else: ${named.filter((t) => !isMine(t, who)).length}`);
   console.log(`Nextly will sync ${mine.length} open ticket${mine.length === 1 ? '' : 's'}.`);
   if (list.onlyMine && named.length && named.some((t) => !isMine(t, who))) console.log('Note: Incident IQ ignored the "you" filter; Nextly drops the other people’s tickets itself.');
+  if (list.onlyMine) {
+    // The same check the sync makes before using the open-only filter.
+    try {
+      const filters = await client.openStateFilters();
+      if (!filters.length) console.log('Open-only filter: the site offered none; Nextly reads the full list each time.');
+      else {
+        const narrow = await client.searchMine(me, filters);
+        const a = openMineIds(list, who), b = openMineIds(narrow, who);
+        const same = a.join() === b.join();
+        console.log(`Open-only filter: ${narrow.length} tickets (${b.length} open and yours) vs ${a.length} from the full list: ${same
+          ? 'same tickets, so Nextly will use it (rechecked every 6 hours)'
+          : `different (${a.filter((x) => !b.includes(x)).length} missing, ${b.filter((x) => !a.includes(x)).length} extra), so Nextly keeps reading the full list`}.`);
+      }
+    } catch (e) { console.log(`Open-only filter: not available (${e.message}); Nextly reads the full list each time.`); }
+  }
   if (!list.length) process.exit(0);
   // Show an open ticket if there is one: closed ones leave out fields like the assignee.
   const i = Math.max(0, read.findIndex((t) => !t.closed));

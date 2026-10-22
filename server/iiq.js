@@ -153,6 +153,22 @@ export function createClient(cfg, fetchImpl = fetch) {
       }
       return results;
     },
+    /**
+     * Filters for open tickets, from the site's own "ticketstate" facet
+     * (the web app's filter list). Empty if the site doesn't offer one.
+     */
+    async openStateFilters() {
+      const r = await either('POST', ['/services/filters', '/api/v1.0/filters'], { Facets: ['ticketstate'], Query: '', ResultsFilter: { EntityName: 'tickets' } });
+      return openStates(r);
+    },
+    /** My tickets from the search, narrowed by extra filters (one page when they're the open ones). */
+    async searchMine(me, extra) {
+      const list = await allPages({
+        name: 'POST /api/v1.0/tickets (agent = you, open)',
+        request: (p) => ['POST', `/api/v1.0/tickets${query(p)}`, { Schema: 'All', Filters: [{ Facet: 'agent', Id: me }, ...extra] }],
+      }, me);
+      return Object.assign(list, { onlyMine: true });
+    },
     /** The user id for an email address, or null if no user has it. */
     async findUser(email) {
       const body = { Query: email, Facets: 4, IncludeMatchedItem: true, Limit: 10 }; // facet 4 = users
@@ -205,6 +221,35 @@ function findByEmail(v, want, depth = 0) {
   }
   for (const x of Object.values(v)) { const r = findByEmail(x, want, depth + 1); if (r) return r; }
   return null;
+}
+
+/**
+ * From a filter-list answer, the ticketstate filter(s) meaning open: the one
+ * named "Open" if there is one, else every state that isn't a closed one.
+ * Whether a site honors them is checked against the full list before use.
+ */
+function openStates(v) {
+  const options = [];
+  (function walk(o, depth) {
+    if (!o || typeof o !== 'object' || depth > 6) return;
+    if (!Array.isArray(o)) {
+      const label = pick(o.Name, o.Text, o.Label, o.DisplayName);
+      const id = pick(o.Id, o.ItemId);
+      const value = pick(o.Value, o.Key);
+      if (typeof label === 'string' && (id !== undefined || value !== undefined) && !/state/i.test(label)) options.push({ label, id, value });
+    }
+    for (const x of Object.values(o)) walk(x, depth + 1);
+  })(v, 0);
+  const asFilter = (o) => (o.id !== undefined ? { Facet: 'ticketstate', Id: o.id } : { Facet: 'ticketstate', Value: o.value });
+  const open = options.find((o) => /^open$/i.test(o.label.trim()));
+  if (open) return [asFilter(open)];
+  return options.filter((o) => !/clos|cancel|resolv|delet|archiv/i.test(o.label)).map(asFilter);
+}
+
+/** Ids of the open tickets in a list that are mine, sorted, to compare lists. */
+export function openMineIds(list, { me, email }) {
+  const who = { me, email, onlyMine: list.onlyMine };
+  return list.map((t) => readTicket(t, { ticketUrl: '' })).filter((t) => t.id && !t.closed && isMine(t, who)).map((t) => t.id).sort();
 }
 
 // ---------- reading IIQ's (undocumented) ticket shape ----------
@@ -289,6 +334,29 @@ export function createIiq({ db, applyChanges, onChange, cfg, client = cfg && cre
   if (!cfg) return { state, start() {}, processActions() {}, status: () => ({ enabled: false }) };
 
   let me = null; // resolved on the first sync (resolveMe)
+  // The search also returns closed tickets (years of them), so once an
+  // open-only filter is shown to find the same open tickets as the full
+  // list, use it, and check it against the full list again every few hours.
+  const RECHECK_MS = 6 * 3600_000;
+  let quick = null; // { filters, checkedAt }
+
+  async function listMine(who) {
+    if (quick && Date.now() - quick.checkedAt < RECHECK_MS) {
+      try { return await client.searchMine(me, quick.filters); } catch { quick = null; } // fall back to the full list
+    }
+    const full = await client.myOpenTickets(me);
+    quick = null;
+    if (full.onlyMine) {
+      try {
+        const filters = await client.openStateFilters();
+        if (filters.length) {
+          const narrow = await client.searchMine(me, filters);
+          if (openMineIds(narrow, who).join() === openMineIds(full, who).join()) quick = { filters, checkedAt: Date.now() };
+        }
+      } catch { /* no usable filter: keep the full list */ }
+    }
+    return full;
+  }
   const getRec = db.prepare('SELECT id, kind, hlc, deleted, data FROM records WHERE id = ?');
   const iiqTasks = db.prepare("SELECT id, hlc, deleted, data FROM records WHERE kind = 'task' AND id LIKE 'iiq-%'");
   const pendingActions = db.prepare("SELECT id, hlc, data FROM records WHERE kind = 'iiq-action' AND deleted = 0 AND json_extract(data, '$.state') = 'pending'");
@@ -332,7 +400,8 @@ export function createIiq({ db, applyChanges, onChange, cfg, client = cfg && cre
     try {
       me ??= (await resolveMe(cfg, client)).id;
       if (!me) throw new Error('Nextly can’t tell which tickets are yours. Set IIQ_USER_EMAIL in .env.');
-      const raw = await client.myOpenTickets(me);
+      const usedQuick = !!quick && Date.now() - quick.checkedAt < RECHECK_MS;
+      const raw = await listMine({ me, email: cfg.userEmail });
       const who = { me, email: cfg.userEmail, onlyMine: raw.onlyMine };
       const mine = raw.map((t) => readTicket(t, cfg)).filter((t) => t.id && !t.closed && isMine(t, who));
       const rows = [];
@@ -361,7 +430,8 @@ export function createIiq({ db, applyChanges, onChange, cfg, client = cfg && cre
           external: external(tk, titleFollowsIiq ? titleOf(tk) : ext.syncedTitle),
         }, cur.hlc));
       }
-      // Tasks whose tickets left my open list: closed or reassigned.
+      // Tasks whose tickets left my open list: closed or reassigned. Each is
+      // looked up on its own; one that's still open and mine stays as it is.
       for (const cur of iiqTasks.all()) {
         if (cur.deleted || open.has(cur.id)) continue;
         const d = JSON.parse(cur.data);
@@ -369,10 +439,16 @@ export function createIiq({ db, applyChanges, onChange, cfg, client = cfg && cre
         let status = 'Closed';
         try {
           const tk = readTicket(await client.ticket(d.external.id), cfg);
-          if (!tk.closed && (tk.assignedTo || tk.assignedEmail) && !isMine(tk, { me, email: cfg.userEmail })) status = 'Reassigned';
-          else if (!tk.closed && !tk.assignedTo && !tk.assignedEmail) status = 'Unassigned';
+          const named = !!(tk.assignedTo || tk.assignedEmail);
+          if (!tk.closed && named && isMine(tk, { me, email: cfg.userEmail })) continue; // the list missed it
+          if (!tk.closed && !named && usedQuick) { quick = null; continue; } // can't tell: let the full list decide next time
+          if (!tk.closed && named) status = 'Reassigned';
+          else if (!tk.closed) status = 'Unassigned';
           else status = tk.status ?? 'Closed';
-        } catch { /* gone or unreadable: treat as closed */ }
+        } catch (e) {
+          if (e.status !== 404) continue; // unreadable for now: try again next time
+          // gone: treat as closed
+        }
         rows.push(record(cur.id, 'task', {
           ...d, done: true, doneAt: d.done ? d.doneAt : now().toISOString(),
           external: { ...d.external, status, closed: true, syncedAt: now().toISOString() },
@@ -455,7 +531,7 @@ export function createIiq({ db, applyChanges, onChange, cfg, client = cfg && cre
     processActions,
     status: () => ({
       enabled: true, lastSync: state.lastSync, lastError: state.lastError, tickets: state.tickets,
-      pollSeconds: cfg.pollSeconds, canResolve: !!(cfg.resolutionActionId || cfg.resolve), knowsUser: !!(me || cfg.userId || cfg.userEmail),
+      pollSeconds: cfg.pollSeconds, canResolve: !!(cfg.resolutionActionId || cfg.resolve), knowsUser: !!(me || cfg.userId || cfg.userEmail), openOnly: !!quick,
     }),
   };
 }

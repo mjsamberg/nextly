@@ -66,6 +66,12 @@ docker compose exec nextly node iiq-probe.js --steps
 Look for `NOT FOUND` under "How Nextly reads the first ticket". If anything
 important is missing, send the output and the reading can be adjusted.
 
+The "Open-only filter" line says whether Nextly can ask Incident IQ for just
+your open tickets (one request) instead of all of them, closed included. It
+uses the filter only when it finds exactly the same open tickets as the full
+list, and checks that again every 6 hours. Either way, a task is marked done
+only after its own ticket is looked up and found closed or reassigned.
+
 ## 4. Turn on resolving from Nextly
 
 Many districts require a **resolution action** to close a ticket, so Nextly
