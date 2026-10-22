@@ -18,8 +18,8 @@ jobs:
       run:
         working-directory: app
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -35,8 +35,8 @@ jobs:
       run:
         working-directory: app
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -47,7 +47,7 @@ jobs:
           workspaces: app/src-tauri
       - run: npm ci
       - run: npx tauri build
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: nextly-windows
           if-no-files-found: error
@@ -70,8 +70,8 @@ jobs:
       APPLE_DEVELOPMENT_TEAM: ${{ secrets.APPLE_DEVELOPMENT_TEAM }}
       HAS_CERT: ${{ secrets.APPLE_CERTIFICATE != '' && secrets.APPLE_SIGNING_IDENTITY != '' && secrets.APPLE_DEVELOPMENT_TEAM != '' }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -116,7 +116,7 @@ jobs:
           NEXTLY_APP_GROUP: ${{ secrets.APPLE_DEVELOPMENT_TEAM }}.com.mjsamberg.nextly
         run: bash ../apple/scripts/ci-run.sh "macOS app build" npx tauri build --target universal-apple-darwin --config src-tauri/tauri.macos-extensions.json
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: nextly-macos
           if-no-files-found: error
@@ -137,8 +137,8 @@ jobs:
       HAS_KEY: ${{ secrets.APPLE_API_KEY != '' && secrets.APPLE_API_ISSUER != '' && secrets.APPLE_API_KEY_P8 != '' && secrets.APPLE_DEVELOPMENT_TEAM != '' }}
       EXPORT_METHOD: ${{ secrets.IOS_EXPORT_METHOD || 'debugging' }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -179,7 +179,7 @@ jobs:
       - name: Note skipped IPA
         if: env.HAS_KEY != 'true'
         run: echo "::notice title=iOS app not built::Add the App Store Connect API key secrets in docs/apple-signing.md to build the iPhone app."
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: env.HAS_KEY == 'true'
         with:
           name: nextly-ios
@@ -193,10 +193,10 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           path: dist
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           draft: true
           files: dist/**/*
