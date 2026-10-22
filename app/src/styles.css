@@ -40,6 +40,9 @@ h1, h2 { font-family: var(--display); font-weight: 600; text-transform: uppercas
 
 /* ---------- layout ---------- */
 .app { display: grid; grid-template-columns: 236px minmax(0, 1fr) minmax(320px, 400px); height: 100%; }
+/* Sections keep their full height and the sidebar scrolls. Without this,
+   sections that clip (iOS's rounded groups) shrink to fit and cut off rows. */
+.sidebar > * { flex-shrink: 0; }
 .sidebar { background: var(--side); border-right: 1px solid var(--line); padding: calc(12px + var(--safe-t)) 10px calc(10px + var(--safe-b)) calc(10px + var(--safe-l)); display: flex; flex-direction: column; gap: 2px; overflow-y: auto; }
 .list-pane { overflow-y: auto; min-width: 0; position: relative; }
 .detail-pane { border-left: 1px solid var(--line); background: var(--paper); overflow-y: auto; min-width: 0; }
