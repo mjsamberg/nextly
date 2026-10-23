@@ -244,6 +244,14 @@
 [data-platform="ios"] .new-proj input { font-size: 17px; border: 0; background: var(--ios-fill); border-radius: 10px; padding: 10px 12px; }
 [data-platform="ios"] .nav-group .new-proj { padding: 8px 12px; }
 
+/* iPhone lists home: a plain scrolling page, not a flex column. Its grouped
+   sections clip their corners, and in a column they could be squeezed to fit
+   the screen instead of scrolling; stacked as blocks they keep their height. */
+@media (max-width: 599px) {
+  [data-platform="ios"] .app[data-pane="nav"] > .sidebar { display: block; }
+  [data-platform="ios"] .side-foot { margin-bottom: 8px; }
+}
+
 /* iOS on wide screens (unfolded foldable, landscape, iPad): iOS text is
    larger, so give the sidebar and the task pane more room than on desktop. */
 @media (min-width: 600px) and (max-width: 899px) {
