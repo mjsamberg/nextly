@@ -48,6 +48,10 @@ export default function Detail({ task: t, onOpen, onClose, onDelete }: Props) {
         <button className="icon-btn close-x" onClick={onClose} aria-label="Close details"><I.X /></button>
       </div>
 
+      {t.readOnly && (
+        <p className="warn-note"><strong>Saved by a newer Nextly.</strong> This task was last changed by a newer version of Nextly, so this one shows it but won’t change it. Update Nextly on this device to edit it.</p>
+      )}
+
       {parent && (
         <button className="parent-link" onClick={() => onOpen(parent.id)}><I.Up width={12} height={12} />Subtask of {parent.title || 'untitled task'}</button>
       )}
@@ -60,6 +64,7 @@ export default function Detail({ task: t, onOpen, onClose, onDelete }: Props) {
           rows={1}
           value={t.title}
           placeholder="New task"
+          readOnly={t.readOnly}
           onChange={(e) => updateTask(t.id, { title: e.target.value.replace(/\n/g, ' ') })}
           autoFocus={!t.title}
         />

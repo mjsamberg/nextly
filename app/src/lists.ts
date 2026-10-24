@@ -1,9 +1,9 @@
 // Which tasks appear in which list. One place, so counts and lists agree.
-import { noteText } from './logic';
-import type { view } from './store';
-import type { TaskItem, View } from './types';
+import { noteText } from './logic.ts';
+import type { ViewData } from './rules.ts';
+import type { TaskItem, View } from './types.ts';
 
-type V = ReturnType<typeof view>;
+type V = ViewData;
 
 const open = (t: TaskItem) => !t.done;
 const byOrder = (a: TaskItem, b: TaskItem) => a.order - b.order;

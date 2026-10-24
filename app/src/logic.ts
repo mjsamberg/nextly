@@ -19,6 +19,19 @@ function normBlock(b: any, i: number): Block {
 const FLAGS = ['inbox', 'doing', 'today', 'next', 'someday'];
 const UNITS = ['day', 'week', 'month', 'year'];
 
+/**
+ * Keys an app doesn't know survive normalizing, so a field another app (or a
+ * newer version) wrote isn't erased the next time this one saves the record.
+ * spec/protocol.md, "Unknown fields".
+ */
+function extras(o: any, known: readonly string[]): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  if (o && typeof o === 'object' && !Array.isArray(o)) for (const k of Object.keys(o)) if (!known.includes(k)) out[k] = o[k];
+  return out;
+}
+
+const REPEAT_KEYS = ['every', 'unit', 'weekdays', 'from'];
+
 export function normRepeat(r: any): Repeat | null {
   if (!r || !UNITS.includes(r.unit)) return null;
   const every = Math.min(365, Math.max(1, Math.round(Number(r.every) || 1)));
@@ -26,6 +39,7 @@ export function normRepeat(r: any): Repeat | null {
     ? [...new Set(r.weekdays.map(Number).filter((n: number) => n >= 0 && n <= 6))].sort() as number[]
     : [];
   return {
+    ...extras(r, REPEAT_KEYS),
     every,
     unit: r.unit,
     ...(r.unit === 'week' && weekdays.length ? { weekdays } : {}),
@@ -33,16 +47,22 @@ export function normRepeat(r: any): Repeat | null {
   };
 }
 
+// Task fields this app knows. `links` and `list` are older forms, folded into
+// notes and flag; `id` belongs to the record, never its data.
+const TASK_KEYS = ['title', 'flag', 'projectId', 'parentId', 'deadline', 'startOn', 'repeat', 'nextId', 'external',
+  'done', 'doneAt', 'order', 'dependsOn', 'notes', 'createdAt', 'links', 'list', 'id'];
+
 // Tolerates older or partial records (for example ones written by the capture page).
 export function normTask(d: any): Task {
   const notes: Block[] = Array.isArray(d?.notes) ? d.notes.map(normBlock) : [];
   if (Array.isArray(d?.links)) {
-    for (const l of d.links) notes.push({ id: uid(), type: 'email', url: l.url, subject: l.subject });
+    d.links.forEach((l: any, i: number) => notes.push({ id: `link${i}`, type: 'email', url: l.url, subject: l.subject }));
   }
   const flag: Flag = FLAGS.includes(d?.flag)
     ? d.flag
     : d?.list === 'inbox' ? 'inbox' : null;
   return {
+    ...extras(d, TASK_KEYS),
     title: String(d?.title ?? ''),
     flag,
     projectId: d?.projectId ?? null,
@@ -85,8 +105,8 @@ export function wouldCycle(taskId: string, depId: string, get: TaskLookup): bool
 }
 
 /** Order value that places a task between two neighbours in Next. */
-export function orderBetween(before: number | undefined, after: number | undefined): number {
-  if (before === undefined && after === undefined) return Date.now();
+export function orderBetween(before: number | undefined, after: number | undefined, now = Date.now()): number {
+  if (before === undefined && after === undefined) return now;
   if (before === undefined) return after! - 1000;
   if (after === undefined) return before + 1000;
   return (before + after) / 2;

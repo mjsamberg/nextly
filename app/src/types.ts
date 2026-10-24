@@ -106,9 +106,13 @@ export interface Rec<T = unknown> {
 }
 
 export type WithId<T> = T & { id: string };
-export type TaskItem = WithId<Task>;
-export type ProjectItem = WithId<Project>;
-export type AreaItem = WithId<Area>;
+/**
+ * `readOnly`: saved by a newer Nextly (a higher `schema` than this app
+ * supports, rules.ts), so this app shows it but doesn't change it.
+ */
+export type TaskItem = WithId<Task> & { readOnly?: boolean };
+export type ProjectItem = WithId<Project> & { readOnly?: boolean };
+export type AreaItem = WithId<Area> & { readOnly?: boolean };
 
 export type View =
   | 'inbox' | 'doing' | 'today' | 'next' | 'scheduled' | 'someday' | 'all' | 'logbook' | 'search'
