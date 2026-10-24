@@ -99,6 +99,12 @@ function validLink(sha, q) {
 
 const safeMime = (m) => (/^[\w.+-]+\/[\w.+-]+$/.test(m || '') ? m : 'application/octet-stream');
 
+// Types a browser shows without running anything in it. Anything else (HTML,
+// SVG, XML...) downloads instead: opened here, its scripts would run on this
+// server's origin, where the capture page keeps the sync token.
+const INLINE = /^(image\/(png|jpeg|gif|webp|avif|bmp)|application\/pdf|text\/plain|audio\/[\w.+-]+|video\/[\w.+-]+)$/;
+const NOSNIFF = { 'x-content-type-options': 'nosniff' };
+
 function readBody(req, limit) {
   return new Promise((resolve, reject) => {
     const chunks = [];
@@ -150,9 +156,11 @@ const server = http.createServer(async (req, res) => {
       if (!validLink(signed[1], url.searchParams)) return send(res, 403, { error: 'This link has expired. Open the file from Nextly again.' });
       if (!fs.existsSync(p)) return send(res, 404, { error: 'No such file' });
       const name = url.searchParams.get('name') || 'file';
+      const mime = safeMime(url.searchParams.get('mime'));
       res.writeHead(200, {
-        'content-type': safeMime(url.searchParams.get('mime')),
-        'content-disposition': `inline; filename*=UTF-8''${encodeURIComponent(name)}`,
+        'content-type': mime,
+        'content-disposition': `${INLINE.test(mime.toLowerCase()) ? 'inline' : 'attachment'}; filename*=UTF-8''${encodeURIComponent(name)}`,
+        ...NOSNIFF,
         ...CORS,
       });
       return fs.createReadStream(p).pipe(res);
@@ -220,7 +228,7 @@ const server = http.createServer(async (req, res) => {
       }
       if (req.method === 'GET') {
         if (!fs.existsSync(p)) return send(res, 404, { error: 'No such file' });
-        res.writeHead(200, { 'content-type': 'application/octet-stream', ...CORS });
+        res.writeHead(200, { 'content-type': 'application/octet-stream', ...NOSNIFF, ...CORS });
         return fs.createReadStream(p).pipe(res);
       }
     }
