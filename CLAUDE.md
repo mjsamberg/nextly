@@ -41,7 +41,8 @@ when something here changes.
   For iOS UI bugs, ask early for a screen recording, or use Safari's Web
   Inspector from the Mac.
 - iOS tap targets are at least 44pt (`platform.css`).
-- `rust-ini` is pinned to 0.21.1 (newer breaks the deep-link plugin).
+- `rust-ini` is held at 0.21.1 by `app/src-tauri/Cargo.lock` (newer breaks the
+  deep-link plugin); keep it there when updating Rust crates.
 
 ## Incident IQ (server/iiq.js, docs/incident-iq.md)
 
