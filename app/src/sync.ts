@@ -45,6 +45,16 @@ const setStatus = (s: Partial<SyncStatus>) => { status = { ...status, ...s }; li
 export const useSyncStatus = () => useSyncExternalStore((l) => { listeners.add(l); return () => { listeners.delete(l); }; }, () => status);
 export const getSettings = () => settings;
 
+let onSynced: () => void = () => {};
+export const setOnSynced = (f: () => void) => { onSynced = f; };
+
+/**
+ * Whether this device has what the server has: sync is off, or a sync has
+ * finished since launch. Automatic edits (promoteDue) wait for this, because
+ * a change made to a stale copy would overwrite newer edits from elsewhere.
+ */
+export const inStep = () => !settings.url || !settings.token || lastSyncAt > 0;
+
 // ---------- one server, one or two addresses ----------
 
 /** The server's addresses, primary first. */
@@ -262,6 +272,7 @@ export async function syncNow(): Promise<void> {
       message: sent || received ? `Synced · sent ${sent}, received ${received}` : 'Up to date · nothing new',
       lastSync: now, sent, received,
     });
+    onSynced();
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     setStatus({ state: 'error', message: /fetch|network|connect|dns|refused|timed out/i.test(msg) ? `Can’t reach ${hosts()}. Check your internet connection and that the server is reachable (Cloudflare Tunnel, or Tailscale if you use it).` : msg });

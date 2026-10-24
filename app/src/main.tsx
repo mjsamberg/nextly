@@ -9,7 +9,7 @@ import './styles.css';
 import './platform.css';
 import App from './App';
 import { load, promoteDue } from './store';
-import { initSync } from './sync';
+import { initSync, inStep, setOnSynced } from './sync';
 import { initApple } from './apple';
 import { initCapture } from './capture';
 import { hasMica, inTauri, platform } from './net';
@@ -21,8 +21,8 @@ void hasMica().then((m) => { if (m) document.documentElement.dataset.mica = ''; 
 const root = createRoot(document.getElementById('root')!);
 
 load()
-  .then(startDailyCheck)
   .then(initSync)
+  .then(startDailyCheck)
   .then(initApple)
   .then(() => root.render(<React.StrictMode><App /></React.StrictMode>))
   .then(() => initCapture())
@@ -31,11 +31,15 @@ load()
 /**
  * Tasks with a start date (including the next copy of a repeating task) move
  * into Today on that day: check at launch, when the app comes back to the
- * front, and every minute in case the date rolls over while it's open.
+ * front, after each sync, and every minute in case the date rolls over while
+ * it's open. Not before this device has synced since launch: moving a stale
+ * copy would undo newer edits from other devices (say, a task finished there).
  */
 function startDailyCheck() {
-  promoteDue();
-  window.addEventListener('focus', () => promoteDue());
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) promoteDue(); });
-  setInterval(() => promoteDue(), 60_000);
+  const check = () => { if (inStep()) promoteDue(); };
+  check();
+  setOnSynced(check);
+  window.addEventListener('focus', check);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) check(); });
+  setInterval(check, 60_000);
 }
