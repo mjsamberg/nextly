@@ -10,19 +10,22 @@ when something here changes.
 | Path | What |
 | --- | --- |
 | `app/` | Tauri 2 app: React + TypeScript (Vite) in `src/`, Rust shell in `src-tauri/` |
-| `app/src/store.ts` | All data changes go through its actions (rules live here, not in components) |
-| `app/src/lists.ts`, `logic.ts` | What each list shows; quick add, repeats, dates (tested in `logic.test.ts`) |
+| `app/src/store.ts` | All data changes go through its actions; it saves what `rules.ts` decides |
+| `app/src/rules.ts` | The store's rules as pure functions (finish, repeats, unblocking, Next order, schema) |
+| `app/src/lists.ts`, `logic.ts` | What each list shows; quick add, repeats, dates |
+| `spec/` | The contract between apps: `protocol.md` and shared test cases in `fixtures/` |
+| `docs/parity.md` | Windows vs Swift feature checklist; the gate for retiring the Tauri Mac/iOS builds |
 | `app/src/sync.ts`, `live.ts` | Sync with the server (one or two addresses, failover), live updates over WebSocket |
 | `app/src/styles.css`, `platform.css` | Base styles; per-platform looks keyed on `html[data-platform]` (mac, win, ios, other) |
 | `server/` | Sync server: Node 24, no dependencies, `node:sqlite`; Docker Compose builds it from GitHub `main` |
 | `server/iiq.js` | Incident IQ sync (see below); `iiq-probe.js`, `iiq-options.js` are read-only diagnostics |
-| `apple/` | Swift widget and Siri extensions (xcodegen specs, CI scripts) |
+| `apple/` | Swift widget and Siri extensions (xcodegen specs, CI scripts); the native Swift apps are being built here |
 | `docs/` | Cloudflare, Apple signing, Incident IQ setup |
 | `scripts/set-version.mjs` | Date-based versions (`Y.M.D.N`, New York time, Nth commit that day) |
 
 ## Working on it
 
-- App: `cd app && npm install`, then `npm test` (logic tests), `npx tsc --noEmit -p .`,
+- App: `cd app && npm install`, then `npm test` (the shared fixtures), `npx tsc --noEmit -p .`,
   `npm run dev` (browser), `npx tauri dev` (desktop, needs Rust).
 - Server: `cd server && npm test` (Node 24; starts a throwaway server for
   the file tests). On the Mac, Node 24 is from Homebrew (`node@24`, keg-only:
@@ -34,6 +37,18 @@ when something here changes.
   the repo (it's public).
 - Pull before starting and push when done; the other computer may have work.
 - Commits: short imperative subject, a body saying why.
+
+## Two apps, one data format
+
+Windows runs the Tauri app; iOS and macOS are moving to native Swift
+(`docs/parity.md`). They must not drift apart:
+
+- A rule change starts in `spec/fixtures` (and `spec/protocol.md`), then
+  goes into `app/src/rules.ts`/`logic.ts` and the Swift package. `node
+  scripts/check-fixtures.mjs` fails CI if a suite doesn't run every fixture.
+- Saving keeps fields the app doesn't know (sync replaces whole records).
+- Records carry `schema`; raise it only for changes older apps can't save
+  over, and they will show such records read-only.
 
 ## Lessons learned
 
