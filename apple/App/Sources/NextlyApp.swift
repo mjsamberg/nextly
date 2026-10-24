@@ -36,6 +36,7 @@ struct NextlyApp: App {
             .font(Theme.body())
             .tint(Theme.plum)
             .onAppear { model.start() }
+            .onOpenURL { model.handle($0) }
             .onChange(of: scenePhase) { _, phase in if phase == .active { model.becameActive() } }
     }
 }

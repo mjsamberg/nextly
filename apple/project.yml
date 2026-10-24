@@ -5,7 +5,12 @@
 #   cd apple && xcodegen generate --spec project.yml && open NextlyNative.xcodeproj
 #
 # While the Tauri builds still ship on Mac and iPhone (docs/parity.md), this
-# app has its own bundle id so both can be installed side by side.
+# app has its own bundle id and App Group so both can be installed side by
+# side. The widget and Siri extensions are the same code the Tauri builds
+# embed (Shared, Widgets, Intents); here they're built for this app.
+#
+# App Group: group.com.mjsamberg.nextly.native on iOS; on the Mac, the
+# team-prefixed <TEAMID>.com.mjsamberg.nextly.native (Developer ID).
 
 name: NextlyNative
 options:
@@ -14,6 +19,22 @@ options:
     iOS: "17.0"
     macOS: "14.0"
   createIntermediateGroups: true
+
+settings:
+  base:
+    SWIFT_VERSION: "5.10"
+    MARKETING_VERSION: "0.0.0" # CI passes MARKETING_VERSION= and CURRENT_PROJECT_VERSION= to xcodebuild
+    CURRENT_PROJECT_VERSION: "1"
+    TARGETED_DEVICE_FAMILY: "1,2"
+    GENERATE_INFOPLIST_FILE: NO
+    ENABLE_HARDENED_RUNTIME: YES
+    "NEXTLY_APP_GROUP[sdk=iphone*]": group.com.mjsamberg.nextly.native
+    "NEXTLY_APP_GROUP[sdk=macosx*]": $(DEVELOPMENT_TEAM).com.mjsamberg.nextly.native
+    # Mac App Groups need a signing team. Local builds without one use the
+    # "local" entitlements (no App Group: the app runs, the widgets can't see
+    # its settings); CI signs with NEXTLY_ENTITLEMENTS=signed.
+    NEXTLY_ENTITLEMENTS: local
+    CODE_SIGN_STYLE: Automatic
 
 packages:
   NextlyKit:
@@ -25,10 +46,14 @@ targets:
     supportedDestinations: [iOS, macOS]
     sources:
       - path: App/Sources
+      - path: Shared # App Group files and the widget snapshot format, shared with the extensions
+      - path: App/Assets.xcassets
       - path: App/Fonts
         buildPhase: resources
     dependencies:
       - package: NextlyKit
+      - target: NextlyWidgets
+      - target: NextlyIntents
     info:
       path: App/Info.plist
       properties:
@@ -37,6 +62,11 @@ targets:
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         LSApplicationCategoryType: public.app-category.productivity
         ITSAppUsesNonExemptEncryption: false
+        NextlyAppGroup: $(NEXTLY_APP_GROUP)
+        # nextly://add links (the Gmail bookmarklet) and widget taps (nextly://open, nextly://list).
+        CFBundleURLTypes:
+          - CFBundleURLName: com.mjsamberg.nextly
+            CFBundleURLSchemes: [nextly]
         UILaunchScreen: {}
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
         UISupportedInterfaceOrientations~ipad: [UIInterfaceOrientationPortrait, UIInterfaceOrientationPortraitUpsideDown, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
@@ -47,14 +77,72 @@ targets:
       base:
         PRODUCT_NAME: Nextly
         PRODUCT_BUNDLE_IDENTIFIER: com.mjsamberg.nextly.native
-        MARKETING_VERSION: "0.0.0" # CI passes MARKETING_VERSION= and CURRENT_PROJECT_VERSION= to xcodebuild
-        CURRENT_PROJECT_VERSION: "1"
-        TARGETED_DEVICE_FAMILY: "1,2"
-        SWIFT_VERSION: "5.10"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ENABLE_PREVIEWS: YES
-        GENERATE_INFOPLIST_FILE: NO
-        "CODE_SIGN_ENTITLEMENTS[sdk=macosx*]": App/Nextly-macOS.entitlements
-        ENABLE_HARDENED_RUNTIME: YES
-        # Local builds: sign to run locally. CI passes a team and identity.
-        CODE_SIGN_STYLE: Automatic
+        "CODE_SIGN_ENTITLEMENTS[sdk=macosx*]": App/Nextly-macOS-$(NEXTLY_ENTITLEMENTS).entitlements
+        "CODE_SIGN_ENTITLEMENTS[sdk=iphone*]": App/Nextly-iOS.entitlements
+        # Local builds: sign to run locally (set per target; XcodeGen's target
+        # defaults would override a project-level value). CI passes a team and identity.
         "CODE_SIGN_IDENTITY[sdk=macosx*]": "-"
+
+  NextlyWidgets:
+    type: app-extension
+    supportedDestinations: [iOS, macOS]
+    sources:
+      - path: Shared
+      - path: Widgets
+    info:
+      path: App/Extensions/Widgets-Info.plist
+      properties:
+        CFBundleDisplayName: Nextly Native
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NextlyAppGroup: $(NEXTLY_APP_GROUP)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: true
+    settings:
+      base:
+        PRODUCT_NAME: NextlyWidgets
+        PRODUCT_BUNDLE_IDENTIFIER: com.mjsamberg.nextly.native.widgets
+        SKIP_INSTALL: YES
+        "CODE_SIGN_ENTITLEMENTS[sdk=macosx*]": App/Extensions/Extension-macOS-$(NEXTLY_ENTITLEMENTS).entitlements
+        "CODE_SIGN_ENTITLEMENTS[sdk=iphone*]": App/Extensions/Extension-iOS.entitlements
+        # Local builds: sign to run locally (set per target; XcodeGen's target
+        # defaults would override a project-level value). CI passes a team and identity.
+        "CODE_SIGN_IDENTITY[sdk=macosx*]": "-"
+    dependencies:
+      - sdk: WidgetKit.framework
+      - sdk: SwiftUI.framework
+
+  NextlyIntents:
+    type: extensionkit-extension
+    supportedDestinations: [iOS, macOS]
+    sources:
+      - path: Shared
+      - path: Intents
+    info:
+      path: App/Extensions/Intents-Info.plist
+      properties:
+        CFBundleDisplayName: Nextly Native
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NextlyAppGroup: $(NEXTLY_APP_GROUP)
+        EXAppExtensionAttributes:
+          EXExtensionPointIdentifier: com.apple.appintents-extension
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: true
+    settings:
+      base:
+        PRODUCT_NAME: NextlyIntents
+        PRODUCT_BUNDLE_IDENTIFIER: com.mjsamberg.nextly.native.intents
+        SKIP_INSTALL: YES
+        "CODE_SIGN_ENTITLEMENTS[sdk=macosx*]": App/Extensions/Extension-macOS-$(NEXTLY_ENTITLEMENTS).entitlements
+        "CODE_SIGN_ENTITLEMENTS[sdk=iphone*]": App/Extensions/Extension-iOS.entitlements
+        # Local builds: sign to run locally (set per target; XcodeGen's target
+        # defaults would override a project-level value). CI passes a team and identity.
+        "CODE_SIGN_IDENTITY[sdk=macosx*]": "-"
+    dependencies:
+      - sdk: AppIntents.framework
+      - sdk: WidgetKit.framework

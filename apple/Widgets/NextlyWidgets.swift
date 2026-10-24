@@ -105,8 +105,13 @@ struct ListWidgetView: View {
         }
     }
 
+    // Taps open the app at this list, or at a task (its title). The native
+    // app handles nextly://list and nextly://open; the Tauri app ignores them
+    // and just comes to the front.
     var body: some View {
-        content.containerBackground(for: .widget) { background }
+        content
+            .containerBackground(for: .widget) { background }
+            .widgetURL(URL(string: "nextly://list/\(kind == .today ? "today" : "next")"))
     }
 
     @ViewBuilder private var background: some View {
@@ -195,13 +200,15 @@ struct ListWidgetView: View {
             }
             .buttonStyle(.plain)
             .disabled(t.blocked)
-            VStack(alignment: .leading, spacing: 0) {
-                Text(t.title)
-                    .font(family == .systemSmall ? .caption : .subheadline)
-                    .lineLimit(1)
-                    .foregroundStyle(t.blocked ? Color.secondary : Color.primary)
-                if family != .systemSmall, let project = t.project {
-                    Text(project).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
+            Link(destination: URL(string: "nextly://open/\(t.id)")!) {
+                VStack(alignment: .leading, spacing: 0) {
+                    Text(t.title)
+                        .font(family == .systemSmall ? .caption : .subheadline)
+                        .lineLimit(1)
+                        .foregroundStyle(t.blocked ? Color.secondary : Color.primary)
+                    if family != .systemSmall, let project = t.project {
+                        Text(project).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
+                    }
                 }
             }
             Spacer(minLength: 0)

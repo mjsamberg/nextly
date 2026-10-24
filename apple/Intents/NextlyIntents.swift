@@ -2,6 +2,7 @@
 // is a Tauri (Rust + web) app with no Swift code of its own.
 
 import AppIntents
+import ExtensionFoundation
 import WidgetKit
 
 @main

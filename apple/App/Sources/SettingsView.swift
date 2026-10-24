@@ -120,6 +120,7 @@ struct SettingsView: View {
             }
             statusLine(sync.status.state.rawValue, syncLine)
             statusLine(liveDot, liveLine)
+            statusLine(model.share.line.state, model.share.line.text)
             Text("Nextly \(appVersion) · This device: \(store.deviceId)").font(Theme.small).foregroundStyle(.secondary)
         }
     }

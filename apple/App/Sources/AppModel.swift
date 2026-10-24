@@ -12,6 +12,8 @@ import SwiftUI
 final class AppModel {
     let store: LocalStore
     let sync: SyncClient
+    /// Settings and a snapshot for the widgets and Siri (AppleShare.swift).
+    let share: AppleShare
 
     /// The open list. Nil on a phone means the list of lists is showing.
     var list: ListView? = .today
@@ -46,10 +48,11 @@ final class AppModel {
         }
         self.store = store
         sync = SyncClient(store: store)
+        share = AppleShare(store: store)
     }
 
-    /// The App Group folder once the widgets share it (Phase 4); until then,
-    /// Application Support, separate from the Tauri app's data.
+    /// Application Support, separate from the Tauri app's data. The widgets
+    /// don't read it; they get settings and a snapshot through AppleShare.
     private static func databaseURL() -> URL {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         return base.appendingPathComponent("Nextly Native", isDirectory: true).appendingPathComponent("nextly.sqlite")
@@ -67,7 +70,10 @@ final class AppModel {
         guard !started else { return }
         started = true
         sync.onSynced = { [weak self] in self?.dailyCheck() }
+        sync.onSettings = { [weak self] s, urls in self?.share.settingsChanged(s, urls) }
         sync.start()
+        share.importPending()
+        watchStore()
         dailyCheck()
         dailyTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.dailyCheck() }
@@ -82,10 +88,63 @@ final class AppModel {
         if sync.inStep { store.promoteDue() }
     }
 
+    /// Every change, local or synced, refreshes the widgets' snapshot.
+    private func watchStore() {
+        withObservationTracking { _ = store.version } onChange: { [weak self] in
+            Task { @MainActor in
+                self?.share.shareSoon()
+                self?.watchStore()
+            }
+        }
+    }
+
     /// The app came back to the front.
     func becameActive() {
+        share.importPending()
         dailyCheck()
         Task { await sync.syncNow() }
+    }
+
+    // MARK: - nextly:// links
+
+    /// nextly://add?title=…&url=…&list=…&note=… (the Gmail bookmarklet; any web
+    /// page can open these, so they only ever add a task, through
+    /// Logic.parseCaptureLink), and the widgets' nextly://open/<task id> and
+    /// nextly://list/<today|next>.
+    func handle(_ url: URL) {
+        guard url.scheme == "nextly" else { return }
+        let parts = ([url.host ?? ""] + url.pathComponents.filter { $0 != "/" }).filter { !$0.isEmpty }
+        switch parts.first {
+        case "open":
+            guard parts.count > 1, let t = view.task(parts[1]) else { return }
+            list = listFor(t)
+            selectedTaskId = t.id
+        case "list":
+            if parts.count > 1, let l = ListView(name: parts[1]) { go(l) }
+        default:
+            guard let c = Logic.parseCaptureLink(url.absoluteString) else { return }
+            var notes: [JSONValue] = []
+            if !c.note.isEmpty { notes.append(Block(id: Logic.uid(), type: .paragraph, text: c.note).json) }
+            if let mail = c.emailUrl {
+                var b = Block(id: Logic.uid(), type: .email)
+                b.url = mail
+                b.subject = c.title
+                notes.append(b.json)
+            }
+            if let other = c.otherUrl { notes.append(Block(id: Logic.uid(), type: .paragraph, text: other).json) }
+            let id = store.createTask(["title": .string(c.title), "flag": .string(c.flag.rawValue), "notes": .array(notes)])
+            let l = ListView(name: c.flag.rawValue) ?? .inbox
+            go(l)
+            selectedTaskId = id
+            show(Toast(text: "Added “\(c.title)” to \(Lists.viewTitle(view, l))"))
+        }
+    }
+
+    /// The list a task opened from a widget shows in.
+    private func listFor(_ t: TaskItem) -> ListView {
+        if let f = t.flag, let l = ListView(name: f.rawValue) { return l }
+        if let p = t.projectId { return .project(p) }
+        return .all
     }
 
     // MARK: - Navigation
