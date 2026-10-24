@@ -1,0 +1,60 @@
+# The native Nextly app for iPhone, iPad and Mac: one SwiftUI target built
+# for both platforms, on NextlyKit (the shared data, rules and sync).
+#
+#   brew install xcodegen
+#   cd apple && xcodegen generate --spec project.yml && open NextlyNative.xcodeproj
+#
+# While the Tauri builds still ship on Mac and iPhone (docs/parity.md), this
+# app has its own bundle id so both can be installed side by side.
+
+name: NextlyNative
+options:
+  bundleIdPrefix: com.mjsamberg
+  deploymentTarget:
+    iOS: "17.0"
+    macOS: "14.0"
+  createIntermediateGroups: true
+
+packages:
+  NextlyKit:
+    path: NextlyKit
+
+targets:
+  Nextly:
+    type: application
+    supportedDestinations: [iOS, macOS]
+    sources:
+      - path: App/Sources
+      - path: App/Fonts
+        buildPhase: resources
+    dependencies:
+      - package: NextlyKit
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleDisplayName: Nextly Native
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        LSApplicationCategoryType: public.app-category.productivity
+        ITSAppUsesNonExemptEncryption: false
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
+        UISupportedInterfaceOrientations~ipad: [UIInterfaceOrientationPortrait, UIInterfaceOrientationPortraitUpsideDown, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
+        # Servers reached over Tailscale may be plain http.
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: true
+    settings:
+      base:
+        PRODUCT_NAME: Nextly
+        PRODUCT_BUNDLE_IDENTIFIER: com.mjsamberg.nextly.native
+        MARKETING_VERSION: "0.0.0" # CI passes MARKETING_VERSION= and CURRENT_PROJECT_VERSION= to xcodebuild
+        CURRENT_PROJECT_VERSION: "1"
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SWIFT_VERSION: "5.10"
+        ENABLE_PREVIEWS: YES
+        GENERATE_INFOPLIST_FILE: NO
+        "CODE_SIGN_ENTITLEMENTS[sdk=macosx*]": App/Nextly-macOS.entitlements
+        ENABLE_HARDENED_RUNTIME: YES
+        # Local builds: sign to run locally. CI passes a team and identity.
+        CODE_SIGN_STYLE: Automatic
+        "CODE_SIGN_IDENTITY[sdk=macosx*]": "-"

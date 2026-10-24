@@ -60,6 +60,17 @@ jobs:
         run: swift test
       - name: Fixture gate (every app runs every shared case)
         run: node scripts/check-fixtures.mjs
+      # The native app (apple/project.yml), unsigned for now: signing and
+      # notarizing come with the widgets (docs/parity.md, Platform).
+      - name: Generate the native app's project
+        working-directory: apple
+        run: brew install xcodegen && xcodegen generate --spec project.yml
+      - name: Build the native app for Mac
+        working-directory: apple
+        run: xcodebuild -project NextlyNative.xcodeproj -scheme Nextly -destination 'generic/platform=macOS' -derivedDataPath build/dd CODE_SIGNING_ALLOWED=NO build -quiet
+      - name: Build the native app for iPhone and iPad (simulator)
+        working-directory: apple
+        run: xcodebuild -project NextlyNative.xcodeproj -scheme Nextly -destination 'generic/platform=iOS Simulator' -derivedDataPath build/dd CODE_SIGNING_ALLOWED=NO build -quiet
 
   windows:
     needs: test
