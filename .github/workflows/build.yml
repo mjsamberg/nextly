@@ -72,6 +72,76 @@ jobs:
         working-directory: apple
         run: xcodebuild -project NextlyNative.xcodeproj -scheme Nextly -destination 'generic/platform=iOS Simulator' -derivedDataPath build/dd CODE_SIGNING_ALLOWED=NO build -quiet
 
+  # The native app, signed. Off until the native identifiers are registered
+  # and the repository variable NATIVE_SIGNING is "true" (docs/apple-signing.md, step 4).
+  native-macos:
+    needs: apple
+    if: vars.NATIVE_SIGNING == 'true'
+    runs-on: macos-latest
+    env:
+      APPLE_DEVELOPMENT_TEAM: ${{ secrets.APPLE_DEVELOPMENT_TEAM }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # the whole history: set-version counts the day's commits
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - name: Stamp the date-based version
+        working-directory: app
+        run: node ../scripts/set-version.mjs
+      - run: brew list xcodegen >/dev/null 2>&1 || brew install xcodegen
+      - name: Import Developer ID certificate
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+        run: bash apple/scripts/import-cert.sh
+      - name: Build, sign and notarize
+        env:
+          APPLE_SIGNING_IDENTITY: ${{ env.NEXTLY_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+        run: bash apple/scripts/ci-run.sh "Native Mac app" bash apple/scripts/build-native.sh mac
+      - uses: actions/upload-artifact@v7
+        with:
+          name: nextly-native-macos
+          if-no-files-found: error
+          path: apple/build/native/Nextly-Native-mac.zip
+
+  native-ios:
+    needs: apple
+    if: vars.NATIVE_SIGNING == 'true'
+    runs-on: macos-latest
+    env:
+      APPLE_DEVELOPMENT_TEAM: ${{ secrets.APPLE_DEVELOPMENT_TEAM }}
+      EXPORT_METHOD: ${{ secrets.IOS_EXPORT_METHOD || 'debugging' }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - name: Stamp the date-based version
+        working-directory: app
+        run: node ../scripts/set-version.mjs
+      - run: brew list xcodegen >/dev/null 2>&1 || brew install xcodegen
+      - name: Build signed IPA
+        env:
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
+        run: |
+          export APPLE_API_KEY_PATH="$RUNNER_TEMP/AuthKey_$APPLE_API_KEY.p8"
+          printf '%s' "$APPLE_API_KEY_P8" > "$APPLE_API_KEY_PATH"
+          bash apple/scripts/ci-run.sh "Native iPhone app" bash apple/scripts/build-native.sh ios
+      - uses: actions/upload-artifact@v7
+        with:
+          name: nextly-native-ios
+          if-no-files-found: error
+          path: apple/build/native/ios/*.ipa
+
   windows:
     needs: test
     runs-on: windows-latest

@@ -37,6 +37,12 @@ when something here changes.
   generate --spec project.yml && open NextlyNative.xcodeproj` (scheme Nextly,
   iOS and macOS). `cd apple/NextlyKit && swift test` runs the shared fixtures
   and sync tests. It installs as "Nextly Native" beside the Tauri app.
+  Mac builds without a signing team use entitlements with no App Group
+  (`NEXTLY_ENTITLEMENTS=local`), so the app runs but its widgets can't see
+  its settings. Signed builds: `apple/scripts/build-native.sh`, run by CI
+  once `NATIVE_SIGNING` is on (`docs/apple-signing.md`, step 4).
+- The widget and Siri code in `apple/Shared`, `Widgets` and `Intents` is
+  built into both the Tauri and the native apps; check both when changing it.
 - Builds and releases run on GitHub Actions (`.github/workflows/build.yml`) on
   every push to `main`; iOS and macOS signing secrets live in GitHub, not here.
 - The server's `.env` lives only on the server. Never put tokens or secrets in

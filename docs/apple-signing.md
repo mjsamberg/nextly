@@ -80,6 +80,37 @@ notarized, so it opens without warnings and can load the widget and Siri.
 On the Mac, the shared App Group is `<Team ID>.com.mjsamberg.nextly`;
 Developer ID apps must use the Team ID prefix, and the build sets it for you.
 
+## 4. The native app (side by side)
+
+The native SwiftUI app (`apple/project.yml`) installs as **Nextly Native**
+next to the Tauri app until it replaces it (`docs/parity.md`). It uses the
+same secrets, but its own identifiers. Register them once, as in step 1:
+
+1. **App Groups**: `group.com.mjsamberg.nextly.native` (iPhone).
+2. **App IDs**, each with **App Groups** on and that group chosen:
+   - `com.mjsamberg.nextly.native` (the app)
+   - `com.mjsamberg.nextly.native.widgets` (widget)
+   - `com.mjsamberg.nextly.native.intents` (Siri)
+
+On the Mac the group is `<TEAMID>.com.mjsamberg.nextly.native`, which
+Developer ID signing needs no registration for.
+
+Then turn the signed builds on: **Settings → Secrets and variables → Actions
+→ Variables → New repository variable**, `NATIVE_SIGNING` = `true`. Until
+then CI builds the native app unsigned as a check. With it on, each push
+also produces:
+
+- `nextly-native-macos`: a signed, notarized `Nextly.app` (zip). Its widgets
+  appear in the widget gallery once the app has been opened.
+- `nextly-native-ios`: an IPA, exported with `IOS_EXPORT_METHOD`.
+
+Building it yourself: `brew install xcodegen`, then `cd apple && xcodegen
+generate --spec project.yml`, open `NextlyNative.xcodeproj`, choose your
+team under Signing & Capabilities for all three targets, and set
+`NEXTLY_ENTITLEMENTS` to `signed` so the Mac build gets its App Group.
+Without a team the Mac app still runs, but its widgets can't see its
+settings.
+
 ## After installing
 
 - **Widget**: long-press the Home Screen (or right-click the Mac desktop) →

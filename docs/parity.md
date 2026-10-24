@@ -89,8 +89,9 @@ fixtures there, but stay unchecked until the app shows them.
 
 | Feature | Windows | Swift |
 | --- | --- | --- |
-| `nextly://add` links (bookmarklet) [capture-links] | ✅ | ⬜ (also iOS, new) |
-| Widgets: Today, Next; finish from the widget | — | ⬜ |
-| Siri: add a task, read a list | — | ⬜ |
-| Widgets open the app on tap | — | ⬜ (new) |
-| Signed and notarized Mac build; iOS build from CI | — | ⬜ |
+| `nextly://add` links (bookmarklet) [capture-links] | ✅ | ✅ (iOS too, which the Tauri app lacks) |
+| App icon | ✅ | ✅ |
+| Widgets: Today, Next; finish from the widget | — | ⬜ (built; the app shares settings and a snapshot with them, checked in the simulator; not yet placed on a home screen) |
+| Siri: add a task, read a list | — | ⬜ (built; tasks Siri saves offline are added on launch, checked; Siri itself not yet tried) |
+| Widgets open the app on tap | — | ⬜ (nextly://open and nextly://list checked in the app; tapping a placed widget not yet tried) |
+| Signed and notarized Mac build; iOS build from CI | — | ⬜ (CI jobs ready; need the native identifiers registered and NATIVE_SIGNING on, docs/apple-signing.md step 4) |
