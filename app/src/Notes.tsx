@@ -9,6 +9,7 @@ import type { Block, BlockType, TaskItem } from './types';
 // Block editor: a note is a list of blocks, like a blog post.
 // Enter makes a new block, Backspace on an empty block removes it,
 // and "/" in an empty text block opens the block menu.
+// Attaching shows the district's student-information warning first.
 
 const TEXT_TYPES: BlockType[] = ['heading', 'paragraph', 'checklist', 'quote'];
 
@@ -28,6 +29,7 @@ export default function Notes({ task }: { task: TaskItem }) {
   const [focusId, setFocusId] = useState<string | null>(null);
   const [menuFor, setMenuFor] = useState<string | null>(null);
   const [emailForm, setEmailForm] = useState<{ at: number } | null>(null);
+  const [attach, setAttach] = useState<{ type: 'image' | 'file'; at: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const pendingKind = useRef<{ type: 'image' | 'file'; at: number }>({ type: 'file', at: 0 });
@@ -43,8 +45,7 @@ export default function Notes({ task }: { task: TaskItem }) {
     const pos = replaceId ? blocks.findIndex((b) => b.id === replaceId) : at;
     if (type === 'image' || type === 'file') {
       if (replaceId) save(rest);
-      pendingKind.current = { type, at: pos };
-      fileInput.current?.click();
+      setAttach({ type, at: pos });
       return;
     }
     if (type === 'email') {
@@ -73,7 +74,16 @@ export default function Notes({ task }: { task: TaskItem }) {
       setError(`Couldn’t add the file: ${e instanceof Error ? e.message : e}`);
     }
     if (fileInput.current) fileInput.current.value = '';
+    setAttach(null);
   };
+
+  const pick = () => {
+    if (!attach || !fileInput.current) return;
+    pendingKind.current = attach;
+    fileInput.current.accept = attach.type === 'image' ? 'image/*' : '';
+    fileInput.current.click();
+  };
+  const hasFiles = blocks.some((b) => b.type === 'image' || b.type === 'file');
 
   const keyDown = (e: KeyboardEvent<HTMLTextAreaElement | HTMLInputElement>, b: Block, i: number) => {
     const el = e.currentTarget;
@@ -148,6 +158,16 @@ export default function Notes({ task }: { task: TaskItem }) {
         </div>
       ))}
 
+      {attach && (
+        <div className="attach-form">
+          <StudentInfoNote />
+          <div className="row-btns">
+            <button type="button" onClick={() => setAttach(null)}>Cancel</button>
+            <button type="button" className="pri" onClick={pick}>{attach.type === 'image' ? 'Choose an image…' : 'Choose files…'}</button>
+          </div>
+        </div>
+      )}
+      {!attach && hasFiles && <StudentInfoNote />}
       {emailForm && <EmailForm onCancel={() => setEmailForm(null)} onAdd={(url, subject) => { insertAt(emailForm.at, { id: uid(), type: 'email', url, subject }); setEmailForm(null); }} />}
       {error && <p className="error">{error}</p>}
 
@@ -161,6 +181,15 @@ export default function Notes({ task }: { task: TaskItem }) {
       </div>
       <input ref={fileInput} id={`file-${task.id}`} type="file" multiple hidden onChange={(e) => void onFiles(e.target.files)} />
     </section>
+  );
+}
+
+/** District policy: a warning wherever files can be attached. */
+function StudentInfoNote() {
+  return (
+    <p className="warn-note">
+      <strong>Student information.</strong> Don’t attach files with more than directory information about students, such as grades, IEP or 504 details, or health records. Attachments are stored on your Nextly server and devices.
+    </p>
   );
 }
 

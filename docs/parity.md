@@ -58,19 +58,19 @@ fixtures there, but stay unchecked until the app shows them.
 | Subtasks | ✅ | ✅ (adding built; not yet checked) |
 | Dependencies, loops refused, freed tasks move to Next [actions: dependency-*, done-frees-waiting] | ✅ | ✅ (adding built; not yet checked) |
 | Delete with undo [actions: delete-with-subtasks] | ✅ | ✅ |
-| Notes: heading, paragraph, checklist, quote, divider; Enter splits, Backspace merges, "/" menu | ✅ | ⬜ (shown read-only; editor is Phase 3) |
-| Images and files in notes | ✅ | ⬜ (names shown; Phase 3) |
-| Email cards (Gmail, Apple Mail `message:`) | ✅ | ⬜ (open as links; editing is Phase 3) |
+| Notes: heading, paragraph, checklist, quote, divider; Enter splits, Backspace merges, "/" menu | ✅ | ✅ |
+| Images and files in notes | ✅ | ✅ |
+| Email cards (Gmail, Apple Mail `message:`) | ✅ | ✅ |
 | Projects and areas: rename, move, delete [actions: delete-project, delete-area] | ✅ | ⬜ (built; not yet checked) |
 
 ## Incident IQ
 
 | Feature | Windows | Swift |
 | --- | --- | --- |
-| Ticket panel: number, status, details, open in Incident IQ | ✅ | ⬜ (number, status, details and link; full panel is Phase 3) |
-| Internal comments and the action log | ✅ | ⬜ |
+| Ticket panel: number, status, details, open in Incident IQ | ✅ | ✅ |
+| Internal comments and the action log | ✅ | ✅ (queued and shown; carrying them out is the server's job) |
 | In Progress starts the ticket [actions: ticket-start] | ✅ | ✅ |
-| Finishing asks for resolution notes [actions: ticket-needs-notes, ticket-resolve] | ✅ | ⬜ (built; not yet checked) |
+| Finishing asks for resolution notes [actions: ticket-needs-notes, ticket-resolve] | ✅ | ✅ |
 | Incident IQ status in Settings | ✅ | ✅ |
 
 ## Settings and district rules
@@ -80,7 +80,7 @@ fixtures there, but stay unchecked until the app shows them.
 | Server addresses, token, header rows with the Cloudflare preset | ✅ | ✅ |
 | Student information warning: privacy note in Settings | ✅ | ✅ |
 | Student information warning: Incident IQ ticket tasks | ✅ | ✅ |
-| Student information warning when attaching files | ⬜ | ⬜ |
+| Student information warning when attaching files | ⬜ (built; not yet checked in the app) | ✅ |
 | District branding: plum, navy, gold, mist; Oswald headings, Mulish body | ✅ | ✅ |
 | Keyboard shortcuts (⌘N, ⌘K, ⌘T, ⌘⇧T, ⌘D, ⌘↩, ⌘,, Esc, Delete) | ✅ | ⬜ (built; not yet checked; ⌘K needs macOS 15 / iOS 18) |
 | Quick add and shortcut help | ✅ | ✅ |

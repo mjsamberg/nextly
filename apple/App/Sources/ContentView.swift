@@ -97,6 +97,11 @@ struct ResolveSheet: View {
             TextEditor(text: $notes)
                 .focused($focused)
                 .frame(minHeight: 110)
+                .overlay(alignment: .topLeading) {
+                    if notes.isEmpty {
+                        Text("What was done to fix it…").foregroundStyle(.tertiary).padding(.horizontal, 5).padding(.vertical, 8).allowsHitTesting(false)
+                    }
+                }
                 .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(.quaternary))
             Text("Saved to the ticket in Incident IQ with your resolution action.")
                 .font(Theme.small).foregroundStyle(.secondary)
@@ -112,6 +117,7 @@ struct ResolveSheet: View {
         }
         .padding(20)
         .frame(minWidth: 380)
+        .presentationDetents([.medium, .large])
         .onAppear { focused = true }
     }
 }

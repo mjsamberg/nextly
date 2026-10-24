@@ -1,6 +1,5 @@
 // A task's details: title, when (flag, start date, repeat, deadline),
 // project, subtasks, what it waits on and blocks, and notes (Detail.tsx).
-// Notes are shown read-only until the block editor arrives (docs/parity.md).
 
 import NextlyKit
 import SwiftUI
@@ -12,6 +11,13 @@ struct DetailView: View {
     @State private var depQuery = ""
     @State private var depError: String?
     @FocusState private var titleFocused: Bool
+    @State private var files: NoteAttachments
+
+    init(model: AppModel, task: TaskItem) {
+        self.model = model
+        self.task = task
+        _files = State(initialValue: NoteAttachments(model: model, taskId: task.id))
+    }
 
     private var store: LocalStore { model.store }
     private var t: TaskItem { task }
@@ -24,14 +30,15 @@ struct DetailView: View {
                     .listRowInsets(EdgeInsets(top: 8, leading: 8, bottom: 8, trailing: 8))
             }
             titleSection(v)
-            if let ext = t.external, ext.source == "iiq" { ticketSection(ext) }
+            if let ext = t.external, ext.source == "iiq" { IiqPanel(model: model, task: t, ext: ext) }
             whenSection(v)
             subtasksSection(v)
             dependsSection(v)
-            notesSection
+            NotesSection(model: model, task: t, files: files)
             footer
         }
         .formStyle(.grouped)
+        .noteAttachments(files)
         .disabled(t.readOnly)
         .navigationTitle(t.title.nonEmpty ?? "New task")
         #if os(iOS)
@@ -64,21 +71,6 @@ struct DetailView: View {
                 .focused($titleFocused)
                 .textFieldStyle(.plain)
             }
-        }
-    }
-
-    // MARK: - Incident IQ (the full panel comes with the notes editor)
-
-    private func ticketSection(_ ext: External) -> some View {
-        Section("Incident IQ") {
-            HStack {
-                Text("#\(ext.number.text ?? "?")").font(Theme.body(.bold))
-                if let s = ext.status { Chip(text: s, color: Theme.navy) }
-                Spacer()
-                if let u = ext.url, let url = URL(string: u) { Link("Open in Incident IQ ↗", destination: url) }
-            }
-            let details = [ext.requester.map { "Requested by \($0)" }, ext.location, ext.issue, ext.priority.map { "Priority: \($0)" }].compactMap { $0 }
-            if !details.isEmpty { Text(details.joined(separator: " · ")).font(Theme.small).foregroundStyle(.secondary) }
         }
     }
 
@@ -187,20 +179,6 @@ struct DetailView: View {
                         Chip(text: b.done ? "Done" : waiting ? "Waiting" : "Free", color: b.done ? .secondary : waiting ? Theme.plum : Theme.navy)
                     }
                 }
-            }
-        }
-    }
-
-    // MARK: - Notes (read-only for now)
-
-    @ViewBuilder private var notesSection: some View {
-        if !t.notes.isEmpty {
-            Section {
-                ForEach(t.notes) { NoteBlockView(b: $0) }
-            } header: {
-                Text("Notes")
-            } footer: {
-                Text("Editing notes is coming to this app; edit them in the Windows or Mac app for now.").font(Theme.small)
             }
         }
     }
@@ -332,32 +310,6 @@ struct RepeatRow: View {
                 Text("\(Logic.repeatLabel(r))\(r.from == .completion ? ", counted from when you finish it" : ""). Finishing it files the next one under Scheduled; it moves into Today on its date.")
                     .font(Theme.small)
                     .foregroundStyle(.secondary)
-            }
-        }
-    }
-}
-
-/// One note block, shown read-only.
-struct NoteBlockView: View {
-    let b: Block
-
-    var body: some View {
-        switch b.type {
-        case .heading: Text(b.text ?? "").font(Theme.heading(18, relativeTo: .headline))
-        case .paragraph: Text(b.text ?? "")
-        case .checklist:
-            Label(b.text ?? "", systemImage: b.checked == true ? "checkmark.square" : "square")
-                .foregroundStyle(b.checked == true ? .secondary : .primary)
-        case .quote:
-            Text(b.text ?? "").italic().padding(.leading, 8)
-                .overlay(alignment: .leading) { Rectangle().fill(Theme.plum).frame(width: 3) }
-        case .divider: Divider()
-        case .image, .file: Label(b.name ?? "Attachment", systemImage: b.type == .image ? "photo" : "doc")
-        case .email:
-            if let u = b.url, let url = URL(string: u) {
-                Link(destination: url) { Label(b.subject?.nonEmpty ?? "Email", systemImage: "envelope") }
-            } else {
-                Label(b.subject?.nonEmpty ?? "Email", systemImage: "envelope")
             }
         }
     }

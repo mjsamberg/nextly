@@ -14,6 +14,8 @@ enum Theme {
     /// In Progress, as in the widgets.
     static let teal = Color(light: 0x0F7B7B, dark: 0x5CC8C8)
     static let danger = Color(light: 0xB3261E, dark: 0xF2B8B5)
+    /// Gold dark enough for text on white ("Needs you").
+    static let todayInk = Color(light: 0xA87600, dark: 0xFFC633)
 
     /// Registers the bundled fonts once, before the first view draws.
     static func registerFonts() {
