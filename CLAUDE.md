@@ -19,7 +19,7 @@ when something here changes.
 | `app/src/styles.css`, `platform.css` | Base styles; per-platform looks keyed on `html[data-platform]` (mac, win, ios, other) |
 | `server/` | Sync server: Node 24, no dependencies, `node:sqlite`; Docker Compose builds it from GitHub `main` |
 | `server/iiq.js` | Incident IQ sync (see below); `iiq-probe.js`, `iiq-options.js` are read-only diagnostics |
-| `apple/` | Swift widget and Siri extensions (xcodegen specs, CI scripts); the native Swift apps are being built here |
+| `apple/` | Native SwiftUI app (`App/`, `project.yml`) on `NextlyKit/` (data, rules, sync); widget and Siri extensions; CI scripts |
 | `apple/NextlyKit/` | Swift package for the native apps: models, rules, lists, SQLite store, sync, live updates (ports of the `app/src` files above). `swift test` runs the fixtures and syncs against `server/` |
 | `docs/` | Cloudflare, Apple signing, Incident IQ setup |
 | `scripts/set-version.mjs` | Date-based versions (`Y.M.D.N`, New York time, Nth commit that day) |
@@ -33,6 +33,10 @@ when something here changes.
   add `/opt/homebrew/opt/node@24/bin` to PATH).
 - NextlyKit: `cd apple/NextlyKit && swift test` (needs Node 24 for the sync tests).
 - Preview a platform's look in the browser with `?platform=ios|mac|win`.
+- Native app (Mac only): `brew install xcodegen`, then `cd apple && xcodegen
+  generate --spec project.yml && open NextlyNative.xcodeproj` (scheme Nextly,
+  iOS and macOS). `cd apple/NextlyKit && swift test` runs the shared fixtures
+  and sync tests. It installs as "Nextly Native" beside the Tauri app.
 - Builds and releases run on GitHub Actions (`.github/workflows/build.yml`) on
   every push to `main`; iOS and macOS signing secrets live in GitHub, not here.
 - The server's `.env` lives only on the server. Never put tokens or secrets in
