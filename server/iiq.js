@@ -414,6 +414,14 @@ export function createIiq({ db, applyChanges, onChange, cfg, client = cfg && cre
     return `${String(ms).padStart(15, '0')}-0000-iiq`;
   };
   const write = (rows) => { if (rows.length) { applyChanges(rows); onChange(); } };
+  /**
+   * Writes task changes made from copies read before awaiting Incident IQ,
+   * skipping any task a device changed in the meantime (its edit would be
+   * lost under the server's newer clock). The next poll redoes the skipped
+   * ones from the fresh copy. `based`: id -> hlc it was read at (null: new).
+   */
+  const writeUnchanged = (rows, based) =>
+    write(rows.filter((r) => !based.has(r.id) || (getRec.get(r.id)?.hlc ?? null) === based.get(r.id)));
   const record = (id, kind, data, prevHlc, deleted = false) => ({ id, kind, hlc: hlcAfter(prevHlc), deleted, data });
 
   function ensureProject(rows) {
@@ -453,13 +461,14 @@ export function createIiq({ db, applyChanges, onChange, cfg, client = cfg && cre
       const who = { me, email: cfg.userEmail, onlyMine: raw.onlyMine };
       const mine = raw.map((t) => readTicket(t, cfg)).filter((t) => t.id && !t.closed && isMine(t, who));
       const rows = [];
+      const based = new Map();
       ensureProject(rows);
       const open = new Set();
       for (const tk of mine) {
         open.add(`iiq-${tk.id}`);
         const cur = getRec.get(`iiq-${tk.id}`);
         if (!cur || cur.deleted) {
-          if (!cur) rows.push(record(`iiq-${tk.id}`, 'task', newTask(tk)));
+          if (!cur) { rows.push(record(`iiq-${tk.id}`, 'task', newTask(tk))); based.set(`iiq-${tk.id}`, null); }
           continue; // deleted in Nextly: leave it deleted
         }
         const d = JSON.parse(cur.data);
@@ -473,6 +482,7 @@ export function createIiq({ db, applyChanges, onChange, cfg, client = cfg && cre
         const changed = ext.status !== tk.status || ext.modified !== tk.modified || (ext.created ?? null) !== tk.created || ext.requester !== tk.requester || ext.location !== tk.location
           || (titleFollowsIiq && d.title !== titleOf(tk)) || reopened || outOfInbox;
         if (!changed) continue;
+        based.set(cur.id, cur.hlc);
         rows.push(record(cur.id, 'task', {
           ...d,
           title: titleFollowsIiq ? titleOf(tk) : d.title,
@@ -500,12 +510,13 @@ export function createIiq({ db, applyChanges, onChange, cfg, client = cfg && cre
           if (e.status !== 404) continue; // unreadable for now: try again next time
           // gone: treat as closed
         }
+        based.set(cur.id, cur.hlc);
         rows.push(record(cur.id, 'task', {
           ...d, done: true, doneAt: d.done ? d.doneAt : now().toISOString(),
           external: { ...d.external, status, closed: true, syncedAt: now().toISOString() },
         }, cur.hlc));
       }
-      write(rows);
+      writeUnchanged(rows, based);
       lastMine = new Set(mine.map((t) => t.id));
       state.tickets = mine.length;
       state.lastSync = now().toISOString();

@@ -32,6 +32,18 @@ jobs:
       - run: npm test
       - run: npm run build
 
+  server:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24 # what the server's Docker image runs
+      - run: npm test
+
   windows:
     needs: test
     runs-on: windows-latest

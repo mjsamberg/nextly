@@ -24,6 +24,9 @@ when something here changes.
 
 - App: `cd app && npm install`, then `npm test` (logic tests), `npx tsc --noEmit -p .`,
   `npm run dev` (browser), `npx tauri dev` (desktop, needs Rust).
+- Server: `cd server && npm test` (Node 24; starts a throwaway server for
+  the file tests). On the Mac, Node 24 is from Homebrew (`node@24`, keg-only:
+  add `/opt/homebrew/opt/node@24/bin` to PATH).
 - Preview a platform's look in the browser with `?platform=ios|mac|win`.
 - Builds and releases run on GitHub Actions (`.github/workflows/build.yml`) on
   every push to `main`; iOS and macOS signing secrets live in GitHub, not here.
