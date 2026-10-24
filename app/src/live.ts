@@ -14,7 +14,7 @@ import { inTauri } from './net';
 export type LiveState = 'off' | 'connecting' | 'live' | 'retrying';
 
 export interface LiveOptions {
-  url: string;                          // server base URL, http(s)://…
+  url: (retrying: boolean) => Promise<string>; // server base URL, http(s)://…, asked on each (re)connect
   headers: Record<string, string>;      // includes authorization
   deviceId: string;
   getTicket: () => Promise<string>;     // browser only
@@ -43,8 +43,8 @@ export function startLive(o: LiveOptions) {
   const gen = generation;
   let attempt = 0;
 
-  const wsUrl = (extra: string) => {
-    const u = new URL(o.url.replace(/\/+$/, '') + '/events');
+  const wsUrl = (base: string, extra: string) => {
+    const u = new URL(base.replace(/\/+$/, '') + '/events');
     u.protocol = u.protocol === 'https:' ? 'wss:' : 'ws:';
     u.searchParams.set('device', o.deviceId);
     return u.toString() + extra;
@@ -83,8 +83,10 @@ export function startLive(o: LiveOptions) {
     if (gen !== generation) return;
     o.onState(attempt ? 'retrying' : 'connecting');
     try {
+      const base = await o.url(attempt > 0);
+      if (gen !== generation) return;
       if (inTauri) {
-        const ws = await TauriWebSocket.connect(wsUrl(''), { headers: o.headers });
+        const ws = await TauriWebSocket.connect(wsUrl(base, ''), { headers: o.headers });
         if (gen !== generation) { void ws.disconnect(); return; }
         const unlisten = ws.addListener((m) => {
           if (m.type === 'Text') onText(m.data);
@@ -94,7 +96,7 @@ export function startLive(o: LiveOptions) {
       } else {
         const ticket = await o.getTicket();
         if (gen !== generation) return;
-        const ws = new window.WebSocket(wsUrl(`&ticket=${encodeURIComponent(ticket)}`));
+        const ws = new window.WebSocket(wsUrl(base, `&ticket=${encodeURIComponent(ticket)}`));
         ws.onmessage = (e) => onText(String(e.data));
         ws.onclose = () => retry('Live updates disconnected.');
         close = () => { ws.onclose = null; ws.close(); };

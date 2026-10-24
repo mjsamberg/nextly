@@ -29,13 +29,16 @@ export default function Settings({ onBack }: { onBack: () => void }) {
   const v = useStore();
   const sync = useSyncStatus();
   const [url, setUrl] = useState(getSettings().url);
+  const [altUrl, setAltUrl] = useState(getSettings().altUrl);
   const [token, setToken] = useState(getSettings().token);
   const [headers, setHeaders] = useState<HeaderRow[]>(getSettings().headers);
   const [area, setArea] = useState('');
   const [diag, setDiag] = useState<{ ok: boolean; lines: string[] } | null>(null);
   const [checking, setChecking] = useState(false);
   const runCheck = async () => { setChecking(true); setDiag(await checkConnection()); setChecking(false); };
-  const urlOk = !url || /^https?:\/\/[^\s/]+/.test(url.trim());
+  const validUrl = (u: string) => !u.trim() || /^https?:\/\/[^\s/]+/.test(u.trim());
+  const urlOk = validUrl(url);
+  const altOk = validUrl(altUrl) && (!altUrl.trim() || !!url.trim());
   const headerError = checkHeaders(headers);
   const hasAccess = headers.some((h) => /^cf-access-client-/i.test(h.name));
   const setRow = (i: number, p: Partial<HeaderRow>) => setHeaders(headers.map((h, j) => (j === i ? { ...h, ...p } : h)));
@@ -50,10 +53,14 @@ export default function Settings({ onBack }: { onBack: () => void }) {
       <section className="panel">
         <h2>Sync</h2>
         <p className="muted">Point every device at the same Nextly server, for example <code>https://nextly.example.com</code> through a Cloudflare Tunnel.</p>
-        <form className="form" onSubmit={(e) => { e.preventDefault(); if (urlOk && !headerError) void saveSettings({ url, token, headers }); }}>
+        <form className="form" onSubmit={(e) => { e.preventDefault(); if (urlOk && altOk && !headerError) void saveSettings({ url, altUrl, token, headers }); }}>
           <label htmlFor="sync-url">Server address</label>
           <input id="sync-url" value={url} placeholder="https://nextly.example.com" onChange={(e) => setUrl(e.target.value)} autoCapitalize="off" autoCorrect="off" spellCheck={false} />
           {!urlOk && <p className="error">The address should start with http:// or https://.</p>}
+          <label htmlFor="sync-alt-url">Second address (optional)</label>
+          <input id="sync-alt-url" value={altUrl} placeholder="https://nextly.your-tailnet.ts.net" onChange={(e) => setAltUrl(e.target.value)} autoCapitalize="off" autoCorrect="off" spellCheck={false} />
+          <p className="muted small">Another way to reach the same server, such as Tailscale. Nextly uses whichever address answers and switches if one stops working.</p>
+          {!altOk && <p className="error">{url.trim() ? 'The address should start with http:// or https://.' : 'Fill in the server address first.'}</p>}
           <label htmlFor="sync-token">Sync token</label>
           <input id="sync-token" type="password" value={token} placeholder="NEXTLY_TOKEN from the server’s .env" onChange={(e) => setToken(e.target.value)} autoComplete="off" />
 
@@ -75,7 +82,7 @@ export default function Settings({ onBack }: { onBack: () => void }) {
           {headerError && <p className="error">{headerError}</p>}
 
           <div className="row-btns">
-            <button type="submit" className="pri" disabled={!urlOk || !!headerError}>Save and sync</button>
+            <button type="submit" className="pri" disabled={!urlOk || !altOk || !!headerError}>Save and sync</button>
             <button type="button" onClick={() => void syncNow()} disabled={!getSettings().url}>Sync now</button>
             <button type="button" onClick={() => void runCheck()} disabled={!getSettings().url || checking}>{checking ? 'Checking…' : 'Check connection'}</button>
           </div>
@@ -85,7 +92,7 @@ export default function Settings({ onBack }: { onBack: () => void }) {
             {diag.lines.map((l, i) => <p key={i}>{l}</p>)}
           </div>
         )}
-        <p className={`sync-line ${sync.state}`}><span className={`sync-dot ${sync.state}`} />{sync.message}{sync.lastSync ? ` · last synced ${new Date(sync.lastSync).toLocaleString()}` : ''}</p>
+        <p className={`sync-line ${sync.state}`}><span className={`sync-dot ${sync.state}`} />{sync.message}{sync.lastSync ? ` · last synced ${new Date(sync.lastSync).toLocaleString()}` : ''}{sync.via ? ` · through ${sync.via}` : ''}</p>
         <p className={`sync-line live-${sync.live}`}>
           <span className={`sync-dot ${sync.live === 'live' ? 'idle' : sync.live === 'retrying' ? 'error' : sync.live === 'connecting' ? 'syncing' : 'off'}`} />
           {LIVE_LABEL[sync.live]}{sync.liveDetail ? ` · ${sync.liveDetail}` : ''}

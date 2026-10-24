@@ -14,9 +14,10 @@ import type { Flag } from './types';
 
 const enabled = inTauri && (platform === 'mac' || platform === 'ios');
 
-interface SharedSettings { url: string; token: string; headers: { name: string; value: string }[] }
+/** urls: every address for the server, primary first (the extensions fail over between them). */
+interface SharedSettings { url: string; urls: string[]; token: string; headers: { name: string; value: string }[] }
 
-let settings: SharedSettings = { url: '', token: '', headers: [] };
+let settings: SharedSettings = { url: '', urls: [], token: '', headers: [] };
 let timer: ReturnType<typeof setTimeout> | undefined;
 
 function snapshot() {
@@ -53,7 +54,8 @@ export const useShareStatus = () =>
 
 async function share() {
   if (!enabled) return;
-  const config = { url: settings.url.replace(/\/+$/, ''), token: settings.token, headers: headerObject(settings.headers) };
+  // "url" stays for extensions built before "urls".
+  const config = { url: settings.url.replace(/\/+$/, ''), urls: settings.urls, token: settings.token, headers: headerObject(settings.headers) };
   try {
     const wrote = await invoke<boolean>('apple_share', { config: JSON.stringify(config), snapshot: JSON.stringify(snapshot()) });
     setShareStatus(wrote

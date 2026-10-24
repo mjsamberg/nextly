@@ -109,6 +109,15 @@ branch and runs `cloudflared` next to it. In each app, open **Settings** and
 enter `https://nextly.example.com` (your hostname), the sync token, and the
 Access service token under **Request headers** → **Add Cloudflare Access headers**.
 
+**A second address.** If the server is also reachable another way, such as
+Tailscale, put that under **Second address**. Each app, plus the widget and
+Siri, uses whichever address answers: after a quiet spell (the phone woke, the
+network changed) it checks both and takes the first to answer, and if the one
+in use stops working (no connection, or Cloudflare's tunnel or Access errors)
+it switches and retries. Settings shows which address is in use, and **Check
+connection** tests each one. Both must reach the same server; the Cloudflare
+Access headers are sent to both, which is harmless for the Tailscale one.
+
 ## Develop
 
 ```bash

@@ -32,8 +32,17 @@ enum AppGroup {
 
 struct SyncConfig: Codable {
     var url: String
+    /// Every address for the server, primary first (say Cloudflare, then
+    /// Tailscale). Missing from apps older than the second address.
+    var urls: [String]? = nil
     var token: String
     var headers: [String: String]
+
+    var addresses: [String] {
+        let all = (urls?.isEmpty == false ? urls! : [url]).map { $0.hasSuffix("/") ? String($0.dropLast()) : $0 }
+        var seen = Set<String>()
+        return all.filter { !$0.isEmpty && seen.insert($0).inserted }
+    }
 }
 
 struct WidgetTask: Codable, Identifiable, Hashable {
@@ -142,11 +151,40 @@ enum NextlyAPI {
         return c
     }
 
+    /// The address that answered last, tried first next time (shared by the widget and Siri).
+    private static var lastGood: String? {
+        get { UserDefaults(suiteName: AppGroup.id)?.string(forKey: "lastGoodURL") }
+        set { UserDefaults(suiteName: AppGroup.id)?.set(newValue, forKey: "lastGoodURL") }
+    }
+
+    /// Tries the last address that worked, then the others. Moves on only when
+    /// an address can't reach the server (no connection, or Cloudflare's
+    /// tunnel and Access errors); any other answer is the server's own.
     static func request(_ path: String, method: String = "GET", json: [String: Any]? = nil) async throws -> Data {
         guard let c = config else { throw NextlyError.notSetUp }
-        let base = c.url.hasSuffix("/") ? String(c.url.dropLast()) : c.url
-        guard let url = URL(string: base + path) else { throw NextlyError.message("The server address in Nextly’s Settings isn’t valid.") }
-        var req = URLRequest(url: url, timeoutInterval: 15)
+        var order = c.addresses
+        if let good = lastGood, let i = order.firstIndex(of: good) { order.insert(order.remove(at: i), at: 0) }
+        var lastError: Error = NextlyError.message("The server address in Nextly’s Settings isn’t valid.")
+        for (i, base) in order.enumerated() {
+            // With another address to try, don't wait long on this one.
+            let timeout: TimeInterval = i < order.count - 1 ? 8 : 15
+            do {
+                let data = try await requestOnce(base, path, c, method: method, json: json, timeout: timeout)
+                lastGood = base
+                return data
+            } catch let e as Unreachable {
+                lastError = e.underlying
+            }
+        }
+        throw lastError
+    }
+
+    /// An address that couldn't reach the server, so the next one is worth a try.
+    private struct Unreachable: Error { let underlying: Error }
+
+    private static func requestOnce(_ base: String, _ path: String, _ c: SyncConfig, method: String, json: [String: Any]?, timeout: TimeInterval) async throws -> Data {
+        guard let url = URL(string: base + path) else { throw Unreachable(underlying: NextlyError.message("The server address in Nextly’s Settings isn’t valid.")) }
+        var req = URLRequest(url: url, timeoutInterval: timeout)
         req.httpMethod = method
         for (name, value) in c.headers { req.setValue(value, forHTTPHeaderField: name) }
         req.setValue("Bearer \(c.token)", forHTTPHeaderField: "Authorization")
@@ -154,12 +192,21 @@ enum NextlyAPI {
             req.httpBody = try JSONSerialization.data(withJSONObject: json)
             req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         }
-        let (data, response) = try await URLSession.shared.data(for: req)
-        guard let http = response as? HTTPURLResponse else { throw NextlyError.message("The server didn’t answer.") }
+        let result: (Data, URLResponse)
+        do {
+            result = try await URLSession.shared.data(for: req)
+        } catch let e as URLError {
+            throw Unreachable(underlying: e) // offline, timed out, or no route (e.g. Tailscale off)
+        }
+        let (data, response) = result
+        guard let http = response as? HTTPURLResponse else { throw Unreachable(underlying: NextlyError.message("The server didn’t answer.")) }
         let type = http.value(forHTTPHeaderField: "Content-Type") ?? ""
         if http.statusCode == 401 { throw NextlyError.message("The server rejected the sync token. Check it in Nextly’s Settings.") }
         if http.statusCode == 403 || type.contains("text/html") || (http.url?.host ?? "").hasSuffix("cloudflareaccess.com") {
-            throw NextlyError.message("Cloudflare Access blocked the request. Check the headers in Nextly’s Settings.")
+            throw Unreachable(underlying: NextlyError.message("Cloudflare Access blocked the request. Check the headers in Nextly’s Settings."))
+        }
+        if [502, 503, 504, 520, 521, 522, 523, 524, 525, 526, 527, 530].contains(http.statusCode) {
+            throw Unreachable(underlying: NextlyError.message("The server isn’t reachable right now (\(http.statusCode))."))
         }
         guard (200..<300).contains(http.statusCode) else {
             let msg = (try? JSONSerialization.jsonObject(with: data) as? [String: Any])?["error"] as? String
