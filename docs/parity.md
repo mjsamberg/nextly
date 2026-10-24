@@ -12,21 +12,24 @@ same server.
 
 Key: ✅ done · ⬜ not yet · — not applicable.
 The rules behind a row are covered by `spec/fixtures` (named in brackets).
+Swift rows marked done for data and sync are in `apple/NextlyKit` and its tests;
+rows about the rules (lists, quick add, repeats, dependencies) also pass the
+fixtures there, but stay unchecked until the app shows them.
 
 ## Data and sync
 
 | Feature | Windows | Swift |
 | --- | --- | --- |
-| Records, HLC, last writer wins (`spec/protocol.md`) | ✅ | ⬜ |
-| Keeps unknown fields when saving [roundtrip] | ✅ | ⬜ |
-| Schema version: stamps `schema: 1`; newer records read-only with a note [roundtrip, actions: promote-due] | ✅ | ⬜ |
-| Sync: outbox, cursor, `more`, a server that lost its data, "edited while in flight" | ✅ | ⬜ |
-| Two server addresses with failover; extra headers (Cloudflare Access) [network] | ✅ | ⬜ |
-| Live updates (WebSocket; 70 s watchdog; backoff) | ✅ | ⬜ |
-| Polling fallback; sync on focus and when back online | ✅ | ⬜ |
-| Due tasks move into Today only after a sync since launch [actions: promote-due] | ✅ | ⬜ |
-| Attachments: stored locally, uploaded, opened through a signed link | ✅ | ⬜ |
-| Check connection report | ✅ | ⬜ |
+| Records, HLC, last writer wins (`spec/protocol.md`) | ✅ | ✅ |
+| Keeps unknown fields when saving [roundtrip] | ✅ | ✅ |
+| Schema version: stamps `schema: 1`; newer records read-only with a note [roundtrip, actions: promote-due] | ✅ | ⬜ (stamps and leaves newer records alone; the note needs the app) |
+| Sync: outbox, cursor, `more`, a server that lost its data, "edited while in flight" | ✅ | ✅ |
+| Two server addresses with failover; extra headers (Cloudflare Access) [network] | ✅ | ✅ |
+| Live updates (WebSocket; 70 s watchdog; backoff) | ✅ | ✅ |
+| Polling fallback; sync on focus and when back online | ✅ | ⬜ (polling done; focus and online need the app) |
+| Due tasks move into Today only after a sync since launch [actions: promote-due] | ✅ | ⬜ (`promoteDue` and `inStep` done; the app runs them) |
+| Attachments: stored locally, uploaded, opened through a signed link | ✅ | ✅ |
+| Check connection report | ✅ | ⬜ (`checkConnection` done; Settings shows it) |
 
 ## Lists and navigation
 

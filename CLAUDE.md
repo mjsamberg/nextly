@@ -20,6 +20,7 @@ when something here changes.
 | `server/` | Sync server: Node 24, no dependencies, `node:sqlite`; Docker Compose builds it from GitHub `main` |
 | `server/iiq.js` | Incident IQ sync (see below); `iiq-probe.js`, `iiq-options.js` are read-only diagnostics |
 | `apple/` | Swift widget and Siri extensions (xcodegen specs, CI scripts); the native Swift apps are being built here |
+| `apple/NextlyKit/` | Swift package for the native apps: models, rules, lists, SQLite store, sync, live updates (ports of the `app/src` files above). `swift test` runs the fixtures and syncs against `server/` |
 | `docs/` | Cloudflare, Apple signing, Incident IQ setup |
 | `scripts/set-version.mjs` | Date-based versions (`Y.M.D.N`, New York time, Nth commit that day) |
 
@@ -30,6 +31,7 @@ when something here changes.
 - Server: `cd server && npm test` (Node 24; starts a throwaway server for
   the file tests). On the Mac, Node 24 is from Homebrew (`node@24`, keg-only:
   add `/opt/homebrew/opt/node@24/bin` to PATH).
+- NextlyKit: `cd apple/NextlyKit && swift test` (needs Node 24 for the sync tests).
 - Preview a platform's look in the browser with `?platform=ios|mac|win`.
 - Builds and releases run on GitHub Actions (`.github/workflows/build.yml`) on
   every push to `main`; iOS and macOS signing secrets live in GitHub, not here.
@@ -59,6 +61,8 @@ Windows runs the Tauri app; iOS and macOS are moving to native Swift
   For iOS UI bugs, ask early for a screen recording, or use Safari's Web
   Inspector from the Mac.
 - iOS tap targets are at least 44pt (`platform.css`).
+- In NextlyKit the task model is `TaskData`, not `Task`: a public `Task` type
+  hides Swift's `Task { }` in every file that imports the package.
 - `rust-ini` is held at 0.21.1 by `app/src-tauri/Cargo.lock` (newer breaks the
   deep-link plugin); keep it there when updating Rust crates.
 

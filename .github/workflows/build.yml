@@ -46,6 +46,21 @@ jobs:
           node-version: 24 # what the server's Docker image runs
       - run: npm test
 
+  # NextlyKit, the Swift package behind the native iOS and macOS apps: the
+  # shared fixtures, and sync against the real server (needs Node 24).
+  apple:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - name: swift test (includes spec/fixtures and the sync tests)
+        working-directory: apple/NextlyKit
+        run: swift test
+      - name: Fixture gate (every app runs every shared case)
+        run: node scripts/check-fixtures.mjs
+
   windows:
     needs: test
     runs-on: windows-latest
