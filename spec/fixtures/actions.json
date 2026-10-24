@@ -1,0 +1,2194 @@
+{
+  "about": "Store actions: starting records, one action, and the records it changes (final data per id). New ids are n1, n2, ... in the order rules.ts documents. Apps add \"schema\" when they save; these are the changes before that.",
+  "now": "2026-10-20T13:00:00.000Z",
+  "today": "2026-10-20",
+  "cases": [
+    {
+      "id": "create-in-inbox",
+      "about": "A new task defaults to the Inbox, ordered by when it was made.",
+      "records": [],
+      "action": {
+        "type": "createTask",
+        "task": {
+          "title": "Call Sam"
+        }
+      },
+      "expect": {
+        "result": "n1",
+        "changed": {
+          "n1": {
+            "kind": "task",
+            "deleted": false,
+            "data": {
+              "title": "Call Sam",
+              "flag": "inbox",
+              "projectId": null,
+              "parentId": null,
+              "deadline": null,
+              "startOn": null,
+              "repeat": null,
+              "nextId": null,
+              "external": null,
+              "done": false,
+              "doneAt": null,
+              "order": 1792501200000,
+              "dependsOn": [],
+              "notes": [],
+              "createdAt": "2026-10-20T13:00:00.000Z"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "create-in-next",
+      "about": "A new Next task goes to the end of Next.",
+      "records": [
+        {
+          "id": "a",
+          "kind": "task",
+          "data": {
+            "title": "a",
+            "flag": "next",
+            "projectId": null,
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 3000,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        }
+      ],
+      "action": {
+        "type": "createTask",
+        "task": {
+          "title": "b",
+          "flag": "next"
+        }
+      },
+      "expect": {
+        "result": "n1",
+        "changed": {
+          "n1": {
+            "kind": "task",
+            "deleted": false,
+            "data": {
+              "title": "b",
+              "flag": "next",
+              "projectId": null,
+              "parentId": null,
+              "deadline": null,
+              "startOn": null,
+              "repeat": null,
+              "nextId": null,
+              "external": null,
+              "done": false,
+              "doneAt": null,
+              "order": 4000,
+              "dependsOn": [],
+              "notes": [],
+              "createdAt": "2026-10-20T13:00:00.000Z"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "flag-next-goes-last",
+      "about": "Moving a task to Next puts it at the end.",
+      "records": [
+        {
+          "id": "a",
+          "kind": "task",
+          "data": {
+            "title": "a",
+            "flag": "next",
+            "projectId": null,
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 3000,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        },
+        {
+          "id": "b",
+          "kind": "task",
+          "data": {
+            "title": "b",
+            "flag": "inbox",
+            "projectId": null,
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 1,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        }
+      ],
+      "action": {
+        "type": "setFlag",
+        "id": "b",
+        "flag": "next"
+      },
+      "expect": {
+        "result": null,
+        "changed": {
+          "b": {
+            "kind": "task",
+            "deleted": false,
+            "data": {
+              "title": "b",
+              "flag": "next",
+              "projectId": null,
+              "parentId": null,
+              "deadline": null,
+              "startOn": null,
+              "repeat": null,
+              "nextId": null,
+              "external": null,
+              "done": false,
+              "doneAt": null,
+              "order": 4000,
+              "dependsOn": [],
+              "notes": [],
+              "createdAt": "2026-10-01T12:00:00.000Z"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "flag-same-is-no-op",
+      "about": "Setting the flag a task already has changes nothing.",
+      "records": [
+        {
+          "id": "a",
+          "kind": "task",
+          "data": {
+            "title": "a",
+            "flag": "today",
+            "projectId": null,
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 1000,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        }
+      ],
+      "action": {
+        "type": "setFlag",
+        "id": "a",
+        "flag": "today"
+      },
+      "expect": {
+        "result": null,
+        "changed": {}
+      }
+    },
+    {
+      "id": "done-with-subtasks",
+      "about": "Finishing a task finishes its open subtasks.",
+      "records": [
+        {
+          "id": "p",
+          "kind": "task",
+          "data": {
+            "title": "p",
+            "flag": "today",
+            "projectId": null,
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 1000,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        },
+        {
+          "id": "c1",
+          "kind": "task",
+          "data": {
+            "title": "c1",
+            "flag": null,
+            "projectId": null,
+            "parentId": "p",
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 1,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        },
+        {
+          "id": "c2",
+          "kind": "task",
+          "data": {
+            "title": "c2",
+            "flag": null,
+            "projectId": null,
+            "parentId": "p",
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": true,
+            "doneAt": "2026-10-19T12:00:00.000Z",
+            "order": 2,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        }
+      ],
+      "action": {
+        "type": "toggleDone",
+        "id": "p"
+      },
+      "expect": {
+        "result": null,
+        "changed": {
+          "p": {
+            "kind": "task",
+            "deleted": false,
+            "data": {
+              "title": "p",
+              "flag": "today",
+              "projectId": null,
+              "parentId": null,
+              "deadline": null,
+              "startOn": null,
+              "repeat": null,
+              "nextId": null,
+              "external": null,
+              "done": true,
+              "doneAt": "2026-10-20T13:00:00.000Z",
+              "order": 1000,
+              "dependsOn": [],
+              "notes": [],
+              "createdAt": "2026-10-01T12:00:00.000Z"
+            }
+          },
+          "c1": {
+            "kind": "task",
+            "deleted": false,
+            "data": {
+              "title": "c1",
+              "flag": null,
+              "projectId": null,
+              "parentId": "p",
+              "deadline": null,
+              "startOn": null,
+              "repeat": null,
+              "nextId": null,
+              "external": null,
+              "done": true,
+              "doneAt": "2026-10-20T13:00:00.000Z",
+              "order": 1,
+              "dependsOn": [],
+              "notes": [],
+              "createdAt": "2026-10-01T12:00:00.000Z"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "done-frees-waiting",
+      "about": "A task only waiting on the finished one moves to Next (end of Next); one in Today stays; one still waiting on another open task stays. Deleted and missing tasks never block.",
+      "records": [
+        {
+          "id": "blocker",
+          "kind": "task",
+          "data": {
+            "title": "blocker",
+            "flag": "today",
+            "projectId": null,
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 1000,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        },
+        {
+          "id": "other",
+          "kind": "task",
+          "data": {
+            "title": "other",
+            "flag": "inbox",
+            "projectId": null,
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 1000,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        },
+        {
+          "id": "w-free",
+          "kind": "task",
+          "data": {
+            "title": "w-free",
+            "flag": "someday",
+            "projectId": null,
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 1000,
+            "dependsOn": [
+              "blocker",
+              "removed",
+              "missing"
+            ],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        },
+        {
+          "id": "removed",
+          "kind": "task",
+          "deleted": true,
+          "data": {
+            "title": "removed",
+            "flag": null,
+            "projectId": null,
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 1000,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        },
+        {
+          "id": "w-today",
+          "kind": "task",
+          "data": {
+            "title": "w-today",
+            "flag": "today",
+            "projectId": null,
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 1000,
+            "dependsOn": [
+              "blocker"
+            ],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        },
+        {
+          "id": "w-still",
+          "kind": "task",
+          "data": {
+            "title": "w-still",
+            "flag": "someday",
+            "projectId": null,
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 1000,
+            "dependsOn": [
+              "blocker",
+              "other"
+            ],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        },
+        {
+          "id": "n0",
+          "kind": "task",
+          "data": {
+            "title": "n0",
+            "flag": "next",
+            "projectId": null,
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 5000,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        }
+      ],
+      "action": {
+        "type": "toggleDone",
+        "id": "blocker"
+      },
+      "expect": {
+        "result": null,
+        "changed": {
+          "blocker": {
+            "kind": "task",
+            "deleted": false,
+            "data": {
+              "title": "blocker",
+              "flag": "today",
+              "projectId": null,
+              "parentId": null,
+              "deadline": null,
+              "startOn": null,
+              "repeat": null,
+              "nextId": null,
+              "external": null,
+              "done": true,
+              "doneAt": "2026-10-20T13:00:00.000Z",
+              "order": 1000,
+              "dependsOn": [],
+              "notes": [],
+              "createdAt": "2026-10-01T12:00:00.000Z"
+            }
+          },
+          "w-free": {
+            "kind": "task",
+            "deleted": false,
+            "data": {
+              "title": "w-free",
+              "flag": "next",
+              "projectId": null,
+              "parentId": null,
+              "deadline": null,
+              "startOn": null,
+              "repeat": null,
+              "nextId": null,
+              "external": null,
+              "done": false,
+              "doneAt": null,
+              "order": 6000,
+              "dependsOn": [
+                "blocker",
+                "removed",
+                "missing"
+              ],
+              "notes": [],
+              "createdAt": "2026-10-01T12:00:00.000Z"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "undo-done",
+      "about": "Un-finishing clears doneAt.",
+      "records": [
+        {
+          "id": "a",
+          "kind": "task",
+          "data": {
+            "title": "a",
+            "flag": "today",
+            "projectId": null,
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": true,
+            "doneAt": "2026-10-19T12:00:00.000Z",
+            "order": 1000,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        }
+      ],
+      "action": {
+        "type": "toggleDone",
+        "id": "a"
+      },
+      "expect": {
+        "result": null,
+        "changed": {
+          "a": {
+            "kind": "task",
+            "deleted": false,
+            "data": {
+              "title": "a",
+              "flag": "today",
+              "projectId": null,
+              "parentId": null,
+              "deadline": null,
+              "startOn": null,
+              "repeat": null,
+              "nextId": null,
+              "external": null,
+              "done": false,
+              "doneAt": null,
+              "order": 1000,
+              "dependsOn": [],
+              "notes": [],
+              "createdAt": "2026-10-01T12:00:00.000Z"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "repeat-spawns-copy",
+      "about": "Finishing a weekly task files a copy (and its subtasks) for next week, notes unchecked, keeping the deadline the same distance from the start.",
+      "records": [
+        {
+          "id": "r",
+          "kind": "task",
+          "data": {
+            "title": "r",
+            "flag": "today",
+            "projectId": null,
+            "parentId": null,
+            "deadline": "2026-10-22",
+            "startOn": null,
+            "repeat": {
+              "every": 1,
+              "unit": "week",
+              "from": "completion"
+            },
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 1000,
+            "dependsOn": [],
+            "notes": [
+              {
+                "id": "b1",
+                "type": "checklist",
+                "text": "bins",
+                "checked": true
+              },
+              {
+                "id": "b2",
+                "type": "paragraph",
+                "text": "curb"
+              }
+            ],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        },
+        {
+          "id": "rc",
+          "kind": "task",
+          "data": {
+            "title": "rc",
+            "flag": null,
+            "projectId": null,
+            "parentId": "r",
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 1,
+            "dependsOn": [],
+            "notes": [
+              {
+                "id": "b3",
+                "type": "checklist",
+                "text": "x",
+                "checked": true
+              }
+            ],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        }
+      ],
+      "action": {
+        "type": "toggleDone",
+        "id": "r"
+      },
+      "expect": {
+        "result": null,
+        "changed": {
+          "n1": {
+            "kind": "task",
+            "deleted": false,
+            "data": {
+              "title": "r",
+              "flag": null,
+              "projectId": null,
+              "parentId": null,
+              "deadline": "2026-10-27",
+              "startOn": "2026-10-27",
+              "repeat": {
+                "every": 1,
+                "unit": "week",
+                "from": "completion"
+              },
+              "nextId": null,
+              "external": null,
+              "done": false,
+              "doneAt": null,
+              "order": 1792501200000,
+              "dependsOn": [],
+              "notes": [
+                {
+                  "id": "n2",
+                  "type": "checklist",
+                  "text": "bins",
+                  "checked": false
+                },
+                {
+                  "id": "n3",
+                  "type": "paragraph",
+                  "text": "curb"
+                }
+              ],
+              "createdAt": "2026-10-20T13:00:00.000Z"
+            }
+          },
+          "n4": {
+            "kind": "task",
+            "deleted": false,
+            "data": {
+              "title": "rc",
+              "flag": null,
+              "projectId": null,
+              "parentId": "n1",
+              "deadline": null,
+              "startOn": null,
+              "repeat": null,
+              "nextId": null,
+              "external": null,
+              "done": false,
+              "doneAt": null,
+              "order": 1792501200000,
+              "dependsOn": [],
+              "notes": [
+                {
+                  "id": "n5",
+                  "type": "checklist",
+                  "text": "x",
+                  "checked": false
+                }
+              ],
+              "createdAt": "2026-10-20T13:00:00.000Z"
+            }
+          },
+          "r": {
+            "kind": "task",
+            "deleted": false,
+            "data": {
+              "title": "r",
+              "flag": "today",
+              "projectId": null,
+              "parentId": null,
+              "deadline": "2026-10-22",
+              "startOn": null,
+              "repeat": {
+                "every": 1,
+                "unit": "week",
+                "from": "completion"
+              },
+              "nextId": "n1",
+              "external": null,
+              "done": true,
+              "doneAt": "2026-10-20T13:00:00.000Z",
+              "order": 1000,
+              "dependsOn": [],
+              "notes": [
+                {
+                  "id": "b1",
+                  "type": "checklist",
+                  "text": "bins",
+                  "checked": true
+                },
+                {
+                  "id": "b2",
+                  "type": "paragraph",
+                  "text": "curb"
+                }
+              ],
+              "createdAt": "2026-10-01T12:00:00.000Z"
+            }
+          },
+          "rc": {
+            "kind": "task",
+            "deleted": false,
+            "data": {
+              "title": "rc",
+              "flag": null,
+              "projectId": null,
+              "parentId": "r",
+              "deadline": null,
+              "startOn": null,
+              "repeat": null,
+              "nextId": null,
+              "external": null,
+              "done": true,
+              "doneAt": "2026-10-20T13:00:00.000Z",
+              "order": 1,
+              "dependsOn": [],
+              "notes": [
+                {
+                  "id": "b3",
+                  "type": "checklist",
+                  "text": "x",
+                  "checked": true
+                }
+              ],
+              "createdAt": "2026-10-01T12:00:00.000Z"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "undo-repeat-removes-copy",
+      "about": "Un-finishing a repeating task deletes its still-open copy.",
+      "records": [
+        {
+          "id": "r",
+          "kind": "task",
+          "data": {
+            "title": "r",
+            "flag": null,
+            "projectId": null,
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": {
+              "every": 1,
+              "unit": "day",
+              "from": "schedule"
+            },
+            "nextId": "copy",
+            "external": null,
+            "done": true,
+            "doneAt": "2026-10-19T12:00:00.000Z",
+            "order": 1000,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        },
+        {
+          "id": "copy",
+          "kind": "task",
+          "data": {
+            "title": "copy",
+            "flag": null,
+            "projectId": null,
+            "parentId": null,
+            "deadline": null,
+            "startOn": "2026-10-21",
+            "repeat": {
+              "every": 1,
+              "unit": "day",
+              "from": "schedule"
+            },
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 1000,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        }
+      ],
+      "action": {
+        "type": "toggleDone",
+        "id": "r"
+      },
+      "expect": {
+        "result": null,
+        "changed": {
+          "copy": {
+            "kind": "task",
+            "deleted": true,
+            "data": {
+              "title": "copy",
+              "flag": null,
+              "projectId": null,
+              "parentId": null,
+              "deadline": null,
+              "startOn": "2026-10-21",
+              "repeat": {
+                "every": 1,
+                "unit": "day",
+                "from": "schedule"
+              },
+              "nextId": null,
+              "external": null,
+              "done": false,
+              "doneAt": null,
+              "order": 1000,
+              "dependsOn": [],
+              "notes": [],
+              "createdAt": "2026-10-01T12:00:00.000Z"
+            }
+          },
+          "r": {
+            "kind": "task",
+            "deleted": false,
+            "data": {
+              "title": "r",
+              "flag": null,
+              "projectId": null,
+              "parentId": null,
+              "deadline": null,
+              "startOn": null,
+              "repeat": {
+                "every": 1,
+                "unit": "day",
+                "from": "schedule"
+              },
+              "nextId": null,
+              "external": null,
+              "done": false,
+              "doneAt": null,
+              "order": 1000,
+              "dependsOn": [],
+              "notes": [],
+              "createdAt": "2026-10-01T12:00:00.000Z"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "ticket-needs-notes",
+      "about": "Finishing an open ticket task asks for notes first and changes nothing.",
+      "records": [
+        {
+          "id": "t",
+          "kind": "task",
+          "data": {
+            "title": "t",
+            "flag": null,
+            "projectId": "iiq-project",
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": {
+              "source": "iiq",
+              "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+              "number": 1042,
+              "url": null,
+              "status": "New",
+              "closed": false,
+              "requester": null,
+              "location": null,
+              "issue": null,
+              "priority": null,
+              "syncedAt": null
+            },
+            "done": false,
+            "doneAt": null,
+            "order": 1000,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        }
+      ],
+      "action": {
+        "type": "toggleDone",
+        "id": "t"
+      },
+      "expect": {
+        "result": "needs-notes",
+        "changed": {}
+      }
+    },
+    {
+      "id": "ticket-resolve",
+      "about": "Resolving with notes finishes the task and asks the server to resolve the ticket.",
+      "records": [
+        {
+          "id": "t",
+          "kind": "task",
+          "data": {
+            "title": "t",
+            "flag": null,
+            "projectId": "iiq-project",
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": {
+              "source": "iiq",
+              "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+              "number": 1042,
+              "url": null,
+              "status": "New",
+              "closed": false,
+              "requester": null,
+              "location": null,
+              "issue": null,
+              "priority": null,
+              "syncedAt": null
+            },
+            "done": false,
+            "doneAt": null,
+            "order": 1000,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        }
+      ],
+      "action": {
+        "type": "resolveWithNotes",
+        "id": "t",
+        "notes": "  Replaced the charger.  "
+      },
+      "expect": {
+        "result": null,
+        "changed": {
+          "n1": {
+            "kind": "iiq-action",
+            "deleted": false,
+            "data": {
+              "type": "resolve",
+              "taskId": "t",
+              "ticketId": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+              "state": "pending",
+              "createdAt": "2026-10-20T13:00:00.000Z",
+              "text": "Replaced the charger."
+            }
+          },
+          "t": {
+            "kind": "task",
+            "deleted": false,
+            "data": {
+              "title": "t",
+              "flag": null,
+              "projectId": "iiq-project",
+              "parentId": null,
+              "deadline": null,
+              "startOn": null,
+              "repeat": null,
+              "nextId": null,
+              "external": {
+                "number": 1042,
+                "url": null,
+                "status": "New",
+                "closed": false,
+                "requester": null,
+                "location": null,
+                "issue": null,
+                "priority": null,
+                "syncedAt": null,
+                "source": "iiq",
+                "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+              },
+              "done": true,
+              "doneAt": "2026-10-20T13:00:00.000Z",
+              "order": 1000,
+              "dependsOn": [],
+              "notes": [],
+              "createdAt": "2026-10-01T12:00:00.000Z"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "ticket-start",
+      "about": "Moving a ticket task to In Progress asks the server to start the ticket.",
+      "records": [
+        {
+          "id": "t",
+          "kind": "task",
+          "data": {
+            "title": "t",
+            "flag": null,
+            "projectId": "iiq-project",
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": {
+              "source": "iiq",
+              "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+              "number": 1042,
+              "url": null,
+              "status": "New",
+              "closed": false,
+              "requester": null,
+              "location": null,
+              "issue": null,
+              "priority": null,
+              "syncedAt": null
+            },
+            "done": false,
+            "doneAt": null,
+            "order": 1000,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        }
+      ],
+      "action": {
+        "type": "setFlag",
+        "id": "t",
+        "flag": "doing"
+      },
+      "expect": {
+        "result": null,
+        "changed": {
+          "t": {
+            "kind": "task",
+            "deleted": false,
+            "data": {
+              "title": "t",
+              "flag": "doing",
+              "projectId": "iiq-project",
+              "parentId": null,
+              "deadline": null,
+              "startOn": null,
+              "repeat": null,
+              "nextId": null,
+              "external": {
+                "number": 1042,
+                "url": null,
+                "status": "New",
+                "closed": false,
+                "requester": null,
+                "location": null,
+                "issue": null,
+                "priority": null,
+                "syncedAt": null,
+                "source": "iiq",
+                "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+              },
+              "done": false,
+              "doneAt": null,
+              "order": 1000,
+              "dependsOn": [],
+              "notes": [],
+              "createdAt": "2026-10-01T12:00:00.000Z"
+            }
+          },
+          "n1": {
+            "kind": "iiq-action",
+            "deleted": false,
+            "data": {
+              "type": "start",
+              "taskId": "t",
+              "ticketId": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+              "state": "pending",
+              "createdAt": "2026-10-20T13:00:00.000Z"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "start-future",
+      "about": "A future start date takes a top-level task off its list until then.",
+      "records": [
+        {
+          "id": "a",
+          "kind": "task",
+          "data": {
+            "title": "a",
+            "flag": "inbox",
+            "projectId": null,
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 1000,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        }
+      ],
+      "action": {
+        "type": "setStartOn",
+        "id": "a",
+        "startOn": "2026-11-02"
+      },
+      "expect": {
+        "result": null,
+        "changed": {
+          "a": {
+            "kind": "task",
+            "deleted": false,
+            "data": {
+              "title": "a",
+              "flag": null,
+              "projectId": null,
+              "parentId": null,
+              "deadline": null,
+              "startOn": "2026-11-02",
+              "repeat": null,
+              "nextId": null,
+              "external": null,
+              "done": false,
+              "doneAt": null,
+              "order": 1000,
+              "dependsOn": [],
+              "notes": [],
+              "createdAt": "2026-10-01T12:00:00.000Z"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "start-today",
+      "about": "A start date of today or earlier moves the task into Today now.",
+      "records": [
+        {
+          "id": "a",
+          "kind": "task",
+          "data": {
+            "title": "a",
+            "flag": "next",
+            "projectId": null,
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 1000,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        }
+      ],
+      "action": {
+        "type": "setStartOn",
+        "id": "a",
+        "startOn": "2026-10-20"
+      },
+      "expect": {
+        "result": null,
+        "changed": {
+          "a": {
+            "kind": "task",
+            "deleted": false,
+            "data": {
+              "title": "a",
+              "flag": "today",
+              "projectId": null,
+              "parentId": null,
+              "deadline": null,
+              "startOn": null,
+              "repeat": null,
+              "nextId": null,
+              "external": null,
+              "done": false,
+              "doneAt": null,
+              "order": 1000,
+              "dependsOn": [],
+              "notes": [],
+              "createdAt": "2026-10-01T12:00:00.000Z"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "start-clear",
+      "about": "Clearing the start date of a loose task puts it in the Inbox.",
+      "records": [
+        {
+          "id": "a",
+          "kind": "task",
+          "data": {
+            "title": "a",
+            "flag": null,
+            "projectId": null,
+            "parentId": null,
+            "deadline": null,
+            "startOn": "2026-11-02",
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 1000,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        }
+      ],
+      "action": {
+        "type": "setStartOn",
+        "id": "a",
+        "startOn": null
+      },
+      "expect": {
+        "result": null,
+        "changed": {
+          "a": {
+            "kind": "task",
+            "deleted": false,
+            "data": {
+              "title": "a",
+              "flag": "inbox",
+              "projectId": null,
+              "parentId": null,
+              "deadline": null,
+              "startOn": null,
+              "repeat": null,
+              "nextId": null,
+              "external": null,
+              "done": false,
+              "doneAt": null,
+              "order": 1000,
+              "dependsOn": [],
+              "notes": [],
+              "createdAt": "2026-10-01T12:00:00.000Z"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "promote-due",
+      "about": "Tasks whose start date has arrived move into Today; In Progress stays; later and done ones stay; newer-format records are left alone.",
+      "records": [
+        {
+          "id": "due",
+          "kind": "task",
+          "data": {
+            "title": "due",
+            "flag": null,
+            "projectId": null,
+            "parentId": null,
+            "deadline": null,
+            "startOn": "2026-10-20",
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 1000,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        },
+        {
+          "id": "late",
+          "kind": "task",
+          "data": {
+            "title": "late",
+            "flag": "doing",
+            "projectId": null,
+            "parentId": null,
+            "deadline": null,
+            "startOn": "2026-10-18",
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 1000,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        },
+        {
+          "id": "later",
+          "kind": "task",
+          "data": {
+            "title": "later",
+            "flag": null,
+            "projectId": null,
+            "parentId": null,
+            "deadline": null,
+            "startOn": "2026-10-21",
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 1000,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        },
+        {
+          "id": "done",
+          "kind": "task",
+          "data": {
+            "title": "done",
+            "flag": null,
+            "projectId": null,
+            "parentId": null,
+            "deadline": null,
+            "startOn": "2026-10-19",
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": true,
+            "doneAt": "2026-10-19T12:00:00.000Z",
+            "order": 1000,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        },
+        {
+          "id": "newer",
+          "kind": "task",
+          "data": {
+            "title": "newer",
+            "flag": null,
+            "projectId": null,
+            "parentId": null,
+            "deadline": null,
+            "startOn": "2026-10-19",
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 1000,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z",
+            "schema": 2
+          }
+        }
+      ],
+      "action": {
+        "type": "promoteDue"
+      },
+      "expect": {
+        "result": null,
+        "changed": {
+          "due": {
+            "kind": "task",
+            "deleted": false,
+            "data": {
+              "title": "due",
+              "flag": "today",
+              "projectId": null,
+              "parentId": null,
+              "deadline": null,
+              "startOn": null,
+              "repeat": null,
+              "nextId": null,
+              "external": null,
+              "done": false,
+              "doneAt": null,
+              "order": 1000,
+              "dependsOn": [],
+              "notes": [],
+              "createdAt": "2026-10-01T12:00:00.000Z"
+            }
+          },
+          "late": {
+            "kind": "task",
+            "deleted": false,
+            "data": {
+              "title": "late",
+              "flag": "doing",
+              "projectId": null,
+              "parentId": null,
+              "deadline": null,
+              "startOn": null,
+              "repeat": null,
+              "nextId": null,
+              "external": null,
+              "done": false,
+              "doneAt": null,
+              "order": 1000,
+              "dependsOn": [],
+              "notes": [],
+              "createdAt": "2026-10-01T12:00:00.000Z"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "delete-with-subtasks",
+      "about": "Deleting a task deletes its subtasks too, keeping their data for undo.",
+      "records": [
+        {
+          "id": "p",
+          "kind": "task",
+          "data": {
+            "title": "p",
+            "flag": null,
+            "projectId": null,
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 1000,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        },
+        {
+          "id": "c",
+          "kind": "task",
+          "data": {
+            "title": "c",
+            "flag": null,
+            "projectId": null,
+            "parentId": "p",
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 1000,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        },
+        {
+          "id": "gc",
+          "kind": "task",
+          "data": {
+            "title": "gc",
+            "flag": null,
+            "projectId": null,
+            "parentId": "c",
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 1000,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        }
+      ],
+      "action": {
+        "type": "deleteTask",
+        "id": "p"
+      },
+      "expect": {
+        "result": null,
+        "changed": {
+          "p": {
+            "kind": "task",
+            "deleted": true,
+            "data": {
+              "title": "p",
+              "flag": null,
+              "projectId": null,
+              "parentId": null,
+              "deadline": null,
+              "startOn": null,
+              "repeat": null,
+              "nextId": null,
+              "external": null,
+              "done": false,
+              "doneAt": null,
+              "order": 1000,
+              "dependsOn": [],
+              "notes": [],
+              "createdAt": "2026-10-01T12:00:00.000Z"
+            }
+          },
+          "c": {
+            "kind": "task",
+            "deleted": true,
+            "data": {
+              "title": "c",
+              "flag": null,
+              "projectId": null,
+              "parentId": "p",
+              "deadline": null,
+              "startOn": null,
+              "repeat": null,
+              "nextId": null,
+              "external": null,
+              "done": false,
+              "doneAt": null,
+              "order": 1000,
+              "dependsOn": [],
+              "notes": [],
+              "createdAt": "2026-10-01T12:00:00.000Z"
+            }
+          },
+          "gc": {
+            "kind": "task",
+            "deleted": true,
+            "data": {
+              "title": "gc",
+              "flag": null,
+              "projectId": null,
+              "parentId": "c",
+              "deadline": null,
+              "startOn": null,
+              "repeat": null,
+              "nextId": null,
+              "external": null,
+              "done": false,
+              "doneAt": null,
+              "order": 1000,
+              "dependsOn": [],
+              "notes": [],
+              "createdAt": "2026-10-01T12:00:00.000Z"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "dependency-loop",
+      "about": "A dependency that would make a loop is refused with a message.",
+      "records": [
+        {
+          "id": "a",
+          "kind": "task",
+          "data": {
+            "title": "a",
+            "flag": null,
+            "projectId": null,
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 1000,
+            "dependsOn": [
+              "b"
+            ],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        },
+        {
+          "id": "b",
+          "kind": "task",
+          "data": {
+            "title": "b",
+            "flag": null,
+            "projectId": null,
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 1000,
+            "dependsOn": [
+              "c"
+            ],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        },
+        {
+          "id": "c",
+          "kind": "task",
+          "data": {
+            "title": "c",
+            "flag": null,
+            "projectId": null,
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 1000,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        }
+      ],
+      "action": {
+        "type": "addDependency",
+        "id": "c",
+        "dependsOn": "a"
+      },
+      "expect": {
+        "result": "“a” already waits on this task, so this would make a loop.",
+        "changed": {}
+      }
+    },
+    {
+      "id": "dependency-self",
+      "about": "A task can't depend on itself.",
+      "records": [
+        {
+          "id": "a",
+          "kind": "task",
+          "data": {
+            "title": "a",
+            "flag": null,
+            "projectId": null,
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 1000,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        }
+      ],
+      "action": {
+        "type": "addDependency",
+        "id": "a",
+        "dependsOn": "a"
+      },
+      "expect": {
+        "result": "A task can’t depend on itself.",
+        "changed": {}
+      }
+    },
+    {
+      "id": "dependency-added",
+      "about": "Adding a dependency.",
+      "records": [
+        {
+          "id": "a",
+          "kind": "task",
+          "data": {
+            "title": "a",
+            "flag": null,
+            "projectId": null,
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 1000,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        },
+        {
+          "id": "b",
+          "kind": "task",
+          "data": {
+            "title": "b",
+            "flag": null,
+            "projectId": null,
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 1000,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        }
+      ],
+      "action": {
+        "type": "addDependency",
+        "id": "a",
+        "dependsOn": "b"
+      },
+      "expect": {
+        "result": null,
+        "changed": {
+          "a": {
+            "kind": "task",
+            "deleted": false,
+            "data": {
+              "title": "a",
+              "flag": null,
+              "projectId": null,
+              "parentId": null,
+              "deadline": null,
+              "startOn": null,
+              "repeat": null,
+              "nextId": null,
+              "external": null,
+              "done": false,
+              "doneAt": null,
+              "order": 1000,
+              "dependsOn": [
+                "b"
+              ],
+              "notes": [],
+              "createdAt": "2026-10-01T12:00:00.000Z"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "move-in-next",
+      "about": "Dragging in Next places the task halfway between its new neighbours; dropping at the end goes 1000 past the last.",
+      "records": [
+        {
+          "id": "a",
+          "kind": "task",
+          "data": {
+            "title": "a",
+            "flag": "next",
+            "projectId": null,
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 1000,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        },
+        {
+          "id": "b",
+          "kind": "task",
+          "data": {
+            "title": "b",
+            "flag": "next",
+            "projectId": null,
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 2000,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        },
+        {
+          "id": "c",
+          "kind": "task",
+          "data": {
+            "title": "c",
+            "flag": "next",
+            "projectId": null,
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 3000,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        }
+      ],
+      "action": {
+        "type": "moveInNext",
+        "id": "c",
+        "before": "b"
+      },
+      "expect": {
+        "result": null,
+        "changed": {
+          "c": {
+            "kind": "task",
+            "deleted": false,
+            "data": {
+              "title": "c",
+              "flag": "next",
+              "projectId": null,
+              "parentId": null,
+              "deadline": null,
+              "startOn": null,
+              "repeat": null,
+              "nextId": null,
+              "external": null,
+              "done": false,
+              "doneAt": null,
+              "order": 1500,
+              "dependsOn": [],
+              "notes": [],
+              "createdAt": "2026-10-01T12:00:00.000Z"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "move-in-next-end",
+      "about": "Dropping at the end of Next.",
+      "records": [
+        {
+          "id": "a",
+          "kind": "task",
+          "data": {
+            "title": "a",
+            "flag": "next",
+            "projectId": null,
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 1000,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        },
+        {
+          "id": "b",
+          "kind": "task",
+          "data": {
+            "title": "b",
+            "flag": "next",
+            "projectId": null,
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 2000,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        }
+      ],
+      "action": {
+        "type": "moveInNext",
+        "id": "a",
+        "before": null
+      },
+      "expect": {
+        "result": null,
+        "changed": {
+          "a": {
+            "kind": "task",
+            "deleted": false,
+            "data": {
+              "title": "a",
+              "flag": "next",
+              "projectId": null,
+              "parentId": null,
+              "deadline": null,
+              "startOn": null,
+              "repeat": null,
+              "nextId": null,
+              "external": null,
+              "done": false,
+              "doneAt": null,
+              "order": 3000,
+              "dependsOn": [],
+              "notes": [],
+              "createdAt": "2026-10-01T12:00:00.000Z"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "delete-project",
+      "about": "Deleting a project sends its tasks to the Inbox (a flag they had is kept).",
+      "records": [
+        {
+          "id": "p",
+          "kind": "project",
+          "data": {
+            "title": "P",
+            "areaId": null,
+            "order": 1
+          }
+        },
+        {
+          "id": "a",
+          "kind": "task",
+          "data": {
+            "title": "a",
+            "flag": null,
+            "projectId": "p",
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 1000,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        },
+        {
+          "id": "b",
+          "kind": "task",
+          "data": {
+            "title": "b",
+            "flag": "next",
+            "projectId": "p",
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 1000,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        }
+      ],
+      "action": {
+        "type": "deleteProject",
+        "id": "p"
+      },
+      "expect": {
+        "result": null,
+        "changed": {
+          "a": {
+            "kind": "task",
+            "deleted": false,
+            "data": {
+              "title": "a",
+              "flag": "inbox",
+              "projectId": null,
+              "parentId": null,
+              "deadline": null,
+              "startOn": null,
+              "repeat": null,
+              "nextId": null,
+              "external": null,
+              "done": false,
+              "doneAt": null,
+              "order": 1000,
+              "dependsOn": [],
+              "notes": [],
+              "createdAt": "2026-10-01T12:00:00.000Z"
+            }
+          },
+          "b": {
+            "kind": "task",
+            "deleted": false,
+            "data": {
+              "title": "b",
+              "flag": "next",
+              "projectId": null,
+              "parentId": null,
+              "deadline": null,
+              "startOn": null,
+              "repeat": null,
+              "nextId": null,
+              "external": null,
+              "done": false,
+              "doneAt": null,
+              "order": 1000,
+              "dependsOn": [],
+              "notes": [],
+              "createdAt": "2026-10-01T12:00:00.000Z"
+            }
+          },
+          "p": {
+            "kind": "project",
+            "deleted": true,
+            "data": {
+              "title": "P",
+              "areaId": null,
+              "order": 1
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "delete-area",
+      "about": "Deleting an area keeps its projects, without an area.",
+      "records": [
+        {
+          "id": "ar",
+          "kind": "area",
+          "data": {
+            "title": "School",
+            "order": 1
+          }
+        },
+        {
+          "id": "p",
+          "kind": "project",
+          "data": {
+            "title": "P",
+            "areaId": "ar",
+            "order": 1
+          }
+        }
+      ],
+      "action": {
+        "type": "deleteArea",
+        "id": "ar"
+      },
+      "expect": {
+        "result": null,
+        "changed": {
+          "p": {
+            "kind": "project",
+            "deleted": false,
+            "data": {
+              "title": "P",
+              "areaId": null,
+              "order": 1
+            }
+          },
+          "ar": {
+            "kind": "area",
+            "deleted": true,
+            "data": {
+              "title": "School",
+              "order": 1
+            }
+          }
+        }
+      }
+    }
+  ]
+}

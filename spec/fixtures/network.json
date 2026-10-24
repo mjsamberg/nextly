@@ -1,0 +1,123 @@
+{
+  "about": "Extra request headers (Settings) and spotting Cloudflare Access. checkHeaders expect: null, or text the error must contain.",
+  "now": "2026-10-20T13:00:00.000Z",
+  "today": "2026-10-20",
+  "cases": [
+    {
+      "id": "cloudflare-ok",
+      "fn": "checkHeaders",
+      "rows": [
+        {
+          "name": "CF-Access-Client-Id",
+          "value": " abc.access "
+        },
+        {
+          "name": "CF-Access-Client-Secret",
+          "value": "xyz"
+        },
+        {
+          "name": "",
+          "value": ""
+        }
+      ],
+      "expect": null
+    },
+    {
+      "id": "reserved",
+      "fn": "checkHeaders",
+      "rows": [
+        {
+          "name": "Authorization",
+          "value": "x"
+        }
+      ],
+      "expect": "sets Authorization itself"
+    },
+    {
+      "id": "bad-name",
+      "fn": "checkHeaders",
+      "rows": [
+        {
+          "name": "bad name",
+          "value": "x"
+        }
+      ],
+      "expect": "valid header name"
+    },
+    {
+      "id": "twice",
+      "fn": "checkHeaders",
+      "rows": [
+        {
+          "name": "X-A",
+          "value": "1"
+        },
+        {
+          "name": "x-a",
+          "value": "2"
+        }
+      ],
+      "expect": "twice"
+    },
+    {
+      "id": "line-break",
+      "fn": "checkHeaders",
+      "rows": [
+        {
+          "name": "X-A",
+          "value": "a\nb"
+        }
+      ],
+      "expect": "line breaks"
+    },
+    {
+      "id": "object",
+      "fn": "headerObject",
+      "rows": [
+        {
+          "name": " CF-Access-Client-Id ",
+          "value": " abc.access "
+        },
+        {
+          "name": "",
+          "value": "ignored"
+        }
+      ],
+      "expect": {
+        "CF-Access-Client-Id": "abc.access"
+      }
+    },
+    {
+      "id": "access-login-page",
+      "fn": "blockedByAccess",
+      "status": 200,
+      "contentType": "text/html",
+      "url": "https://team.cloudflareaccess.com/cdn-cgi/access/login",
+      "expect": true
+    },
+    {
+      "id": "access-403",
+      "fn": "blockedByAccess",
+      "status": 403,
+      "contentType": "text/html",
+      "url": "https://nextly.example.com/sync",
+      "expect": true
+    },
+    {
+      "id": "json-ok",
+      "fn": "blockedByAccess",
+      "status": 200,
+      "contentType": "application/json",
+      "url": "https://nextly.example.com/sync",
+      "expect": false
+    },
+    {
+      "id": "token-rejected",
+      "fn": "blockedByAccess",
+      "status": 401,
+      "contentType": "application/json",
+      "url": "https://nextly.example.com/sync",
+      "expect": false
+    }
+  ]
+}

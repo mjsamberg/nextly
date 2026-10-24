@@ -1,0 +1,101 @@
+{
+  "about": "Swipes (promote, defer) and Next order (orderBetween; null is a missing neighbour, and with none the order is now in ms).",
+  "now": "2026-10-20T13:00:00.000Z",
+  "today": "2026-10-20",
+  "cases": [
+    {
+      "id": "promote-inbox",
+      "fn": "promote",
+      "flag": "inbox",
+      "expect": "today"
+    },
+    {
+      "id": "promote-next",
+      "fn": "promote",
+      "flag": "next",
+      "expect": "today"
+    },
+    {
+      "id": "promote-today",
+      "fn": "promote",
+      "flag": "today",
+      "expect": "doing"
+    },
+    {
+      "id": "promote-doing",
+      "fn": "promote",
+      "flag": "doing",
+      "expect": "doing"
+    },
+    {
+      "id": "promote-null",
+      "fn": "promote",
+      "flag": null,
+      "expect": "today"
+    },
+    {
+      "id": "defer-doing",
+      "fn": "defer",
+      "flag": "doing",
+      "expect": "today"
+    },
+    {
+      "id": "defer-today",
+      "fn": "defer",
+      "flag": "today",
+      "expect": "next"
+    },
+    {
+      "id": "defer-next",
+      "fn": "defer",
+      "flag": "next",
+      "expect": "someday"
+    },
+    {
+      "id": "defer-inbox",
+      "fn": "defer",
+      "flag": "inbox",
+      "expect": "next"
+    },
+    {
+      "id": "defer-null",
+      "fn": "defer",
+      "flag": null,
+      "expect": "next"
+    },
+    {
+      "id": "defer-someday",
+      "fn": "defer",
+      "flag": "someday",
+      "expect": "someday"
+    },
+    {
+      "id": "between",
+      "fn": "orderBetween",
+      "before": 10,
+      "after": 20,
+      "expect": 15
+    },
+    {
+      "id": "first",
+      "fn": "orderBetween",
+      "before": null,
+      "after": 20,
+      "expect": -980
+    },
+    {
+      "id": "last",
+      "fn": "orderBetween",
+      "before": 10,
+      "after": null,
+      "expect": 1010
+    },
+    {
+      "id": "only",
+      "fn": "orderBetween",
+      "before": null,
+      "after": null,
+      "expect": 1792501200000
+    }
+  ]
+}

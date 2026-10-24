@@ -1,0 +1,69 @@
+{
+  "about": "parseQuickAdd(input, today): the quick add field. Dates are local; today is Tue 2026-10-20.",
+  "now": "2026-10-20T13:00:00.000Z",
+  "today": "2026-10-20",
+  "cases": [
+    {
+      "id": "flag-deadline-gmail",
+      "input": "Reply to Ortiz !t ^fri https://mail.google.com/mail/u/0/#all/18f2",
+      "expect": {
+        "title": "Reply to Ortiz",
+        "flag": "today",
+        "deadline": "2026-10-23",
+        "emailUrl": "https://mail.google.com/mail/u/0/#all/18f2"
+      }
+    },
+    {
+      "id": "unknown-tokens-stay",
+      "input": "Fix ^nonsense and !wow",
+      "expect": {
+        "title": "Fix ^nonsense and !wow"
+      }
+    },
+    {
+      "id": "in-progress",
+      "input": "Write report !p",
+      "expect": {
+        "title": "Write report",
+        "flag": "doing"
+      }
+    },
+    {
+      "id": "start-and-repeat",
+      "input": "Water plants @mon *weekly",
+      "expect": {
+        "title": "Water plants",
+        "startOn": "2026-10-26",
+        "repeat": {
+          "every": 1,
+          "unit": "week",
+          "from": "schedule"
+        }
+      }
+    },
+    {
+      "id": "bad-repeat-stays",
+      "input": "Email *nonsense",
+      "expect": {
+        "title": "Email *nonsense"
+      }
+    },
+    {
+      "id": "apple-mail-link",
+      "input": "message:%3Cabc@x%3E !n",
+      "expect": {
+        "title": "",
+        "flag": "next",
+        "emailUrl": "message:%3Cabc@x%3E"
+      }
+    },
+    {
+      "id": "extra-spaces",
+      "input": "  Call   Sam  !someday ",
+      "expect": {
+        "title": "Call Sam",
+        "flag": "someday"
+      }
+    }
+  ]
+}

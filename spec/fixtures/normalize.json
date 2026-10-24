@@ -1,0 +1,250 @@
+{
+  "about": "normTask(data): how every app reads a task record. Older forms (list, links, text blocks) are folded in; unknown keys are kept; id belongs to the record, not its data.",
+  "now": "2026-10-20T13:00:00.000Z",
+  "today": "2026-10-20",
+  "cases": [
+    {
+      "id": "capture-page-record",
+      "input": {
+        "title": "x",
+        "list": "inbox",
+        "notes": [
+          {
+            "type": "text",
+            "text": "hi"
+          }
+        ],
+        "links": [
+          {
+            "url": "u",
+            "subject": "s"
+          }
+        ]
+      },
+      "expect": {
+        "title": "x",
+        "flag": "inbox",
+        "projectId": null,
+        "parentId": null,
+        "deadline": null,
+        "startOn": null,
+        "repeat": null,
+        "nextId": null,
+        "external": null,
+        "done": false,
+        "doneAt": null,
+        "order": 0,
+        "dependsOn": [],
+        "notes": [
+          {
+            "type": "paragraph",
+            "text": "hi",
+            "id": "b0"
+          },
+          {
+            "id": "link0",
+            "type": "email",
+            "url": "u",
+            "subject": "s"
+          }
+        ],
+        "createdAt": "1970-01-01T00:00:00.000Z"
+      }
+    },
+    {
+      "id": "empty",
+      "input": {},
+      "expect": {
+        "title": "",
+        "flag": null,
+        "projectId": null,
+        "parentId": null,
+        "deadline": null,
+        "startOn": null,
+        "repeat": null,
+        "nextId": null,
+        "external": null,
+        "done": false,
+        "doneAt": null,
+        "order": 0,
+        "dependsOn": [],
+        "notes": [],
+        "createdAt": "1970-01-01T00:00:00.000Z"
+      }
+    },
+    {
+      "id": "doing-kept",
+      "input": {
+        "title": "x",
+        "flag": "doing",
+        "createdAt": "2026-10-01T12:00:00.000Z"
+      },
+      "expect": {
+        "title": "x",
+        "flag": "doing",
+        "projectId": null,
+        "parentId": null,
+        "deadline": null,
+        "startOn": null,
+        "repeat": null,
+        "nextId": null,
+        "external": null,
+        "done": false,
+        "doneAt": null,
+        "order": 1790856000000,
+        "dependsOn": [],
+        "notes": [],
+        "createdAt": "2026-10-01T12:00:00.000Z"
+      }
+    },
+    {
+      "id": "bad-values-cleaned",
+      "input": {
+        "title": 7,
+        "flag": "later",
+        "deadline": 20261020,
+        "dependsOn": [
+          1,
+          "b"
+        ],
+        "notes": [
+          {
+            "type": "video",
+            "text": "v"
+          }
+        ],
+        "repeat": {
+          "unit": "hour"
+        },
+        "order": "x",
+        "createdAt": "2026-10-01T12:00:00.000Z"
+      },
+      "expect": {
+        "title": "7",
+        "flag": null,
+        "projectId": null,
+        "parentId": null,
+        "deadline": null,
+        "startOn": null,
+        "repeat": null,
+        "nextId": null,
+        "external": null,
+        "done": false,
+        "doneAt": null,
+        "order": 1790856000000,
+        "dependsOn": [
+          "1",
+          "b"
+        ],
+        "notes": [
+          {
+            "type": "paragraph",
+            "text": "v",
+            "id": "b0"
+          }
+        ],
+        "createdAt": "2026-10-01T12:00:00.000Z"
+      }
+    },
+    {
+      "id": "unknown-fields-kept",
+      "input": {
+        "title": "x",
+        "flag": "today",
+        "color": "plum",
+        "schema": 1,
+        "notes": [
+          {
+            "id": "b1",
+            "type": "paragraph",
+            "text": "x",
+            "align": "center"
+          }
+        ],
+        "repeat": {
+          "every": 1,
+          "unit": "day",
+          "from": "schedule",
+          "until": "2027-01-01"
+        },
+        "external": {
+          "source": "iiq",
+          "id": "T1",
+          "slaDue": "2026-10-21"
+        },
+        "createdAt": "2026-10-01T12:00:00.000Z",
+        "order": 5
+      },
+      "expect": {
+        "color": "plum",
+        "schema": 1,
+        "title": "x",
+        "flag": "today",
+        "projectId": null,
+        "parentId": null,
+        "deadline": null,
+        "startOn": null,
+        "repeat": {
+          "until": "2027-01-01",
+          "every": 1,
+          "unit": "day",
+          "from": "schedule"
+        },
+        "nextId": null,
+        "external": {
+          "number": null,
+          "url": null,
+          "status": null,
+          "closed": false,
+          "requester": null,
+          "location": null,
+          "issue": null,
+          "priority": null,
+          "syncedAt": null,
+          "source": "iiq",
+          "id": "T1",
+          "slaDue": "2026-10-21"
+        },
+        "done": false,
+        "doneAt": null,
+        "order": 5,
+        "dependsOn": [],
+        "notes": [
+          {
+            "id": "b1",
+            "type": "paragraph",
+            "text": "x",
+            "align": "center"
+          }
+        ],
+        "createdAt": "2026-10-01T12:00:00.000Z"
+      }
+    },
+    {
+      "id": "record-id-not-data",
+      "input": {
+        "id": "other",
+        "title": "x",
+        "createdAt": "2026-10-01T12:00:00.000Z",
+        "order": 5
+      },
+      "expect": {
+        "title": "x",
+        "flag": null,
+        "projectId": null,
+        "parentId": null,
+        "deadline": null,
+        "startOn": null,
+        "repeat": null,
+        "nextId": null,
+        "external": null,
+        "done": false,
+        "doneAt": null,
+        "order": 5,
+        "dependsOn": [],
+        "notes": [],
+        "createdAt": "2026-10-01T12:00:00.000Z"
+      }
+    }
+  ]
+}

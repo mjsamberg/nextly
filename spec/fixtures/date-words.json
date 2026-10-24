@@ -1,0 +1,72 @@
+{
+  "about": "parseDateWord(word, today): weekdays mean the next one, counting today. null when it is not a date.",
+  "now": "2026-10-20T13:00:00.000Z",
+  "today": "2026-10-20",
+  "cases": [
+    {
+      "id": "today",
+      "word": "today",
+      "expect": "2026-10-20"
+    },
+    {
+      "id": "tod",
+      "word": "tod",
+      "expect": "2026-10-20"
+    },
+    {
+      "id": "tom",
+      "word": "tom",
+      "expect": "2026-10-21"
+    },
+    {
+      "id": "tomorrow",
+      "word": "tomorrow",
+      "expect": "2026-10-21"
+    },
+    {
+      "id": "tue",
+      "word": "tue",
+      "expect": "2026-10-20"
+    },
+    {
+      "id": "mon",
+      "word": "mon",
+      "expect": "2026-10-26"
+    },
+    {
+      "id": "Friday",
+      "word": "Friday",
+      "expect": "2026-10-23"
+    },
+    {
+      "id": "10/1",
+      "word": "10/1",
+      "expect": "2027-10-01"
+    },
+    {
+      "id": "12/25",
+      "word": "12/25",
+      "expect": "2026-12-25"
+    },
+    {
+      "id": "1/5/27",
+      "word": "1/5/27",
+      "expect": "2027-01-05"
+    },
+    {
+      "id": "2026-12-01",
+      "word": "2026-12-01",
+      "expect": "2026-12-01"
+    },
+    {
+      "id": "soon",
+      "word": "soon",
+      "expect": null
+    },
+    {
+      "id": "mo",
+      "word": "mo",
+      "expect": null
+    }
+  ]
+}

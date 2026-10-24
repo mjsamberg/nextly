@@ -1,0 +1,914 @@
+{
+  "about": "Which tasks each list shows, and the sidebar counts. Ticket tasks never show in the Inbox; a project of tickets is newest submitted first; records from a newer format still show.",
+  "now": "2026-10-20T13:00:00.000Z",
+  "today": "2026-10-20",
+  "cases": [
+    {
+      "id": "every-list",
+      "records": [
+        {
+          "id": "proj",
+          "kind": "project",
+          "data": {
+            "title": "Fall conferences",
+            "areaId": null,
+            "order": 1
+          }
+        },
+        {
+          "id": "iiq-project",
+          "kind": "project",
+          "data": {
+            "title": "Incident IQ",
+            "areaId": null,
+            "order": 2
+          }
+        },
+        {
+          "id": "inbox1",
+          "kind": "task",
+          "data": {
+            "title": "inbox1",
+            "flag": "inbox",
+            "projectId": null,
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 1000,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-02T12:00:00.000Z"
+          }
+        },
+        {
+          "id": "loose",
+          "kind": "task",
+          "data": {
+            "title": "loose",
+            "flag": null,
+            "projectId": null,
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 1000,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        },
+        {
+          "id": "doing1",
+          "kind": "task",
+          "data": {
+            "title": "doing1",
+            "flag": "doing",
+            "projectId": null,
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 5,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        },
+        {
+          "id": "today1",
+          "kind": "task",
+          "data": {
+            "title": "today1",
+            "flag": "today",
+            "projectId": null,
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 20,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        },
+        {
+          "id": "today2",
+          "kind": "task",
+          "data": {
+            "title": "today2",
+            "flag": "today",
+            "projectId": "proj",
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 10,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        },
+        {
+          "id": "next1",
+          "kind": "task",
+          "data": {
+            "title": "next1",
+            "flag": "next",
+            "projectId": null,
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 3000,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        },
+        {
+          "id": "next2",
+          "kind": "task",
+          "data": {
+            "title": "next2",
+            "flag": "next",
+            "projectId": null,
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 2000,
+            "dependsOn": [],
+            "notes": [
+              {
+                "id": "b",
+                "type": "paragraph",
+                "text": "call the district office"
+              }
+            ],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        },
+        {
+          "id": "someday1",
+          "kind": "task",
+          "data": {
+            "title": "someday1",
+            "flag": "someday",
+            "projectId": null,
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 1000,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        },
+        {
+          "id": "scheduled1",
+          "kind": "task",
+          "data": {
+            "title": "scheduled1",
+            "flag": null,
+            "projectId": null,
+            "parentId": null,
+            "deadline": null,
+            "startOn": "2026-11-02",
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 1000,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        },
+        {
+          "id": "deadline1",
+          "kind": "task",
+          "data": {
+            "title": "deadline1",
+            "flag": "next",
+            "projectId": null,
+            "parentId": null,
+            "deadline": "2026-10-25",
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 4000,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        },
+        {
+          "id": "inproject",
+          "kind": "task",
+          "data": {
+            "title": "inproject",
+            "flag": null,
+            "projectId": "proj",
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 7,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        },
+        {
+          "id": "sub",
+          "kind": "task",
+          "data": {
+            "title": "sub",
+            "flag": "today",
+            "projectId": null,
+            "parentId": "inproject",
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 30,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        },
+        {
+          "id": "done1",
+          "kind": "task",
+          "data": {
+            "title": "done1",
+            "flag": "today",
+            "projectId": null,
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": true,
+            "doneAt": "2026-10-19T12:00:00.000Z",
+            "order": 1000,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        },
+        {
+          "id": "done2",
+          "kind": "task",
+          "data": {
+            "title": "done2",
+            "flag": null,
+            "projectId": null,
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": true,
+            "doneAt": "2026-10-20T12:00:00.000Z",
+            "order": 1000,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        },
+        {
+          "id": "gone",
+          "kind": "task",
+          "deleted": true,
+          "data": {
+            "title": "gone",
+            "flag": "today",
+            "projectId": null,
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 1000,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        },
+        {
+          "id": "iiq-old",
+          "kind": "task",
+          "data": {
+            "title": "iiq-old",
+            "flag": "inbox",
+            "projectId": "iiq-project",
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": {
+              "source": "iiq",
+              "id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+              "created": "2026-10-01T12:00:00.000Z"
+            },
+            "done": false,
+            "doneAt": null,
+            "order": 1000,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        },
+        {
+          "id": "iiq-new",
+          "kind": "task",
+          "data": {
+            "title": "iiq-new",
+            "flag": null,
+            "projectId": "iiq-project",
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": {
+              "source": "iiq",
+              "id": "cccccccc-cccc-cccc-cccc-cccccccccccc",
+              "created": "2026-10-15T12:00:00.000Z"
+            },
+            "done": false,
+            "doneAt": null,
+            "order": 1000,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        },
+        {
+          "id": "newer",
+          "kind": "task",
+          "data": {
+            "title": "newer",
+            "flag": "today",
+            "projectId": null,
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 15,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z",
+            "schema": 2
+          }
+        }
+      ],
+      "views": {
+        "inbox": [
+          "loose",
+          "inbox1"
+        ],
+        "doing": [
+          "doing1"
+        ],
+        "today": [
+          "today2",
+          "newer",
+          "today1",
+          "sub"
+        ],
+        "next": [
+          "next2",
+          "next1",
+          "deadline1"
+        ],
+        "someday": [
+          "someday1"
+        ],
+        "scheduled": [
+          "deadline1",
+          "scheduled1"
+        ],
+        "all": [
+          "doing1",
+          "today2",
+          "newer",
+          "today1",
+          "next2",
+          "next1",
+          "deadline1",
+          "iiq-old",
+          "inbox1",
+          "inproject",
+          "iiq-new",
+          "loose",
+          "scheduled1",
+          "someday1"
+        ],
+        "logbook": [
+          "done2",
+          "done1"
+        ],
+        "project:proj": [
+          "inproject",
+          "today2"
+        ],
+        "project:iiq-project": [
+          "iiq-new",
+          "iiq-old"
+        ]
+      },
+      "counts": {
+        "inbox": 2,
+        "doing": 1,
+        "today": 4,
+        "next": 3
+      }
+    },
+    {
+      "id": "search",
+      "records": [
+        {
+          "id": "proj",
+          "kind": "project",
+          "data": {
+            "title": "Fall conferences",
+            "areaId": null,
+            "order": 1
+          }
+        },
+        {
+          "id": "iiq-project",
+          "kind": "project",
+          "data": {
+            "title": "Incident IQ",
+            "areaId": null,
+            "order": 2
+          }
+        },
+        {
+          "id": "inbox1",
+          "kind": "task",
+          "data": {
+            "title": "inbox1",
+            "flag": "inbox",
+            "projectId": null,
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 1000,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-02T12:00:00.000Z"
+          }
+        },
+        {
+          "id": "loose",
+          "kind": "task",
+          "data": {
+            "title": "loose",
+            "flag": null,
+            "projectId": null,
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 1000,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        },
+        {
+          "id": "doing1",
+          "kind": "task",
+          "data": {
+            "title": "doing1",
+            "flag": "doing",
+            "projectId": null,
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 5,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        },
+        {
+          "id": "today1",
+          "kind": "task",
+          "data": {
+            "title": "today1",
+            "flag": "today",
+            "projectId": null,
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 20,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        },
+        {
+          "id": "today2",
+          "kind": "task",
+          "data": {
+            "title": "today2",
+            "flag": "today",
+            "projectId": "proj",
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 10,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        },
+        {
+          "id": "next1",
+          "kind": "task",
+          "data": {
+            "title": "next1",
+            "flag": "next",
+            "projectId": null,
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 3000,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        },
+        {
+          "id": "next2",
+          "kind": "task",
+          "data": {
+            "title": "next2",
+            "flag": "next",
+            "projectId": null,
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 2000,
+            "dependsOn": [],
+            "notes": [
+              {
+                "id": "b",
+                "type": "paragraph",
+                "text": "call the district office"
+              }
+            ],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        },
+        {
+          "id": "someday1",
+          "kind": "task",
+          "data": {
+            "title": "someday1",
+            "flag": "someday",
+            "projectId": null,
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 1000,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        },
+        {
+          "id": "scheduled1",
+          "kind": "task",
+          "data": {
+            "title": "scheduled1",
+            "flag": null,
+            "projectId": null,
+            "parentId": null,
+            "deadline": null,
+            "startOn": "2026-11-02",
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 1000,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        },
+        {
+          "id": "deadline1",
+          "kind": "task",
+          "data": {
+            "title": "deadline1",
+            "flag": "next",
+            "projectId": null,
+            "parentId": null,
+            "deadline": "2026-10-25",
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 4000,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        },
+        {
+          "id": "inproject",
+          "kind": "task",
+          "data": {
+            "title": "inproject",
+            "flag": null,
+            "projectId": "proj",
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 7,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        },
+        {
+          "id": "sub",
+          "kind": "task",
+          "data": {
+            "title": "sub",
+            "flag": "today",
+            "projectId": null,
+            "parentId": "inproject",
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 30,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        },
+        {
+          "id": "done1",
+          "kind": "task",
+          "data": {
+            "title": "done1",
+            "flag": "today",
+            "projectId": null,
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": true,
+            "doneAt": "2026-10-19T12:00:00.000Z",
+            "order": 1000,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        },
+        {
+          "id": "done2",
+          "kind": "task",
+          "data": {
+            "title": "done2",
+            "flag": null,
+            "projectId": null,
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": true,
+            "doneAt": "2026-10-20T12:00:00.000Z",
+            "order": 1000,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        },
+        {
+          "id": "gone",
+          "kind": "task",
+          "deleted": true,
+          "data": {
+            "title": "gone",
+            "flag": "today",
+            "projectId": null,
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 1000,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        },
+        {
+          "id": "iiq-old",
+          "kind": "task",
+          "data": {
+            "title": "iiq-old",
+            "flag": "inbox",
+            "projectId": "iiq-project",
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": {
+              "source": "iiq",
+              "id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+              "created": "2026-10-01T12:00:00.000Z"
+            },
+            "done": false,
+            "doneAt": null,
+            "order": 1000,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        },
+        {
+          "id": "iiq-new",
+          "kind": "task",
+          "data": {
+            "title": "iiq-new",
+            "flag": null,
+            "projectId": "iiq-project",
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": {
+              "source": "iiq",
+              "id": "cccccccc-cccc-cccc-cccc-cccccccccccc",
+              "created": "2026-10-15T12:00:00.000Z"
+            },
+            "done": false,
+            "doneAt": null,
+            "order": 1000,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        },
+        {
+          "id": "newer",
+          "kind": "task",
+          "data": {
+            "title": "newer",
+            "flag": "today",
+            "projectId": null,
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 15,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z",
+            "schema": 2
+          }
+        }
+      ],
+      "query": "District",
+      "views": {
+        "search": [
+          "next2"
+        ]
+      },
+      "counts": {
+        "inbox": 2,
+        "doing": 1,
+        "today": 4,
+        "next": 3
+      }
+    }
+  ]
+}

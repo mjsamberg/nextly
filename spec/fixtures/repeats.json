@@ -1,0 +1,333 @@
+{
+  "about": "Repeat rules: fn names the function. nextStart uses the file's today.",
+  "now": "2026-10-20T13:00:00.000Z",
+  "today": "2026-10-20",
+  "cases": [
+    {
+      "id": "day",
+      "fn": "nextOccurrence",
+      "repeat": {
+        "every": 1,
+        "from": "schedule",
+        "unit": "day"
+      },
+      "after": "2026-10-20",
+      "expect": "2026-10-21"
+    },
+    {
+      "id": "two-weeks",
+      "fn": "nextOccurrence",
+      "repeat": {
+        "every": 2,
+        "from": "schedule",
+        "unit": "week"
+      },
+      "after": "2026-10-20",
+      "expect": "2026-11-03"
+    },
+    {
+      "id": "month-end-clamps",
+      "fn": "nextOccurrence",
+      "repeat": {
+        "every": 1,
+        "from": "schedule",
+        "unit": "month"
+      },
+      "after": "2027-01-31",
+      "expect": "2027-02-28"
+    },
+    {
+      "id": "month-end-30",
+      "fn": "nextOccurrence",
+      "repeat": {
+        "every": 1,
+        "from": "schedule",
+        "unit": "month"
+      },
+      "after": "2026-03-31",
+      "expect": "2026-04-30"
+    },
+    {
+      "id": "leap-day-year",
+      "fn": "nextOccurrence",
+      "repeat": {
+        "every": 1,
+        "from": "schedule",
+        "unit": "year"
+      },
+      "after": "2028-02-29",
+      "expect": "2029-02-28"
+    },
+    {
+      "id": "weekdays-friday",
+      "fn": "nextOccurrence",
+      "repeat": {
+        "every": 1,
+        "from": "schedule",
+        "unit": "week",
+        "weekdays": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      },
+      "after": "2026-10-23",
+      "expect": "2026-10-26"
+    },
+    {
+      "id": "weekdays-tuesday",
+      "fn": "nextOccurrence",
+      "repeat": {
+        "every": 1,
+        "from": "schedule",
+        "unit": "week",
+        "weekdays": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      },
+      "after": "2026-10-20",
+      "expect": "2026-10-21"
+    },
+    {
+      "id": "mon-thu-biweekly-same-week",
+      "fn": "nextOccurrence",
+      "repeat": {
+        "every": 2,
+        "from": "schedule",
+        "unit": "week",
+        "weekdays": [
+          1,
+          4
+        ]
+      },
+      "after": "2026-10-19",
+      "expect": "2026-10-22"
+    },
+    {
+      "id": "mon-thu-biweekly-skip",
+      "fn": "nextOccurrence",
+      "repeat": {
+        "every": 2,
+        "from": "schedule",
+        "unit": "week",
+        "weekdays": [
+          1,
+          4
+        ]
+      },
+      "after": "2026-10-22",
+      "expect": "2026-11-02"
+    },
+    {
+      "id": "start-skips-missed",
+      "fn": "nextStart",
+      "repeat": {
+        "every": 1,
+        "from": "schedule",
+        "unit": "week"
+      },
+      "task": {
+        "startOn": "2026-10-05",
+        "deadline": null
+      },
+      "expect": "2026-10-26"
+    },
+    {
+      "id": "start-from-deadline",
+      "fn": "nextStart",
+      "repeat": {
+        "every": 1,
+        "from": "schedule",
+        "unit": "week"
+      },
+      "task": {
+        "startOn": null,
+        "deadline": "2026-10-19"
+      },
+      "expect": "2026-10-26"
+    },
+    {
+      "id": "start-from-completion",
+      "fn": "nextStart",
+      "repeat": {
+        "every": 3,
+        "unit": "day",
+        "from": "completion"
+      },
+      "task": {
+        "startOn": "2026-10-01",
+        "deadline": null
+      },
+      "expect": "2026-10-23"
+    },
+    {
+      "id": "days-between",
+      "fn": "daysBetween",
+      "a": "2026-10-20",
+      "b": "2026-10-26",
+      "expect": 6
+    },
+    {
+      "id": "days-between-dst",
+      "fn": "daysBetween",
+      "a": "2026-10-31",
+      "b": "2026-11-02",
+      "expect": 2
+    },
+    {
+      "id": "label-day",
+      "fn": "label",
+      "repeat": {
+        "every": 1,
+        "unit": "day"
+      },
+      "expect": "Every day"
+    },
+    {
+      "id": "label-two-weeks",
+      "fn": "label",
+      "repeat": {
+        "every": 2,
+        "unit": "week"
+      },
+      "expect": "Every 2 weeks"
+    },
+    {
+      "id": "label-weekday",
+      "fn": "label",
+      "repeat": {
+        "every": 1,
+        "unit": "week",
+        "weekdays": [
+          5,
+          1,
+          2,
+          3,
+          4
+        ]
+      },
+      "expect": "Every weekday"
+    },
+    {
+      "id": "label-mon-thu",
+      "fn": "label",
+      "repeat": {
+        "every": 1,
+        "unit": "week",
+        "weekdays": [
+          1,
+          4
+        ]
+      },
+      "expect": "Every Mon, Thu"
+    },
+    {
+      "id": "label-biweekly-days",
+      "fn": "label",
+      "repeat": {
+        "every": 2,
+        "unit": "week",
+        "weekdays": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      },
+      "expect": "Every 2 weeks on weekdays"
+    },
+    {
+      "id": "norm-bad-unit",
+      "fn": "normRepeat",
+      "input": {
+        "unit": "fortnight"
+      },
+      "expect": null
+    },
+    {
+      "id": "norm-caps-every",
+      "fn": "normRepeat",
+      "input": {
+        "every": 9999,
+        "unit": "day"
+      },
+      "expect": {
+        "every": 365,
+        "unit": "day",
+        "from": "schedule"
+      }
+    },
+    {
+      "id": "norm-weekdays-only-weekly",
+      "fn": "normRepeat",
+      "input": {
+        "every": 1,
+        "unit": "day",
+        "weekdays": [
+          1
+        ]
+      },
+      "expect": {
+        "every": 1,
+        "unit": "day",
+        "from": "schedule"
+      }
+    },
+    {
+      "id": "norm-keeps-unknown",
+      "fn": "normRepeat",
+      "input": {
+        "every": 1,
+        "unit": "week",
+        "from": "completion",
+        "until": "2027-06-01"
+      },
+      "expect": {
+        "until": "2027-06-01",
+        "every": 1,
+        "unit": "week",
+        "from": "completion"
+      }
+    },
+    {
+      "id": "word-3d",
+      "fn": "parseRepeatWord",
+      "word": "3d",
+      "expect": {
+        "every": 3,
+        "unit": "day",
+        "from": "schedule"
+      }
+    },
+    {
+      "id": "word-weekdays",
+      "fn": "parseRepeatWord",
+      "word": "weekdays",
+      "expect": {
+        "every": 1,
+        "unit": "week",
+        "weekdays": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "from": "schedule"
+      }
+    },
+    {
+      "id": "word-zero",
+      "fn": "parseRepeatWord",
+      "word": "0d",
+      "expect": null
+    }
+  ]
+}

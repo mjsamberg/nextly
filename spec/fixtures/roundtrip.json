@@ -1,0 +1,384 @@
+{
+  "about": "Unknown fields survive every edit, so one app never erases what another wrote. Records with a higher schema than the app supports are left as they are.",
+  "now": "2026-10-20T13:00:00.000Z",
+  "today": "2026-10-20",
+  "cases": [
+    {
+      "id": "edit-keeps-unknown",
+      "about": "Editing a task keeps fields this app doesn't know, at every level.",
+      "records": [
+        {
+          "id": "a",
+          "kind": "task",
+          "data": {
+            "title": "Keep me",
+            "flag": "today",
+            "projectId": null,
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": {
+              "every": 1,
+              "unit": "week",
+              "from": "schedule",
+              "until": "2027-06-01"
+            },
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 1000,
+            "dependsOn": [],
+            "notes": [
+              {
+                "id": "b1",
+                "type": "checklist",
+                "text": "x",
+                "checked": false,
+                "indent": 2
+              }
+            ],
+            "createdAt": "2026-10-01T12:00:00.000Z",
+            "color": "plum",
+            "reviewedBy": {
+              "name": "Pat"
+            }
+          }
+        }
+      ],
+      "action": {
+        "type": "updateTask",
+        "id": "a",
+        "patch": {
+          "title": "Renamed"
+        }
+      },
+      "expect": {
+        "result": null,
+        "changed": {
+          "a": {
+            "kind": "task",
+            "deleted": false,
+            "data": {
+              "color": "plum",
+              "reviewedBy": {
+                "name": "Pat"
+              },
+              "title": "Renamed",
+              "flag": "today",
+              "projectId": null,
+              "parentId": null,
+              "deadline": null,
+              "startOn": null,
+              "repeat": {
+                "until": "2027-06-01",
+                "every": 1,
+                "unit": "week",
+                "from": "schedule"
+              },
+              "nextId": null,
+              "external": null,
+              "done": false,
+              "doneAt": null,
+              "order": 1000,
+              "dependsOn": [],
+              "notes": [
+                {
+                  "id": "b1",
+                  "type": "checklist",
+                  "text": "x",
+                  "checked": false,
+                  "indent": 2
+                }
+              ],
+              "createdAt": "2026-10-01T12:00:00.000Z"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "flag-keeps-unknown",
+      "about": "A rule-driven change keeps them too.",
+      "records": [
+        {
+          "id": "a",
+          "kind": "task",
+          "data": {
+            "title": "Keep me",
+            "flag": "today",
+            "projectId": null,
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": {
+              "every": 1,
+              "unit": "week",
+              "from": "schedule",
+              "until": "2027-06-01"
+            },
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 1000,
+            "dependsOn": [],
+            "notes": [
+              {
+                "id": "b1",
+                "type": "checklist",
+                "text": "x",
+                "checked": false,
+                "indent": 2
+              }
+            ],
+            "createdAt": "2026-10-01T12:00:00.000Z",
+            "color": "plum",
+            "reviewedBy": {
+              "name": "Pat"
+            }
+          }
+        }
+      ],
+      "action": {
+        "type": "setFlag",
+        "id": "a",
+        "flag": "next"
+      },
+      "expect": {
+        "result": null,
+        "changed": {
+          "a": {
+            "kind": "task",
+            "deleted": false,
+            "data": {
+              "color": "plum",
+              "reviewedBy": {
+                "name": "Pat"
+              },
+              "title": "Keep me",
+              "flag": "next",
+              "projectId": null,
+              "parentId": null,
+              "deadline": null,
+              "startOn": null,
+              "repeat": {
+                "until": "2027-06-01",
+                "every": 1,
+                "unit": "week",
+                "from": "schedule"
+              },
+              "nextId": null,
+              "external": null,
+              "done": false,
+              "doneAt": null,
+              "order": 1000,
+              "dependsOn": [],
+              "notes": [
+                {
+                  "id": "b1",
+                  "type": "checklist",
+                  "text": "x",
+                  "checked": false,
+                  "indent": 2
+                }
+              ],
+              "createdAt": "2026-10-01T12:00:00.000Z"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "ticket-keeps-unknown-external",
+      "about": "Unknown Incident IQ fields survive a local edit.",
+      "records": [
+        {
+          "id": "t",
+          "kind": "task",
+          "data": {
+            "title": "t",
+            "flag": null,
+            "projectId": "iiq-project",
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": {
+              "source": "iiq",
+              "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+              "closed": false,
+              "slaDue": "2026-10-21"
+            },
+            "done": false,
+            "doneAt": null,
+            "order": 1000,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        }
+      ],
+      "action": {
+        "type": "updateTask",
+        "id": "t",
+        "patch": {
+          "title": "x"
+        }
+      },
+      "expect": {
+        "result": null,
+        "changed": {
+          "t": {
+            "kind": "task",
+            "deleted": false,
+            "data": {
+              "title": "x",
+              "flag": null,
+              "projectId": "iiq-project",
+              "parentId": null,
+              "deadline": null,
+              "startOn": null,
+              "repeat": null,
+              "nextId": null,
+              "external": {
+                "number": null,
+                "url": null,
+                "status": null,
+                "closed": false,
+                "requester": null,
+                "location": null,
+                "issue": null,
+                "priority": null,
+                "syncedAt": null,
+                "source": "iiq",
+                "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                "slaDue": "2026-10-21"
+              },
+              "done": false,
+              "doneAt": null,
+              "order": 1000,
+              "dependsOn": [],
+              "notes": [],
+              "createdAt": "2026-10-01T12:00:00.000Z"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "newer-schema-untouched",
+      "about": "A record from a newer format isn't changed.",
+      "records": [
+        {
+          "id": "a",
+          "kind": "task",
+          "data": {
+            "title": "a",
+            "flag": null,
+            "projectId": null,
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 1000,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z",
+            "schema": 2
+          }
+        }
+      ],
+      "action": {
+        "type": "updateTask",
+        "id": "a",
+        "patch": {
+          "title": "x"
+        }
+      },
+      "expect": {
+        "result": null,
+        "changed": {}
+      }
+    },
+    {
+      "id": "newer-schema-not-deleted",
+      "about": "Nor deleted.",
+      "records": [
+        {
+          "id": "a",
+          "kind": "task",
+          "data": {
+            "title": "a",
+            "flag": null,
+            "projectId": null,
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": null,
+            "done": false,
+            "doneAt": null,
+            "order": 1000,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z",
+            "schema": 2
+          }
+        }
+      ],
+      "action": {
+        "type": "deleteTask",
+        "id": "a"
+      },
+      "expect": {
+        "result": null,
+        "changed": {}
+      }
+    },
+    {
+      "id": "project-keeps-unknown",
+      "about": "Projects keep unknown fields.",
+      "records": [
+        {
+          "id": "p",
+          "kind": "project",
+          "data": {
+            "title": "P",
+            "areaId": null,
+            "order": 1,
+            "color": "navy"
+          }
+        }
+      ],
+      "action": {
+        "type": "updateProject",
+        "id": "p",
+        "patch": {
+          "title": "Q"
+        }
+      },
+      "expect": {
+        "result": null,
+        "changed": {
+          "p": {
+            "kind": "project",
+            "deleted": false,
+            "data": {
+              "title": "Q",
+              "areaId": null,
+              "order": 1,
+              "color": "navy"
+            }
+          }
+        }
+      }
+    }
+  ]
+}

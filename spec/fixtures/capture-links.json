@@ -1,0 +1,143 @@
+{
+  "about": "parseCaptureLink(link): nextly://add links. Any web page can open one, so only adding is allowed. expect null means ignored.",
+  "now": "2026-10-20T13:00:00.000Z",
+  "today": "2026-10-20",
+  "cases": [
+    {
+      "id": "gmail",
+      "link": "nextly://add?title=Re%3A%20Conference%20times&url=https%3A%2F%2Fmail.google.com%2Fmail%2Fu%2F0%2F%23all%2F18f2",
+      "expect": {
+        "title": "Re: Conference times",
+        "flag": "inbox",
+        "emailUrl": "https://mail.google.com/mail/u/0/#all/18f2",
+        "otherUrl": null,
+        "note": ""
+      }
+    },
+    {
+      "id": "trailing-slash",
+      "link": "nextly://add/?title=x",
+      "expect": {
+        "title": "x",
+        "flag": "inbox",
+        "emailUrl": null,
+        "otherUrl": null,
+        "note": ""
+      }
+    },
+    {
+      "id": "no-slashes",
+      "link": "nextly:add?title=x",
+      "expect": {
+        "title": "x",
+        "flag": "inbox",
+        "emailUrl": null,
+        "otherUrl": null,
+        "note": ""
+      }
+    },
+    {
+      "id": "list-next",
+      "link": "nextly://add?title=x&list=next",
+      "expect": {
+        "title": "x",
+        "flag": "next",
+        "emailUrl": null,
+        "otherUrl": null,
+        "note": ""
+      }
+    },
+    {
+      "id": "list-doing-refused",
+      "link": "nextly://add?title=x&list=doing",
+      "expect": {
+        "title": "x",
+        "flag": "inbox",
+        "emailUrl": null,
+        "otherUrl": null,
+        "note": ""
+      }
+    },
+    {
+      "id": "list-unknown",
+      "link": "nextly://add?title=x&list=delete-everything",
+      "expect": {
+        "title": "x",
+        "flag": "inbox",
+        "emailUrl": null,
+        "otherUrl": null,
+        "note": ""
+      }
+    },
+    {
+      "id": "email-no-title",
+      "link": "nextly://add?url=https%3A%2F%2Fmail.google.com%2Fmail%2Fu%2F0%2F%23all%2F18f2",
+      "expect": {
+        "title": "Email",
+        "flag": "inbox",
+        "emailUrl": "https://mail.google.com/mail/u/0/#all/18f2",
+        "otherUrl": null,
+        "note": ""
+      }
+    },
+    {
+      "id": "web-link",
+      "link": "nextly://add?title=x&url=https%3A%2F%2Fexample.com&note=%20see%20this%20",
+      "expect": {
+        "title": "x",
+        "flag": "inbox",
+        "emailUrl": null,
+        "otherUrl": "https://example.com",
+        "note": "see this"
+      }
+    },
+    {
+      "id": "javascript-dropped",
+      "link": "nextly://add?title=x&url=javascript%3Aalert(1)",
+      "expect": {
+        "title": "x",
+        "flag": "inbox",
+        "emailUrl": null,
+        "otherUrl": null,
+        "note": ""
+      }
+    },
+    {
+      "id": "title-whitespace",
+      "link": "nextly://add?title=%20a%0A%20%20b%20",
+      "expect": {
+        "title": "a b",
+        "flag": "inbox",
+        "emailUrl": null,
+        "otherUrl": null,
+        "note": ""
+      }
+    },
+    {
+      "id": "other-action",
+      "link": "nextly://delete?id=1",
+      "expect": null
+    },
+    {
+      "id": "other-scheme",
+      "link": "https://add?title=x",
+      "expect": null
+    },
+    {
+      "id": "no-title",
+      "link": "nextly://add",
+      "expect": null
+    },
+    {
+      "id": "title-capped",
+      "link": "nextly://add?title=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "expect": {
+        "title": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "flag": "inbox",
+        "emailUrl": null,
+        "otherUrl": null,
+        "note": ""
+      }
+    }
+  ]
+}
