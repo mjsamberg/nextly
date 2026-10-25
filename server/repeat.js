@@ -1,5 +1,6 @@
 // Repeat and start-date rules for tasks changed on the server (widget, Siri).
-// Mirrors nextOccurrence/nextStart in app/src/logic.ts; keep the two in step.
+// Mirrors nextOccurrence/nextStart in the apps (Logic.swift, Logic.cs) and
+// spec/fixtures/repeats.json; keep them in step.
 // Dates are local YYYY-MM-DD strings.
 
 const pad = (n) => String(n).padStart(2, '0');

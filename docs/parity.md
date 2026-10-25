@@ -1,17 +1,12 @@
-# Feature parity: Windows (Tauri) and the Swift apps
+# Feature checklist: the Windows and Swift apps
 
-The native iOS and macOS apps (`apple/`) are built alongside the Tauri app,
-which keeps shipping for Mac and iPhone until every row below is checked for
-Swift. Once the Swift apps reach parity, they take over the bundle id
-`com.mjsamberg.nextly`, and the Tauri `macos` and `ios` builds stop. Windows
-stays on Tauri.
+Each platform now has a native app on the same server and data format: the
+Windows app (`windows/`, WinUI 3) and the Swift app for Mac, iPhone and iPad
+(`apple/`). The first app, Tauri + React for all three, was retired on
+2026-10-24 and is kept on the `tauri` branch; its column below is the list of
+features it had, which the native apps are measured against.
 
-**Cutover gate**: every row checked; `swift test`, `npm test` and the fixture
-gate green; and a week of daily use with the Swift apps and Windows on the
-same server.
-
-Key: ✅ done (for Swift: built and checked on the iPhone simulator, or against a test server; for Windows Native: built and checked in the app on the Windows PC, or by `dotnet test` against the real server) · ⬜ not yet · — not applicable.
-"Windows" is the Tauri app; "Windows Native" is the WinUI 3 app in `windows/` that will replace it (see the end of this file).
+Key: ✅ done (for Swift: built and checked on the iPhone simulator, or against a test server; for Windows: built and checked in the app on the Windows PC, or by `dotnet test` against the real server) · ⬜ not yet · — not applicable.
 The Swift app hasn't been checked on a real iPhone, an iPad or visually on the Mac yet.
 The rules behind a row are covered by `spec/fixtures` (named in brackets).
 Swift rows marked done for data and sync are in `apple/NextlyKit` and its tests;
@@ -20,7 +15,7 @@ fixtures there, but stay unchecked until the app shows them.
 
 ## Data and sync
 
-| Feature | Windows | Swift | Windows Native |
+| Feature | Tauri (retired) | Swift | Windows |
 | --- | --- | --- | --- |
 | Records, HLC, last writer wins (`spec/protocol.md`) | ✅ | ✅ | ✅ |
 | Keeps unknown fields when saving [roundtrip] | ✅ | ✅ | ✅ |
@@ -35,7 +30,7 @@ fixtures there, but stay unchecked until the app shows them.
 
 ## Lists and navigation
 
-| Feature | Windows | Swift | Windows Native |
+| Feature | Tauri (retired) | Swift | Windows |
 | --- | --- | --- | --- |
 | Inbox, In Progress, Today, Next, Scheduled, Someday, All, Logbook, projects [lists] | ✅ | ✅ (Scheduled, All and Logbook built; not yet checked) | ✅ (Scheduled, Someday, All and Logbook built; not yet checked) |
 | Sidebar counts [lists] | ✅ | ✅ | ✅ |
@@ -51,7 +46,7 @@ fixtures there, but stay unchecked until the app shows them.
 
 ## Tasks
 
-| Feature | Windows | Swift | Windows Native |
+| Feature | Tauri (retired) | Swift | Windows |
 | --- | --- | --- | --- |
 | Quick add with `!flag ^deadline @start *repeat` and pasted mail links [quick-add, date-words, repeats] | ✅ | ✅ | ⬜ (rules pass the fixtures; the quick-add box not yet typed into) |
 | Detail: title, flag, start date, deadline, repeat picker, project | ✅ | ✅ | ✅ (the date and repeat pickers not yet tried) |
@@ -66,7 +61,7 @@ fixtures there, but stay unchecked until the app shows them.
 
 ## Incident IQ
 
-| Feature | Windows | Swift | Windows Native |
+| Feature | Tauri (retired) | Swift | Windows |
 | --- | --- | --- | --- |
 | Ticket panel: number, status, details, open in Incident IQ | ✅ | ✅ | ✅ |
 | Internal comments and the action log | ✅ | ✅ (queued and shown; carrying them out is the server's job) | ⬜ (built; posting a comment not yet tried) |
@@ -76,7 +71,7 @@ fixtures there, but stay unchecked until the app shows them.
 
 ## Settings and district rules
 
-| Feature | Windows | Swift | Windows Native |
+| Feature | Tauri (retired) | Swift | Windows |
 | --- | --- | --- | --- |
 | Server addresses, token, header rows with the Cloudflare preset | ✅ | ✅ | ✅ |
 | Student information warning: privacy note in Settings | ✅ | ✅ | ✅ |
@@ -88,73 +83,24 @@ fixtures there, but stay unchecked until the app shows them.
 
 ## Platform
 
-| Feature | Windows | Swift | Windows Native |
+| Feature | Tauri (retired) | Swift | Windows |
 | --- | --- | --- | --- |
 | `nextly://add` links (bookmarklet) [capture-links] | ✅ | ✅ (iOS too, which the Tauri app lacks) | ✅ (a second launch hands its link to the running copy) |
 | App icon | ✅ | ✅ | ✅ |
 | Widgets: Today, Next; finish from the widget | — | ⬜ (built; the app shares settings and a snapshot with them, checked in the simulator; not yet placed on a home screen) | — |
 | Siri: add a task, read a list | — | ⬜ (built; tasks Siri saves offline are added on launch, checked; Siri itself not yet tried) | — |
 | Widgets open the app on tap | — | ⬜ (nextly://open and nextly://list checked in the app; tapping a placed widget not yet tried) | — |
-| Signed and notarized Mac build; iOS build from CI | — | ⬜ (CI jobs ready; need the native identifiers registered and NATIVE_SIGNING on, docs/apple-signing.md step 4) | — |
+| Signed and notarized Mac build; iOS build from CI | — | ⬜ (CI jobs ready; need the identifiers registered and NATIVE_SIGNING on, docs/apple-signing.md) | — |
 | Installer from CI (Windows) | ✅ (MSI and setup.exe) | — | ⬜ (per-user installer built in CI; unsigned) |
 
-## Next: a native Windows app (started)
+## What's left
 
-Agreed on 2026-10-24: Windows moves off Tauri too, to a native Fluent app
-built with **WinUI 3 and C#**, so each platform has a native app on the same
-server. It follows the path the Swift apps took:
+- **Windows code signing.** The installer (`nextly-windows-native`, built by
+  CI) isn't signed: SmartScreen warns on first run, and PCs with Smart App
+  Control on won't run it.
+- **Every ⬜ row above checked**, for both apps, and then a week of daily use
+  with both on the same server.
 
-1. **A C# core library first**, a port of `app/src` like NextlyKit: models,
-   rules, quick add, repeats, lists, local store, sync (two addresses with
-   failover, Cloudflare headers), live updates. Its tests run every case in
-   `spec/fixtures` and it joins `scripts/check-fixtures.mjs` as a third suite.
-2. **Then the WinUI app** on top: Mica, NavigationView sidebar, Fluent icons
-   and type, dark mode, keyboard shortcuts, the district branding and
-   student-information warnings, `nextly://` links for the Gmail bookmarklet.
-3. **Builds and an installer** on GitHub Actions' Windows runners.
-4. **Parity:** these tables get a "Windows Native" column. The Tauri Windows
-   build keeps shipping until every row is checked; then Tauri is retired.
-
-Needs the .NET SDK on the Windows PC (`winget install Microsoft.DotNet.SDK.9`);
-Visual Studio is optional.
-
-**Progress**
-
-- [x] `windows/Nextly.Core`: models, rules, lists, quick add, repeats, dates,
-  capture links, headers, HLC. Passes all 123 shared cases
-  (`cd windows && dotnet test`), required by the fixture gate, run in CI
-  (`windows-core`).
-- [x] Local store (SQLite), sync (two addresses with failover, Cloudflare
-  headers, a server that lost its data, edits made while a sync is in
-  flight), attachments, live updates, and the connection check. The same nine
-  server scenarios as NextlyKit's `SyncTests.swift`, against the real server
-  (Node 24, or Docker when Node isn't installed).
-- [x] The WinUI 3 app, first pass (`windows/Nextly.App`): Fluent title bar
-  and Mica, NavigationView sidebar with counts, areas and projects, search;
-  every list (Today's In Progress / project / Up next sections, All by area
-  and project, Next drag to reorder); rows with the round check, chips and a
-  right-click flag menu; the detail pane (title, flag, start date, repeat,
-  deadline, project, subtasks, dependencies, Incident IQ panel); resolve
-  notes dialog; delete with Undo; Settings (two addresses, token, headers,
-  status, connection check, Incident IQ, areas and projects); shortcuts;
-  light and dark. Checked against a real server: sync both ways, live
-  updates, and a ticket resolved with notes.
-- [x] Notes editor: heading, text, checklist, quote, divider; Enter splits,
-  Backspace on an empty block removes it, "/" menu; images and files (the
-  student-information warning first, then Windows' file picker); email
-  cards. Checked by typing into the app (Windows' file picker itself still
-  needs trying by hand).
-- [x] `nextly://` links (Gmail bookmarklet) and one window at a time
-  (`Links.cs`, `Program.cs`, Settings → Links). A second launch hands its
-  link to the running copy. It registers for links only when nothing else
-  handles them, or when you ask in Settings, so it doesn't take them from
-  the Tauri app.
-- [x] Installer from CI: `windows-native` publishes the self-contained app
-  with the date-based version and builds a per-user Inno Setup installer,
-  "Nextly Native" (`windows/installer/Nextly.iss`), artifact
-  `nextly-windows-native`. Uninstalling keeps your data.
-- [ ] Code signing. Unsigned, SmartScreen warns on first run, and PCs with
-  Smart App Control on won't run it (it's off on the Windows PC now).
-- [x] The Windows Native column in the tables above.
-- [ ] Every Windows Native row checked, then a week of daily use; then the
-  Tauri Windows build is retired.
+How the Windows app was built and checked (a C# core passing every shared
+case and the sync tests, then the WinUI app, then the installer) is in the
+commit history from 2026-10-24.

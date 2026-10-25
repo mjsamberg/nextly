@@ -1,7 +1,10 @@
 # Nextly data and sync protocol
 
-The contract every Nextly app keeps: the Windows app (Tauri, `app/`), the
-Swift apps for iOS and macOS (`apple/`), and the sync server (`server/`).
+The contract every Nextly app keeps: the Windows app (`windows/`), the Swift
+apps for iOS and macOS (`apple/`), and the sync server (`server/`). The first
+app, in Tauri and TypeScript, is kept on the `tauri` branch; its `app/src` is
+where these rules were first written.
+
 When a rule changes, change it here and in `spec/fixtures` first, then in
 each app. CI fails until every app passes the fixtures (`scripts/check-fixtures.mjs`).
 
@@ -22,7 +25,7 @@ Everything syncs as records:
 
 ### Conflicts: last writer wins, per record
 
-Each save stamps a hybrid logical clock (`app/src/hlc.ts`):
+Each save stamps a hybrid logical clock (`HLC.swift`, `Hlc.cs`):
 `<ms since 1970, 15 digits>-<counter, 4 digits>-<device id>`. It is compared
 as plain text, and the higher one wins, on the server and on every device.
 A device moves its clock past every clock it sees. The server writes as
@@ -56,7 +59,7 @@ Raise the schema only for changes an older app can't safely save over, such
 as a field whose meaning changes. **A new optional field doesn't need a new
 schema**, because older apps keep unknown fields.
 
-Supported now: **1**, in `app/src/rules.ts` (`SCHEMA`) and `apple/NextlyKit` (`Schema.current`).
+Supported now: **1**, in `apple/NextlyKit` (`Schema.current`) and `windows/Nextly.Core` (`Schema.Current`).
 
 ## Task data
 
@@ -93,7 +96,7 @@ sets their result. The widgets and Siri never create them.
 
 ## Lists
 
-These are defined in `app/src/lists.ts` and checked by `lists.json`:
+These are defined in each app (`Lists.swift`, `Lists.cs`) and checked by `lists.json`:
 
 - **Inbox**: open tasks with `flag: inbox`, plus loose ones (no flag, project, parent or start date). Never Incident IQ tasks. Oldest first.
 - **In Progress, Today, Next, Someday**: open tasks with that flag, by `order` (Someday oldest first).
@@ -104,7 +107,8 @@ These are defined in `app/src/lists.ts` and checked by `lists.json`:
 
 ## Rules
 
-`app/src/rules.ts` holds the rules as pure functions over records, and
+Each app holds the rules as pure functions over records (`Rules.swift`,
+`Rules.cs`), and
 `actions.json` gives the cases. In short:
 
 - **Finishing a task** finishes its open subtasks. A task that waited only on
@@ -115,7 +119,7 @@ These are defined in `app/src/lists.ts` and checked by `lists.json`:
   deletes the copy if it's still open.
 - **Finishing an open ticket's task** asks for notes first, then queues a
   `resolve` action. Moving the task to In Progress queues `start`.
-- **New ids**, in the order `rules.ts` documents. Fixtures name them `n1`,
+- **New ids**, in the order the rules files document. Fixtures name them `n1`,
   `n2`, …, so both apps must make them in the same order. Rules visit tasks
   in id order.
 

@@ -12,28 +12,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: app
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0 # the whole history: set-version counts the day's commits
-      - name: Stamp the date-based version
-        run: node ../scripts/set-version.mjs
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: app/package-lock.json
-      - run: npm ci
-      - run: npm test # includes the shared cases in spec/fixtures
-      - name: Fixture gate (every app runs every shared case)
-        run: node ../scripts/check-fixtures.mjs
-      - run: npm run build
-
   server:
     runs-on: ubuntu-latest
     defaults:
@@ -129,7 +107,7 @@ jobs:
         working-directory: apple
         run: xcodebuild -project NextlyNative.xcodeproj -scheme Nextly -destination 'generic/platform=iOS Simulator' -derivedDataPath build/dd CODE_SIGNING_ALLOWED=NO build -quiet
 
-  # The native app, signed. Off until the native identifiers are registered
+  # The native app, signed. Off until the identifiers are registered
   # and the repository variable NATIVE_SIGNING is "true" (docs/apple-signing.md, step 4).
   native-macos:
     needs: apple
@@ -145,8 +123,7 @@ jobs:
         with:
           node-version: 24
       - name: Stamp the date-based version
-        working-directory: app
-        run: node ../scripts/set-version.mjs
+        run: node scripts/set-version.mjs
       - run: brew list xcodegen >/dev/null 2>&1 || brew install xcodegen
       - name: Import Developer ID certificate
         env:
@@ -181,8 +158,7 @@ jobs:
         with:
           node-version: 24
       - name: Stamp the date-based version
-        working-directory: app
-        run: node ../scripts/set-version.mjs
+        run: node scripts/set-version.mjs
       - run: brew list xcodegen >/dev/null 2>&1 || brew install xcodegen
       - name: Build signed IPA
         env:
@@ -199,179 +175,12 @@ jobs:
           if-no-files-found: error
           path: apple/build/native/ios/*.ipa
 
-  windows:
-    needs: test
-    runs-on: windows-latest
-    defaults:
-      run:
-        working-directory: app
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0 # the whole history: set-version counts the day's commits
-      - name: Stamp the date-based version
-        run: node ../scripts/set-version.mjs
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: app/package-lock.json
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: swatinem/rust-cache@v2
-        with:
-          workspaces: app/src-tauri
-      - run: npm ci
-      - run: npx tauri build
-      - uses: actions/upload-artifact@v7
-        with:
-          name: nextly-windows
-          if-no-files-found: error
-          path: |
-            app/src-tauri/target/release/bundle/msi/*.msi
-            app/src-tauri/target/release/bundle/nsis/*.exe
-
-  # Signed + notarized with the widget and Siri when these secrets exist
-  # (see docs/apple-signing.md): APPLE_CERTIFICATE, APPLE_CERTIFICATE_PASSWORD,
-  # APPLE_SIGNING_IDENTITY, APPLE_DEVELOPMENT_TEAM, APPLE_ID, APPLE_PASSWORD.
-  # Without them: an unsigned app (no widget or Siri; macOS won't load
-  # extensions from an unsigned app), and the extensions are compiled as a check.
-  macos:
-    needs: test
-    runs-on: macos-latest
-    defaults:
-      run:
-        working-directory: app
-    env:
-      APPLE_DEVELOPMENT_TEAM: ${{ secrets.APPLE_DEVELOPMENT_TEAM }}
-      HAS_CERT: ${{ secrets.APPLE_CERTIFICATE != '' && secrets.APPLE_SIGNING_IDENTITY != '' && secrets.APPLE_DEVELOPMENT_TEAM != '' }}
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0 # the whole history: set-version counts the day's commits
-      - name: Stamp the date-based version
-        run: node ../scripts/set-version.mjs
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: app/package-lock.json
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: aarch64-apple-darwin,x86_64-apple-darwin
-      - uses: swatinem/rust-cache@v2
-        with:
-          workspaces: app/src-tauri
-      - run: brew list xcodegen >/dev/null 2>&1 || brew install xcodegen
-      - run: npm ci
-
-      - name: Compile widget and Siri extensions (unsigned check)
-        if: env.HAS_CERT != 'true'
-        run: bash ../apple/scripts/ci-run.sh "Compile macOS extensions" bash ../apple/scripts/build-macos-extensions.sh check
-      - name: Build app (unsigned, no widget or Siri)
-        if: env.HAS_CERT != 'true'
-        run: |
-          echo "::notice title=macOS widget and Siri not included::Add the Developer ID secrets in docs/apple-signing.md to ship them."
-          npx tauri build --target universal-apple-darwin
-
-      - name: Import Developer ID certificate
-        if: env.HAS_CERT == 'true'
-        env:
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-        run: bash ../apple/scripts/import-cert.sh
-      - name: Build and sign widget and Siri extensions
-        if: env.HAS_CERT == 'true'
-        env:
-          APPLE_SIGNING_IDENTITY: ${{ env.NEXTLY_SIGNING_IDENTITY }}
-        run: bash ../apple/scripts/ci-run.sh "Sign macOS extensions" bash ../apple/scripts/build-macos-extensions.sh sign
-      - name: Build, sign and notarize app with extensions
-        if: env.HAS_CERT == 'true'
-        env:
-          APPLE_SIGNING_IDENTITY: ${{ env.NEXTLY_SIGNING_IDENTITY }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_DEVELOPMENT_TEAM }}
-          NEXTLY_APP_GROUP: ${{ secrets.APPLE_DEVELOPMENT_TEAM }}.com.mjsamberg.nextly
-        run: bash ../apple/scripts/ci-run.sh "macOS app build" npx tauri build --target universal-apple-darwin --config src-tauri/tauri.macos-extensions.json
-
-      - uses: actions/upload-artifact@v7
-        with:
-          name: nextly-macos
-          if-no-files-found: error
-          path: app/src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg
-
-  # The widget and Siri extensions are always compiled (unsigned, simulator).
-  # A signed IPA is built when these secrets exist (see docs/apple-signing.md):
-  # APPLE_DEVELOPMENT_TEAM, APPLE_API_KEY, APPLE_API_ISSUER, APPLE_API_KEY_P8.
-  # Optional: IOS_EXPORT_METHOD (debugging | release-testing | app-store-connect).
-  ios:
-    needs: test
-    runs-on: macos-latest
-    defaults:
-      run:
-        working-directory: app
-    env:
-      APPLE_DEVELOPMENT_TEAM: ${{ secrets.APPLE_DEVELOPMENT_TEAM }}
-      HAS_KEY: ${{ secrets.APPLE_API_KEY != '' && secrets.APPLE_API_ISSUER != '' && secrets.APPLE_API_KEY_P8 != '' && secrets.APPLE_DEVELOPMENT_TEAM != '' }}
-      EXPORT_METHOD: ${{ secrets.IOS_EXPORT_METHOD || 'debugging' }}
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0 # the whole history: set-version counts the day's commits
-      - name: Stamp the date-based version
-        run: node ../scripts/set-version.mjs
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: app/package-lock.json
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: aarch64-apple-ios,aarch64-apple-ios-sim
-      - uses: swatinem/rust-cache@v2
-        with:
-          workspaces: app/src-tauri
-      - run: |
-          brew list xcodegen >/dev/null 2>&1 || brew install xcodegen
-          brew list yq >/dev/null 2>&1 || brew install yq
-      - run: npm ci
-      # tauri ios init insists on a Team ID. Without the secret, a placeholder
-      # is enough for the unsigned compile check (nothing gets signed).
-      - run: |
-          export APPLE_DEVELOPMENT_TEAM="${APPLE_DEVELOPMENT_TEAM:-UNSIGNED00}"
-          bash ../apple/scripts/ci-run.sh "tauri ios init" npx tauri ios init --ci
-      - run: bash ../apple/scripts/ci-run.sh "Patch iOS project" bash ../apple/scripts/patch-ios-project.sh
-
-      - name: Compile widget and Siri extensions (unsigned check)
-        run: |
-          project=$(ls -d src-tauri/gen/apple/*.xcodeproj)
-          bash ../apple/scripts/ci-run.sh "Compile iOS extensions" xcodebuild -project "$project" -target NextlyWidgets -target NextlyIntents \
-            -sdk iphonesimulator -configuration debug CODE_SIGNING_ALLOWED=NO build
-
-      - name: Build signed IPA
-        if: env.HAS_KEY == 'true'
-        env:
-          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
-          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
-          APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
-        run: |
-          export APPLE_API_KEY_PATH="$RUNNER_TEMP/AuthKey_$APPLE_API_KEY.p8"
-          printf '%s' "$APPLE_API_KEY_P8" > "$APPLE_API_KEY_PATH"
-          bash ../apple/scripts/ci-run.sh "iOS build" npx tauri ios build --ci --export-method "$EXPORT_METHOD"
-      - name: Note skipped IPA
-        if: env.HAS_KEY != 'true'
-        run: echo "::notice title=iOS app not built::Add the App Store Connect API key secrets in docs/apple-signing.md to build the iPhone app."
-      - uses: actions/upload-artifact@v7
-        if: env.HAS_KEY == 'true'
-        with:
-          name: nextly-ios
-          if-no-files-found: error
-          path: app/src-tauri/gen/apple/build/**/*.ipa
-
+  # A tag like v2026.10.24.3 makes a draft release with every build. The
+  # signed Apple builds are skipped while NATIVE_SIGNING is off; the release
+  # goes ahead with whatever was built.
   release:
-    if: startsWith(github.ref, 'refs/tags/v')
-    needs: [windows, windows-native, macos, ios]
+    if: startsWith(github.ref, 'refs/tags/v') && !cancelled() && !failure()
+    needs: [windows-native, native-macos, native-ios]
     runs-on: ubuntu-latest
     permissions:
       contents: write

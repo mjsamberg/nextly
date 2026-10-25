@@ -10,19 +10,23 @@
 #                         APPLE_API_KEY, APPLE_API_ISSUER, APPLE_API_KEY_PATH (the .p8 file).
 #                         EXPORT_METHOD: debugging (default), release-testing or app-store-connect.
 #
-# Versions come from app/src-tauri/tauri.conf.json after scripts/set-version.mjs,
-# so the native app carries the same date-based version as the Tauri builds.
+# Versions are the date-based ones from scripts/set-version.mjs: CI sets
+# NEXTLY_VERSION and NEXTLY_BUILD; run by hand, it asks the script.
 set -euo pipefail
 
 mode="${1:?mac or ios}"
 here="$(cd "$(dirname "$0")" && pwd)"
 apple_dir="$(cd "$here/.." && pwd)"
-app_dir="$(cd "$apple_dir/../app" && pwd)"
 out="$apple_dir/build/native"
 mkdir -p "$out"
 
-version="$(node -p "require('$app_dir/src-tauri/tauri.conf.json').version")"
-build="$(node -p "const c = require('$app_dir/src-tauri/tauri.conf.json'); c.bundle?.iOS?.bundleVersion ?? c.bundle?.macOS?.bundleVersion ?? c.version")"
+if [ -z "${NEXTLY_VERSION:-}" ] || [ -z "${NEXTLY_BUILD:-}" ]; then
+  v="$(node "$apple_dir/../scripts/set-version.mjs" --print)"
+  NEXTLY_VERSION="$(node -p "JSON.parse(process.argv[1]).version" "$v")"
+  NEXTLY_BUILD="$(node -p "JSON.parse(process.argv[1]).build" "$v")"
+fi
+version="$NEXTLY_VERSION"
+build="$NEXTLY_BUILD"
 : "${APPLE_DEVELOPMENT_TEAM:?set APPLE_DEVELOPMENT_TEAM}"
 
 (cd "$apple_dir" && xcodegen generate --spec project.yml)

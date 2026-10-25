@@ -1,8 +1,8 @@
-// Renders app/icon.svg (the Tauri app's icon source) to the native app's
+// Renders brand/icon.svg (the app icon source) to the native app's
 // icons: a full-bleed square for iOS (the system rounds it) and the macOS
 // grid (824px tile centered in 1024). Run after changing the SVG:
 //
-//   swift apple/scripts/render-icons.swift app/icon.svg apple/App/Assets.xcassets/AppIcon.appiconset
+//   swift apple/scripts/render-icons.swift brand/icon.svg apple/App/Assets.xcassets/AppIcon.appiconset
 import AppKit
 let args = CommandLine.arguments
 let svg = NSImage(contentsOfFile: args[1])!

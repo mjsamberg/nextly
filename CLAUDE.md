@@ -5,54 +5,54 @@ server and a two-way Incident IQ sync. The owner works on it from a Windows PC
 and a Mac; this file is how both start with the same context. Keep it current
 when something here changes.
 
+Each platform has a native app: WinUI 3 (C#) on Windows, SwiftUI on the Mac,
+iPhone and iPad. The first app, one Tauri 2 + React codebase for all three, is
+kept on the `tauri` branch and no longer built or used. Comments that say a
+file is a "port of `app/src/…`" point there.
+
 ## Layout
 
 | Path | What |
 | --- | --- |
-| `app/` | Tauri 2 app: React + TypeScript (Vite) in `src/`, Rust shell in `src-tauri/` |
-| `app/src/store.ts` | All data changes go through its actions; it saves what `rules.ts` decides |
-| `app/src/rules.ts` | The store's rules as pure functions (finish, repeats, unblocking, Next order, schema) |
-| `app/src/lists.ts`, `logic.ts` | What each list shows; quick add, repeats, dates |
 | `spec/` | The contract between apps: `protocol.md` and shared test cases in `fixtures/` |
-| `docs/parity.md` | Windows vs Swift feature checklist; the gate for retiring the Tauri Mac/iOS builds |
-| `app/src/sync.ts`, `live.ts` | Sync with the server (one or two addresses, failover), live updates over WebSocket |
-| `app/src/styles.css`, `platform.css` | Base styles; per-platform looks keyed on `html[data-platform]` (mac, win, ios, other) |
+| `windows/Nextly.Core/` | C# library for the Windows app: models, rules, lists, SQLite store, sync, live updates (record data stays `System.Text.Json` nodes so unknown fields survive). `cd windows && dotnet test` runs the fixtures and syncs against `server/` (Node 24, or Docker) |
+| `windows/Nextly.App/` | The Windows app (WinUI 3, unpackaged, self-contained) on Nextly.Core. Screens are built in code (`TaskListPane`, `DetailPane`, `NotesView`, `SettingsPane`); `NEXTLY_DATA_DIR` points it at another data folder, `NEXTLY_THEME=light\|dark` forces a theme, `NEXTLY_DEBUG_LOG=<file>` traces saves, rebuilds and exceptions |
+| `windows/installer/` | The per-user Inno Setup installer ("Nextly Native"), built by CI |
+| `apple/` | The SwiftUI app (`App/`, `project.yml`) on `NextlyKit/`; widget and Siri extensions (`Shared`, `Widgets`, `Intents`); CI scripts |
+| `apple/NextlyKit/` | Swift package: models, rules, lists, SQLite store, sync, live updates. `swift test` runs the fixtures and syncs against `server/` |
 | `server/` | Sync server: Node 24, no dependencies, `node:sqlite`; Docker Compose builds it from GitHub `main` |
 | `server/iiq.js` | Incident IQ sync (see below); `iiq-probe.js`, `iiq-options.js` are read-only diagnostics |
-| `apple/` | Native SwiftUI app (`App/`, `project.yml`) on `NextlyKit/` (data, rules, sync); widget and Siri extensions; CI scripts |
-| `apple/NextlyKit/` | Swift package for the native apps: models, rules, lists, SQLite store, sync, live updates (ports of the `app/src` files above). `swift test` runs the fixtures and syncs against `server/` |
-| `windows/Nextly.Core/` | C# library for the native Windows app: models, rules, lists, SQLite store, sync, live updates (ports of the `app/src` files above; record data stays `System.Text.Json` nodes so unknown fields survive). `cd windows && dotnet test` runs the fixtures and syncs against `server/` (Node 24, or Docker) |
-| `windows/Nextly.App/` | The native Windows app (WinUI 3, unpackaged, self-contained) on Nextly.Core. Screens are built in code (`TaskListPane`, `DetailPane`, `SettingsPane`); `NEXTLY_DATA_DIR` points it at another data folder and `NEXTLY_THEME=light\|dark` forces a theme, for testing |
-| `docs/` | Cloudflare, Apple signing, Incident IQ setup |
-| `scripts/set-version.mjs` | Date-based versions (`Y.M.D.N`, New York time, Nth commit that day) |
+| `capture/` | The Gmail bookmarklet (`nextly://add` links) |
+| `brand/icon.svg` | The app icon's source (`apple/scripts/render-icons.swift` renders it) |
+| `docs/` | Cloudflare, Apple signing, Incident IQ setup; `parity.md` is the feature checklist for both apps |
+| `scripts/set-version.mjs` | Date-based versions (`Y.M.D.N`, New York time, Nth commit that day), passed to builds as `NEXTLY_VERSION_LABEL`, `NEXTLY_VERSION`, `NEXTLY_BUILD` |
 
 ## Working on it
 
-- App: `cd app && npm install`, then `npm test` (the shared fixtures), `npx tsc --noEmit -p .`,
-  `npm run dev` (browser), `npx tauri dev` (desktop, needs Rust).
+- Windows: `cd windows && dotnet test` (.NET 9 SDK; on the Windows PC it's in
+  `C:\Program Files\dotnet` if `dotnet` isn't on PATH). This also builds the
+  WinUI app (Windows only); run it from
+  `windows/Nextly.App/bin/x64/Debug/.../Nextly.exe`. A published build
+  (`dotnet publish … -r win-x64 -p:Platform=x64`) needs `EnableMsixTooling`
+  (kept on in the project) or it can't load its XAML.
+- Mac and iPhone (Mac only): `brew install xcodegen`, then `cd apple && xcodegen
+  generate --spec project.yml && open NextlyNative.xcodeproj` (scheme Nextly,
+  iOS and macOS). `cd apple/NextlyKit && swift test` runs the shared fixtures
+  and sync tests. Mac builds without a signing team use entitlements with no
+  App Group (`NEXTLY_ENTITLEMENTS=local`), so the app runs but its widgets
+  can't see its settings. Signed builds: `apple/scripts/build-native.sh`, run
+  by CI once `NATIVE_SIGNING` is on (`docs/apple-signing.md`, step 4).
 - Server: `cd server && npm test` (Node 24; starts a throwaway server for
   the file tests). On the Mac, Node 24 is from Homebrew (`node@24`, keg-only:
   add `/opt/homebrew/opt/node@24/bin` to PATH).
-- NextlyKit: `cd apple/NextlyKit && swift test` (needs Node 24 for the sync tests).
-- Nextly.Core (Windows): `cd windows && dotnet test` (.NET 9 SDK; on the
-  Windows PC it's in `C:\Program Files\dotnet` if `dotnet` isn't on PATH).
-  This also builds the WinUI app (Windows only); run it from
-  `windows/Nextly.App/bin/x64/Debug/.../Nextly.exe`.
 - Screenshots of the Windows app: capture only its own window (PrintWindow),
-  never the screen, so other apps' content can't end up in an image.
-- Preview a platform's look in the browser with `?platform=ios|mac|win`.
-- Native app (Mac only): `brew install xcodegen`, then `cd apple && xcodegen
-  generate --spec project.yml && open NextlyNative.xcodeproj` (scheme Nextly,
-  iOS and macOS). `cd apple/NextlyKit && swift test` runs the shared fixtures
-  and sync tests. It installs as "Nextly Native" beside the Tauri app.
-  Mac builds without a signing team use entitlements with no App Group
-  (`NEXTLY_ENTITLEMENTS=local`), so the app runs but its widgets can't see
-  its settings. Signed builds: `apple/scripts/build-native.sh`, run by CI
-  once `NATIVE_SIGNING` is on (`docs/apple-signing.md`, step 4).
-- The widget and Siri code in `apple/Shared`, `Widgets` and `Intents` is
-  built into both the Tauri and the native apps; check both when changing it.
+  never the screen, so other apps' content can't end up in an image. Drive it
+  with UI Automation; send keys only after checking Nextly is the foreground
+  window.
 - Builds and releases run on GitHub Actions (`.github/workflows/build.yml`) on
-  every push to `main`; iOS and macOS signing secrets live in GitHub, not here.
+  every push to `main`; signing secrets live in GitHub, not here. The Windows
+  installer isn't code-signed yet: SmartScreen warns, and Smart App Control
+  blocks it.
 - The server's `.env` lives only on the server. Never put tokens or secrets in
   the repo (it's public).
 - Pull before starting and push when done; the other computer may have work.
@@ -60,13 +60,11 @@ when something here changes.
 
 ## Two apps, one data format
 
-Windows runs the Tauri app; iOS and macOS are moving to native Swift
-(`docs/parity.md`). A native WinUI 3 / C# Windows app is under way: its
-core library is in `windows/` (progress at the end of `docs/parity.md`).
-They must not drift apart:
+The Windows and Apple apps must not drift apart (`docs/parity.md` tracks the
+features):
 
 - A rule change starts in `spec/fixtures` (and `spec/protocol.md`), then
-  goes into `app/src/rules.ts`/`logic.ts` and the Swift package. `node
+  goes into both `Rules.swift`/`Logic.swift` and `Rules.cs`/`Logic.cs`. `node
   scripts/check-fixtures.mjs` fails CI if a suite doesn't run every fixture.
 - Saving keeps fields the app doesn't know (sync replaces whole records).
 - Records carry `schema`; raise it only for changes older apps can't save
@@ -74,17 +72,16 @@ They must not drift apart:
 
 ## Lessons learned
 
-- **iPhone layout: verify on the device.** Desktop Chrome and Playwright WebKit
-  both passed a fix that didn't work on the iPhone (home screen sections
-  squeezed instead of scrolling). Scroll containers that hold clipped
-  (`overflow: hidden`) sections use block layout on iOS, not a flex column.
-  For iOS UI bugs, ask early for a screen recording, or use Safari's Web
-  Inspector from the Mac.
-- iOS tap targets are at least 44pt (`platform.css`).
+- **iPhone layout: verify on the device.** Desktop browsers and emulators
+  passed a fix that didn't work on the iPhone. For iOS UI bugs, ask early for
+  a screen recording.
+- iOS tap targets are at least 44pt.
 - In NextlyKit the task model is `TaskData`, not `Task`: a public `Task` type
   hides Swift's `Task { }` in every file that imports the package.
-- `rust-ini` is held at 0.21.1 by `app/src-tauri/Cargo.lock` (newer breaks the
-  deep-link plugin); keep it there when updating Rust crates.
+- WinUI: never rebuild UI inside a focus event (crashes); `FrameworkElement.Parent`
+  is null once an element's old container is off screen, so track containers
+  yourself before re-adding an element; a text box replaced by a rebuild can
+  still fire LostFocus, so don't let it save stale text.
 
 ## Incident IQ (server/iiq.js, docs/incident-iq.md)
 

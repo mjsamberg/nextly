@@ -6,8 +6,8 @@ support subtasks, dependencies, repeats, block-based notes with attachments,
 and Gmail links.
 
 - **In Progress** is what you're working on right now. It has its own list and
-  heads the Today list. Swipe a Today task right (or press Ctrl/⌘+D) to start
-  it; swipe left to put it back in Today.
+  heads the Today list. Swipe a Today task right on iPhone, right-click it on
+  Windows, or press Ctrl/⌘+D to start it.
 - **Start dates** ("Today on") hold a task in Scheduled until that day, then it
   moves into Today by itself.
 - **Repeats**: every day, weekday, week, 2 weeks, month, year, or every N
@@ -21,28 +21,39 @@ and Gmail links.
 - **Quick add**: `!p` In Progress, `!t` Today, `!n` Next, `@mon` start date,
   `^fri` deadline, `*weekly` / `*weekdays` / `*3d` repeat.
 
+Each platform has a native app, all on one sync server and one data format
+([spec/protocol.md](spec/protocol.md)):
+
 | Folder | What's in it |
 | --- | --- |
-| `app/` | The app: Tauri 2 + React + TypeScript, one codebase for all three platforms |
+| `windows/` | The Windows app: WinUI 3 (C#), on `Nextly.Core` (rules, lists, store, sync) |
+| `apple/` | The iPhone, iPad and Mac app: SwiftUI, on `NextlyKit`, with its widget and Siri extensions |
+| `spec/` | The data and sync contract, and the test cases every app must pass |
 | `server/` | Sync server (Node 24, no dependencies) and its Docker Compose file |
 | `capture/` | Gmail bookmarklet for Chrome and Safari (hands emails to the app) |
-| `apple/` | Widget and Siri extensions (Swift) for macOS and iOS |
-| `docs/` | Cloudflare, Apple signing and Incident IQ setup |
+| `brand/` | The app icon's source |
+| `docs/` | Cloudflare, Apple signing, Incident IQ setup, and the feature checklist (`parity.md`) |
 | `wireframes.html` | The original wireframes |
+
+The first version, one Tauri + React app for all three platforms, is kept on
+the [`tauri` branch](https://github.com/mjsamberg/nextly/tree/tauri). It isn't
+built or used any more.
 
 ## Get the apps
 
 Every push to `main` builds them on GitHub Actions. Open the latest run under
 **Actions → Build apps** and download:
 
-- **nextly-windows**: `.msi` and `-setup.exe` installers
-- **nextly-macos**: a universal `.dmg` (Apple silicon and Intel). Until the
-  signing secrets are set it's unsigned and has no widget or Siri; the first
-  time, right-click the app → **Open**, or run `xattr -cr /Applications/Nextly.app`.
-- **nextly-ios**: a signed `.ipa` with the widget and Siri, once the secrets
-  are set.
+- **nextly-windows-native**: a setup `.exe` that installs "Nextly Native" for
+  you (no administrator rights needed). It isn't code-signed yet, so Windows
+  SmartScreen warns the first time (**More info → Run anyway**), and PCs with
+  Smart App Control on won't run it.
+- **nextly-native-macos**: the Mac app, signed and notarized, with its widget
+  and Siri.
+- **nextly-native-ios**: a signed `.ipa` with the widget and Siri.
 
-Signing setup for both: [docs/apple-signing.md](docs/apple-signing.md).
+The Apple builds need the signing secrets and the `NATIVE_SIGNING` variable:
+[docs/apple-signing.md](docs/apple-signing.md).
 
 ### Widget and Siri (Mac and iPhone)
 
@@ -72,12 +83,11 @@ over older builds:
 
 | Where | Example |
 | --- | --- |
-| Shown in Settings | `2026.10.22.3` |
-| App version | `2026.10.22` |
-| iOS/macOS build number (app and extensions) | `2026102203` |
-| Windows MSI version (parts must stay under 256) | `26.10.2203` |
+| Shown in Settings, and the Windows app's file version | `2026.10.22.3` |
+| Mac and iPhone version | `2026.10.22` |
+| Mac and iPhone build number (app and extensions) | `2026102203` |
 
-The version in `tauri.conf.json` is only a placeholder; local builds show "dev".
+Builds made on your own computer show a placeholder version.
 
 ## Email to task
 
@@ -87,7 +97,8 @@ as its URL. With a Gmail message open, click it: the browser hands the email to
 the Nextly app through a `nextly://add` link (the first time it asks to open
 Nextly; tick "Always allow"). The app adds an Inbox task with an email card and
 opens it so you can choose Today or Next. It needs the app installed on that
-computer, and works offline.
+computer, and works offline. On Windows the app takes `nextly://` links when
+nothing else handles them; otherwise switch them in **Settings → Links**.
 
 **iPhone and Mac:** Siri ("Add a task in Nextly"), or paste a Gmail link into
 quick add.
@@ -121,16 +132,19 @@ Access headers are sent to both, which is harmless for the Tailscale one.
 ## Develop
 
 ```bash
-cd app
-npm install
-npm test            # rules: quick add, dates, dependencies
-npx tauri dev       # desktop app with hot reload (needs Rust)
-npm run dev         # frontend only, in a browser
+cd windows && dotnet test                # Windows: shared cases and sync tests (.NET 9)
+cd apple/NextlyKit && swift test         # Mac and iPhone: the same (Mac only)
+cd server && npm test                    # the sync server (Node 24)
+node scripts/check-fixtures.mjs          # every app runs every shared case
 ```
+
+The Windows app builds with `dotnet build windows/Nextly.sln`; the Apple app
+with Xcode (`cd apple && xcodegen generate --spec project.yml`). A rule change
+starts in `spec/fixtures`, then goes into both apps.
 
 ## How it works
 
-- **Local first.** Each device keeps everything in the webview's IndexedDB and
+- **Local first.** Each device keeps everything in a local SQLite database and
   works offline. Edits queue up and sync when the server is reachable.
 - **Sync.** Every task, project and area is one record with a hybrid logical
   clock timestamp. If two devices edit the same record, the newer edit wins.
@@ -146,5 +160,3 @@ npm run dev         # frontend only, in a browser
   `CF-Access-Client-Id` and `CF-Access-Client-Secret`) go with every sync and
   file request. If Cloudflare Access turns a request away, the app says so
   instead of showing a generic error.
-- **Requests go through Rust** (`tauri-plugin-http`), so they aren't limited by
-  CORS in the webview.
