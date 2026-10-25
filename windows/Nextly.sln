@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nextly.Core", "Nextly.Core\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nextly.Core.Tests", "Nextly.Core.Tests\Nextly.Core.Tests.csproj", "{BA56E13C-952B-4574-8FAB-13E2C30F2100}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nextly.App", "Nextly.App\Nextly.App.csproj", "{85D12476-FD6E-408C-97BA-BEF673F15DA4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -41,6 +43,18 @@ Global
 		{BA56E13C-952B-4574-8FAB-13E2C30F2100}.Release|x64.Build.0 = Release|Any CPU
 		{BA56E13C-952B-4574-8FAB-13E2C30F2100}.Release|x86.ActiveCfg = Release|Any CPU
 		{BA56E13C-952B-4574-8FAB-13E2C30F2100}.Release|x86.Build.0 = Release|Any CPU
+		{85D12476-FD6E-408C-97BA-BEF673F15DA4}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{85D12476-FD6E-408C-97BA-BEF673F15DA4}.Debug|Any CPU.Build.0 = Debug|x64
+		{85D12476-FD6E-408C-97BA-BEF673F15DA4}.Debug|x64.ActiveCfg = Debug|x64
+		{85D12476-FD6E-408C-97BA-BEF673F15DA4}.Debug|x64.Build.0 = Debug|x64
+		{85D12476-FD6E-408C-97BA-BEF673F15DA4}.Debug|x86.ActiveCfg = Debug|x64
+		{85D12476-FD6E-408C-97BA-BEF673F15DA4}.Debug|x86.Build.0 = Debug|x64
+		{85D12476-FD6E-408C-97BA-BEF673F15DA4}.Release|Any CPU.ActiveCfg = Release|x64
+		{85D12476-FD6E-408C-97BA-BEF673F15DA4}.Release|Any CPU.Build.0 = Release|x64
+		{85D12476-FD6E-408C-97BA-BEF673F15DA4}.Release|x64.ActiveCfg = Release|x64
+		{85D12476-FD6E-408C-97BA-BEF673F15DA4}.Release|x64.Build.0 = Release|x64
+		{85D12476-FD6E-408C-97BA-BEF673F15DA4}.Release|x86.ActiveCfg = Release|x64
+		{85D12476-FD6E-408C-97BA-BEF673F15DA4}.Release|x86.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

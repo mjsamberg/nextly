@@ -22,6 +22,7 @@ when something here changes.
 | `apple/` | Native SwiftUI app (`App/`, `project.yml`) on `NextlyKit/` (data, rules, sync); widget and Siri extensions; CI scripts |
 | `apple/NextlyKit/` | Swift package for the native apps: models, rules, lists, SQLite store, sync, live updates (ports of the `app/src` files above). `swift test` runs the fixtures and syncs against `server/` |
 | `windows/Nextly.Core/` | C# library for the native Windows app: models, rules, lists, SQLite store, sync, live updates (ports of the `app/src` files above; record data stays `System.Text.Json` nodes so unknown fields survive). `cd windows && dotnet test` runs the fixtures and syncs against `server/` (Node 24, or Docker) |
+| `windows/Nextly.App/` | The native Windows app (WinUI 3, unpackaged, self-contained) on Nextly.Core. Screens are built in code (`TaskListPane`, `DetailPane`, `SettingsPane`); `NEXTLY_DATA_DIR` points it at another data folder and `NEXTLY_THEME=light\|dark` forces a theme, for testing |
 | `docs/` | Cloudflare, Apple signing, Incident IQ setup |
 | `scripts/set-version.mjs` | Date-based versions (`Y.M.D.N`, New York time, Nth commit that day) |
 
@@ -35,6 +36,10 @@ when something here changes.
 - NextlyKit: `cd apple/NextlyKit && swift test` (needs Node 24 for the sync tests).
 - Nextly.Core (Windows): `cd windows && dotnet test` (.NET 9 SDK; on the
   Windows PC it's in `C:\Program Files\dotnet` if `dotnet` isn't on PATH).
+  This also builds the WinUI app (Windows only); run it from
+  `windows/Nextly.App/bin/x64/Debug/.../Nextly.exe`.
+- Screenshots of the Windows app: capture only its own window (PrintWindow),
+  never the screen, so other apps' content can't end up in an image.
 - Preview a platform's look in the browser with `?platform=ios|mac|win`.
 - Native app (Mac only): `brew install xcodegen`, then `cd apple && xcodegen
   generate --spec project.yml && open NextlyNative.xcodeproj` (scheme Nextly,

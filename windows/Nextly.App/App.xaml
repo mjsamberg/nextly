@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Application
+    x:Class="Nextly.App.App"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
+            </ResourceDictionary.MergedDictionaries>
+
+            <!-- Chatham County Schools: plum 122/60/89, navy 19/65/105, gold
+                 255/182/0, mist 210/216/230. Navy is the accent, so Fluent's
+                 own buttons, checkboxes and selection use it. -->
+            <Color x:Key="SystemAccentColor">#134169</Color>
+            <Color x:Key="SystemAccentColorLight1">#2A5A87</Color>
+            <Color x:Key="SystemAccentColorLight2">#5D88B5</Color>
+            <Color x:Key="SystemAccentColorLight3">#8FB4E0</Color>
+            <Color x:Key="SystemAccentColorDark1">#0F3456</Color>
+            <Color x:Key="SystemAccentColorDark2">#0B2740</Color>
+            <Color x:Key="SystemAccentColorDark3">#071A2B</Color>
+
+            <FontFamily x:Key="NxHeadingFont">ms-appx:///Assets/Fonts/oswald-latin-600.ttf#Oswald</FontFamily>
+            <FontFamily x:Key="NxBodyFont">ms-appx:///Assets/Fonts/mulish-latin-400.ttf#Mulish</FontFamily>
+            <!-- The district's body face for every control and text block. -->
+            <FontFamily x:Key="ContentControlThemeFontFamily">ms-appx:///Assets/Fonts/mulish-latin-400.ttf#Mulish</FontFamily>
+
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Light">
+                    <SolidColorBrush x:Key="NxPlum" Color="#7A3C59" />
+                    <SolidColorBrush x:Key="NxNavy" Color="#134169" />
+                    <SolidColorBrush x:Key="NxGold" Color="#FFB600" />
+                    <SolidColorBrush x:Key="NxToday" Color="#8A6100" />
+                    <SolidColorBrush x:Key="NxTodayBg" Color="#FFF2CC" />
+                    <SolidColorBrush x:Key="NxNext" Color="#134169" />
+                    <SolidColorBrush x:Key="NxNextBg" Color="#E1E9F4" />
+                    <SolidColorBrush x:Key="NxDoing" Color="#1F7A6A" />
+                    <SolidColorBrush x:Key="NxDoingBg" Color="#DFF2EC" />
+                    <SolidColorBrush x:Key="NxBlocked" Color="#7A3C59" />
+                    <SolidColorBrush x:Key="NxBlockedBg" Color="#F3E6EC" />
+                    <SolidColorBrush x:Key="NxChipBg" Color="#0F000000" />
+                    <SolidColorBrush x:Key="NxDanger" Color="#A3303A" />
+                    <SolidColorBrush x:Key="NxOk" Color="#2F7A4D" />
+                    <SolidColorBrush x:Key="NxWarnBg" Color="#FFF2CC" />
+                    <SolidColorBrush x:Key="NxWarnFg" Color="#5C4300" />
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Dark">
+                    <SolidColorBrush x:Key="NxPlum" Color="#D898B6" />
+                    <SolidColorBrush x:Key="NxNavy" Color="#8FB4E0" />
+                    <SolidColorBrush x:Key="NxGold" Color="#FFC633" />
+                    <SolidColorBrush x:Key="NxToday" Color="#FFC633" />
+                    <SolidColorBrush x:Key="NxTodayBg" Color="#3A2F12" />
+                    <SolidColorBrush x:Key="NxNext" Color="#8FB4E0" />
+                    <SolidColorBrush x:Key="NxNextBg" Color="#1B2C44" />
+                    <SolidColorBrush x:Key="NxDoing" Color="#6FD0B8" />
+                    <SolidColorBrush x:Key="NxDoingBg" Color="#153A33" />
+                    <SolidColorBrush x:Key="NxBlocked" Color="#D898B6" />
+                    <SolidColorBrush x:Key="NxBlockedBg" Color="#3A2130" />
+                    <SolidColorBrush x:Key="NxChipBg" Color="#14FFFFFF" />
+                    <SolidColorBrush x:Key="NxDanger" Color="#EF7D86" />
+                    <SolidColorBrush x:Key="NxOk" Color="#6CC391" />
+                    <SolidColorBrush x:Key="NxWarnBg" Color="#3A2F12" />
+                    <SolidColorBrush x:Key="NxWarnFg" Color="#FFE3A3" />
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

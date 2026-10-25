@@ -127,5 +127,16 @@ Visual Studio is optional.
   flight), attachments, live updates, and the connection check. The same nine
   server scenarios as NextlyKit's `SyncTests.swift`, against the real server
   (Node 24, or Docker when Node isn't installed).
-- [ ] The WinUI 3 app.
+- [x] The WinUI 3 app, first pass (`windows/Nextly.App`): Fluent title bar
+  and Mica, NavigationView sidebar with counts, areas and projects, search;
+  every list (Today's In Progress / project / Up next sections, All by area
+  and project, Next drag to reorder); rows with the round check, chips and a
+  right-click flag menu; the detail pane (title, flag, start date, repeat,
+  deadline, project, subtasks, dependencies, Incident IQ panel); resolve
+  notes dialog; delete with Undo; Settings (two addresses, token, headers,
+  status, connection check, Incident IQ, areas and projects); shortcuts;
+  light and dark. Checked against a real server: sync both ways, live
+  updates, and a ticket resolved with notes.
+- [ ] Notes editor (blocks, attachments with the student-information
+  warning, email cards); `nextly://` links; single instance.
 - [ ] Installer from CI; the Windows Native parity column.
