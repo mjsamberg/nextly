@@ -21,6 +21,7 @@ when something here changes.
 | `server/iiq.js` | Incident IQ sync (see below); `iiq-probe.js`, `iiq-options.js` are read-only diagnostics |
 | `apple/` | Native SwiftUI app (`App/`, `project.yml`) on `NextlyKit/` (data, rules, sync); widget and Siri extensions; CI scripts |
 | `apple/NextlyKit/` | Swift package for the native apps: models, rules, lists, SQLite store, sync, live updates (ports of the `app/src` files above). `swift test` runs the fixtures and syncs against `server/` |
+| `windows/Nextly.Core/` | C# library for the native Windows app (ports of the `app/src` files above; record data stays `System.Text.Json` nodes so unknown fields survive). `cd windows && dotnet test` runs the fixtures |
 | `docs/` | Cloudflare, Apple signing, Incident IQ setup |
 | `scripts/set-version.mjs` | Date-based versions (`Y.M.D.N`, New York time, Nth commit that day) |
 
@@ -32,6 +33,8 @@ when something here changes.
   the file tests). On the Mac, Node 24 is from Homebrew (`node@24`, keg-only:
   add `/opt/homebrew/opt/node@24/bin` to PATH).
 - NextlyKit: `cd apple/NextlyKit && swift test` (needs Node 24 for the sync tests).
+- Nextly.Core (Windows): `cd windows && dotnet test` (.NET 9 SDK; on the
+  Windows PC it's in `C:\Program Files\dotnet` if `dotnet` isn't on PATH).
 - Preview a platform's look in the browser with `?platform=ios|mac|win`.
 - Native app (Mac only): `brew install xcodegen`, then `cd apple && xcodegen
   generate --spec project.yml && open NextlyNative.xcodeproj` (scheme Nextly,
@@ -53,8 +56,9 @@ when something here changes.
 ## Two apps, one data format
 
 Windows runs the Tauri app; iOS and macOS are moving to native Swift
-(`docs/parity.md`). A native WinUI 3 / C# Windows app is planned next, not
-started (end of `docs/parity.md`). They must not drift apart:
+(`docs/parity.md`). A native WinUI 3 / C# Windows app is under way: its
+core library is in `windows/` (progress at the end of `docs/parity.md`).
+They must not drift apart:
 
 - A rule change starts in `spec/fixtures` (and `spec/protocol.md`), then
   goes into `app/src/rules.ts`/`logic.ts` and the Swift package. `node

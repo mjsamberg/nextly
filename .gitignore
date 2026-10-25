@@ -12,3 +12,8 @@ app/src-tauri/tauri.macos-extensions.json
 apple/NextlyKit/.build/
 apple/NextlyKit/.swiftpm/
 apple/NextlyKit/Package.resolved
+
+windows/**/bin/
+windows/**/obj/
+windows/**/TestResults/
+windows/.vs/

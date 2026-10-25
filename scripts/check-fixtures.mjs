@@ -4,16 +4,19 @@
 // a manifest; this fails when a file is missing from one, when a manifest
 // names a file that doesn't exist, or when a fixture is malformed.
 //
-// The Swift manifest is required once apple/NextlyKit exists.
+// The Swift and C# manifests are required once apple/NextlyKit and
+// windows/Nextly.Core exist.
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const dir = path.join(root, 'spec/fixtures');
 const suites = [
   { name: 'TypeScript (app)', manifest: 'app/src/fixtures.manifest.json', required: true },
   { name: 'Swift (NextlyKit)', manifest: 'apple/NextlyKit/Tests/fixtures.manifest.json', required: fs.existsSync(path.join(root, 'apple/NextlyKit')) },
+  { name: 'C# (Nextly.Core)', manifest: 'windows/Nextly.Core.Tests/fixtures.manifest.json', required: fs.existsSync(path.join(root, 'windows/Nextly.Core')) },
 ];
 
 const problems = [];

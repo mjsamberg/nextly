@@ -96,7 +96,7 @@ fixtures there, but stay unchecked until the app shows them.
 | Widgets open the app on tap | — | ⬜ (nextly://open and nextly://list checked in the app; tapping a placed widget not yet tried) |
 | Signed and notarized Mac build; iOS build from CI | — | ⬜ (CI jobs ready; need the native identifiers registered and NATIVE_SIGNING on, docs/apple-signing.md step 4) |
 
-## Next: a native Windows app (planned, not started)
+## Next: a native Windows app (started)
 
 Agreed on 2026-10-24: Windows moves off Tauri too, to a native Fluent app
 built with **WinUI 3 and C#**, so each platform has a native app on the same
@@ -115,3 +115,13 @@ server. It follows the path the Swift apps took:
 
 Needs the .NET SDK on the Windows PC (`winget install Microsoft.DotNet.SDK.9`);
 Visual Studio is optional.
+
+**Progress**
+
+- [x] `windows/Nextly.Core`: models, rules, lists, quick add, repeats, dates,
+  capture links, headers, HLC. Passes all 123 shared cases
+  (`cd windows && dotnet test`), required by the fixture gate, run in CI
+  (`windows-core`).
+- [ ] Local store, sync (two addresses, failover), live updates.
+- [ ] The WinUI 3 app.
+- [ ] Installer from CI; the Windows Native parity column.
