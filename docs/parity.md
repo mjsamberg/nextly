@@ -154,4 +154,3 @@ Visual Studio is optional.
 - [ ] Code signing. Unsigned, SmartScreen warns on first run, and PCs with
   Smart App Control on won't run it (it's off on the Windows PC now).
 - [ ] The Windows Native parity column, then a week of daily use.
-- [x] (see below)
