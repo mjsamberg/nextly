@@ -92,6 +92,14 @@ public sealed partial class MainWindow : Window
         UpdateSyncLine();
         Go("today");
         Closed += (_, _) => m.Dispose();
+        // Coming back to the window: catch up with other devices, and move
+        // tasks whose day has come into Today (like the other apps).
+        Activated += (_, e) =>
+        {
+            if (e.WindowActivationState == WindowActivationState.Deactivated) return;
+            _ = m.Sync.SyncNow();
+            m.PromoteDue();
+        };
     }
 
     // ---------- navigation ----------

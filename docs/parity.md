@@ -10,7 +10,8 @@ stays on Tauri.
 gate green; and a week of daily use with the Swift apps and Windows on the
 same server.
 
-Key: ✅ done (for Swift: built and checked on the iPhone simulator, or against a test server) · ⬜ not yet · — not applicable.
+Key: ✅ done (for Swift: built and checked on the iPhone simulator, or against a test server; for Windows Native: built and checked in the app on the Windows PC, or by `dotnet test` against the real server) · ⬜ not yet · — not applicable.
+"Windows" is the Tauri app; "Windows Native" is the WinUI 3 app in `windows/` that will replace it (see the end of this file).
 The Swift app hasn't been checked on a real iPhone, an iPad or visually on the Mac yet.
 The rules behind a row are covered by `spec/fixtures` (named in brackets).
 Swift rows marked done for data and sync are in `apple/NextlyKit` and its tests;
@@ -19,82 +20,83 @@ fixtures there, but stay unchecked until the app shows them.
 
 ## Data and sync
 
-| Feature | Windows | Swift |
-| --- | --- | --- |
-| Records, HLC, last writer wins (`spec/protocol.md`) | ✅ | ✅ |
-| Keeps unknown fields when saving [roundtrip] | ✅ | ✅ |
-| Schema version: stamps `schema: 1`; newer records read-only with a note [roundtrip, actions: promote-due] | ✅ | ✅ |
-| Sync: outbox, cursor, `more`, a server that lost its data, "edited while in flight" | ✅ | ✅ |
-| Two server addresses with failover; extra headers (Cloudflare Access) [network] | ✅ | ✅ |
-| Live updates (WebSocket; 70 s watchdog; backoff) | ✅ | ✅ |
-| Polling fallback; sync on focus and when back online | ✅ | ⬜ (polling and sync on returning to the app done; no trigger yet when the network comes back) |
-| Due tasks move into Today only after a sync since launch [actions: promote-due] | ✅ | ✅ |
-| Attachments: stored locally, uploaded, opened through a signed link | ✅ | ✅ |
-| Check connection report | ✅ | ⬜ (built; not yet checked) |
+| Feature | Windows | Swift | Windows Native |
+| --- | --- | --- | --- |
+| Records, HLC, last writer wins (`spec/protocol.md`) | ✅ | ✅ | ✅ |
+| Keeps unknown fields when saving [roundtrip] | ✅ | ✅ | ✅ |
+| Schema version: stamps `schema: 1`; newer records read-only with a note [roundtrip, actions: promote-due] | ✅ | ✅ | ✅ |
+| Sync: outbox, cursor, `more`, a server that lost its data, "edited while in flight" | ✅ | ✅ | ✅ |
+| Two server addresses with failover; extra headers (Cloudflare Access) [network] | ✅ | ✅ | ✅ |
+| Live updates (WebSocket; 70 s watchdog; backoff) | ✅ | ✅ | ✅ |
+| Polling fallback; sync on focus and when back online | ✅ | ⬜ (polling and sync on returning to the app done; no trigger yet when the network comes back) | ⬜ (all three built; not yet checked) |
+| Due tasks move into Today only after a sync since launch [actions: promote-due] | ✅ | ✅ | ✅ |
+| Attachments: stored locally, uploaded, opened through a signed link | ✅ | ✅ | ✅ |
+| Check connection report | ✅ | ⬜ (built; not yet checked) | ✅ |
 
 ## Lists and navigation
 
-| Feature | Windows | Swift |
-| --- | --- | --- |
-| Inbox, In Progress, Today, Next, Scheduled, Someday, All, Logbook, projects [lists] | ✅ | ✅ (Scheduled, All and Logbook built; not yet checked) |
-| Sidebar counts [lists] | ✅ | ✅ |
-| Areas and projects in the sidebar; new project/area inline | ✅ | ✅ (adding inline built; not yet checked) |
-| Search over titles and notes [lists: search] | ✅ | ⬜ (built; not yet checked) |
-| Today: In Progress first, grouped by project, "Up next" (5) | ✅ | ✅ |
-| All: grouped by area and project | ✅ | ⬜ (built; not yet checked) |
-| Next: drag to reorder [actions: move-in-next] | ✅ | ⬜ (built; not yet checked) |
-| Empty-list messages | ✅ | ✅ |
-| Phone: one pane at a time, swipe from the edge to go back | ✅ | ✅ |
-| Row chips: subtasks, mail, attachments, waiting, flag, ticket status, repeat, start, deadline | ✅ | ✅ |
-| Row swipes: right promotes, left defers [flags] | ✅ | ✅ |
+| Feature | Windows | Swift | Windows Native |
+| --- | --- | --- | --- |
+| Inbox, In Progress, Today, Next, Scheduled, Someday, All, Logbook, projects [lists] | ✅ | ✅ (Scheduled, All and Logbook built; not yet checked) | ✅ (Scheduled, Someday, All and Logbook built; not yet checked) |
+| Sidebar counts [lists] | ✅ | ✅ | ✅ |
+| Areas and projects in the sidebar; new project/area inline | ✅ | ✅ (adding inline built; not yet checked) | ✅ (adding is a dialog; built, not yet checked) |
+| Search over titles and notes [lists: search] | ✅ | ⬜ (built; not yet checked) | ⬜ (built; not yet checked) |
+| Today: In Progress first, grouped by project, "Up next" (5) | ✅ | ✅ | ✅ |
+| All: grouped by area and project | ✅ | ⬜ (built; not yet checked) | ⬜ (built; not yet checked) |
+| Next: drag to reorder [actions: move-in-next] | ✅ | ⬜ (built; not yet checked) | ⬜ (built; not yet checked) |
+| Empty-list messages | ✅ | ✅ | ⬜ (built; not yet checked) |
+| Phone: one pane at a time, swipe from the edge to go back | ✅ | ✅ | — (a narrow window shows the task over the list, with Back) |
+| Row chips: subtasks, mail, attachments, waiting, flag, ticket status, repeat, start, deadline | ✅ | ✅ | ✅ |
+| Row swipes: right promotes, left defers [flags] | ✅ | ✅ | — (right-click menu for flags; touch swipes not built) |
 
 ## Tasks
 
-| Feature | Windows | Swift |
-| --- | --- | --- |
-| Quick add with `!flag ^deadline @start *repeat` and pasted mail links [quick-add, date-words, repeats] | ✅ | ✅ |
-| Detail: title, flag, start date, deadline, repeat picker, project | ✅ | ✅ |
-| Repeating tasks: next copy on finishing [repeats, actions: repeat-*] | ✅ | ✅ |
-| Subtasks | ✅ | ✅ (adding built; not yet checked) |
-| Dependencies, loops refused, freed tasks move to Next [actions: dependency-*, done-frees-waiting] | ✅ | ✅ (adding built; not yet checked) |
-| Delete with undo [actions: delete-with-subtasks] | ✅ | ✅ |
-| Notes: heading, paragraph, checklist, quote, divider; Enter splits, Backspace merges, "/" menu | ✅ | ✅ |
-| Images and files in notes | ✅ | ✅ |
-| Email cards (Gmail, Apple Mail `message:`) | ✅ | ✅ |
-| Projects and areas: rename, move, delete [actions: delete-project, delete-area] | ✅ | ⬜ (built; not yet checked) |
+| Feature | Windows | Swift | Windows Native |
+| --- | --- | --- | --- |
+| Quick add with `!flag ^deadline @start *repeat` and pasted mail links [quick-add, date-words, repeats] | ✅ | ✅ | ⬜ (rules pass the fixtures; the quick-add box not yet typed into) |
+| Detail: title, flag, start date, deadline, repeat picker, project | ✅ | ✅ | ✅ (the date and repeat pickers not yet tried) |
+| Repeating tasks: next copy on finishing [repeats, actions: repeat-*] | ✅ | ✅ | ✅ |
+| Subtasks | ✅ | ✅ (adding built; not yet checked) | ✅ (adding built; not yet checked) |
+| Dependencies, loops refused, freed tasks move to Next [actions: dependency-*, done-frees-waiting] | ✅ | ✅ (adding built; not yet checked) | ✅ (adding built; not yet checked) |
+| Delete with undo [actions: delete-with-subtasks] | ✅ | ✅ | ✅ |
+| Notes: heading, paragraph, checklist, quote, divider; Enter splits, Backspace merges, "/" menu | ✅ | ✅ | ✅ (Backspace on an empty block removes it; the "/" menu not yet tried) |
+| Images and files in notes | ✅ | ✅ | ⬜ (built; Windows' file picker not yet tried) |
+| Email cards (Gmail, Apple Mail `message:`) | ✅ | ✅ | ✅ |
+| Projects and areas: rename, move, delete [actions: delete-project, delete-area] | ✅ | ⬜ (built; not yet checked) | ⬜ (built; not yet checked) |
 
 ## Incident IQ
 
-| Feature | Windows | Swift |
-| --- | --- | --- |
-| Ticket panel: number, status, details, open in Incident IQ | ✅ | ✅ |
-| Internal comments and the action log | ✅ | ✅ (queued and shown; carrying them out is the server's job) |
-| In Progress starts the ticket [actions: ticket-start] | ✅ | ✅ |
-| Finishing asks for resolution notes [actions: ticket-needs-notes, ticket-resolve] | ✅ | ✅ |
-| Incident IQ status in Settings | ✅ | ✅ |
+| Feature | Windows | Swift | Windows Native |
+| --- | --- | --- | --- |
+| Ticket panel: number, status, details, open in Incident IQ | ✅ | ✅ | ✅ |
+| Internal comments and the action log | ✅ | ✅ (queued and shown; carrying them out is the server's job) | ⬜ (built; posting a comment not yet tried) |
+| In Progress starts the ticket [actions: ticket-start] | ✅ | ✅ | ✅ |
+| Finishing asks for resolution notes [actions: ticket-needs-notes, ticket-resolve] | ✅ | ✅ | ✅ (checked against a real server) |
+| Incident IQ status in Settings | ✅ | ✅ | ⬜ (built; checked only with Incident IQ off) |
 
 ## Settings and district rules
 
-| Feature | Windows | Swift |
-| --- | --- | --- |
-| Server addresses, token, header rows with the Cloudflare preset | ✅ | ✅ |
-| Student information warning: privacy note in Settings | ✅ | ✅ |
-| Student information warning: Incident IQ ticket tasks | ✅ | ✅ |
-| Student information warning when attaching files | ⬜ (built; not yet checked in the app) | ✅ |
-| District branding: plum, navy, gold, mist; Oswald headings, Mulish body | ✅ | ✅ |
-| Keyboard shortcuts (⌘N, ⌘K, ⌘T, ⌘⇧T, ⌘D, ⌘↩, ⌘,, Esc, Delete) | ✅ | ⬜ (built; not yet checked; ⌘K needs macOS 15 / iOS 18) |
-| Quick add and shortcut help | ✅ | ✅ |
+| Feature | Windows | Swift | Windows Native |
+| --- | --- | --- | --- |
+| Server addresses, token, header rows with the Cloudflare preset | ✅ | ✅ | ✅ |
+| Student information warning: privacy note in Settings | ✅ | ✅ | ✅ |
+| Student information warning: Incident IQ ticket tasks | ✅ | ✅ | ✅ |
+| Student information warning when attaching files | ⬜ (built; not yet checked in the app) | ✅ | ✅ |
+| District branding: plum, navy, gold, mist; Oswald headings, Mulish body | ✅ | ✅ | ✅ (light and dark) |
+| Keyboard shortcuts (⌘N, ⌘K, ⌘T, ⌘⇧T, ⌘D, ⌘↩, ⌘,, Esc, Delete) | ✅ | ⬜ (built; not yet checked; ⌘K needs macOS 15 / iOS 18) | ⬜ (Ctrl versions built; not yet checked) |
+| Quick add and shortcut help | ✅ | ✅ | ✅ |
 
 ## Platform
 
-| Feature | Windows | Swift |
-| --- | --- | --- |
-| `nextly://add` links (bookmarklet) [capture-links] | ✅ | ✅ (iOS too, which the Tauri app lacks) |
-| App icon | ✅ | ✅ |
-| Widgets: Today, Next; finish from the widget | — | ⬜ (built; the app shares settings and a snapshot with them, checked in the simulator; not yet placed on a home screen) |
-| Siri: add a task, read a list | — | ⬜ (built; tasks Siri saves offline are added on launch, checked; Siri itself not yet tried) |
-| Widgets open the app on tap | — | ⬜ (nextly://open and nextly://list checked in the app; tapping a placed widget not yet tried) |
-| Signed and notarized Mac build; iOS build from CI | — | ⬜ (CI jobs ready; need the native identifiers registered and NATIVE_SIGNING on, docs/apple-signing.md step 4) |
+| Feature | Windows | Swift | Windows Native |
+| --- | --- | --- | --- |
+| `nextly://add` links (bookmarklet) [capture-links] | ✅ | ✅ (iOS too, which the Tauri app lacks) | ✅ (a second launch hands its link to the running copy) |
+| App icon | ✅ | ✅ | ✅ |
+| Widgets: Today, Next; finish from the widget | — | ⬜ (built; the app shares settings and a snapshot with them, checked in the simulator; not yet placed on a home screen) | — |
+| Siri: add a task, read a list | — | ⬜ (built; tasks Siri saves offline are added on launch, checked; Siri itself not yet tried) | — |
+| Widgets open the app on tap | — | ⬜ (nextly://open and nextly://list checked in the app; tapping a placed widget not yet tried) | — |
+| Signed and notarized Mac build; iOS build from CI | — | ⬜ (CI jobs ready; need the native identifiers registered and NATIVE_SIGNING on, docs/apple-signing.md step 4) | — |
+| Installer from CI (Windows) | ✅ (MSI and setup.exe) | — | ⬜ (per-user installer built in CI; unsigned) |
 
 ## Next: a native Windows app (started)
 
@@ -153,4 +155,6 @@ Visual Studio is optional.
   `nextly-windows-native`. Uninstalling keeps your data.
 - [ ] Code signing. Unsigned, SmartScreen warns on first run, and PCs with
   Smart App Control on won't run it (it's off on the Windows PC now).
-- [ ] The Windows Native parity column, then a week of daily use.
+- [x] The Windows Native column in the tables above.
+- [ ] Every Windows Native row checked, then a week of daily use; then the
+  Tauri Windows build is retired.
