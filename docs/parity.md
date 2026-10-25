@@ -122,6 +122,10 @@ Visual Studio is optional.
   capture links, headers, HLC. Passes all 123 shared cases
   (`cd windows && dotnet test`), required by the fixture gate, run in CI
   (`windows-core`).
-- [ ] Local store, sync (two addresses, failover), live updates.
+- [x] Local store (SQLite), sync (two addresses with failover, Cloudflare
+  headers, a server that lost its data, edits made while a sync is in
+  flight), attachments, live updates, and the connection check. The same nine
+  server scenarios as NextlyKit's `SyncTests.swift`, against the real server
+  (Node 24, or Docker when Node isn't installed).
 - [ ] The WinUI 3 app.
 - [ ] Installer from CI; the Windows Native parity column.

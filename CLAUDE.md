@@ -21,7 +21,7 @@ when something here changes.
 | `server/iiq.js` | Incident IQ sync (see below); `iiq-probe.js`, `iiq-options.js` are read-only diagnostics |
 | `apple/` | Native SwiftUI app (`App/`, `project.yml`) on `NextlyKit/` (data, rules, sync); widget and Siri extensions; CI scripts |
 | `apple/NextlyKit/` | Swift package for the native apps: models, rules, lists, SQLite store, sync, live updates (ports of the `app/src` files above). `swift test` runs the fixtures and syncs against `server/` |
-| `windows/Nextly.Core/` | C# library for the native Windows app (ports of the `app/src` files above; record data stays `System.Text.Json` nodes so unknown fields survive). `cd windows && dotnet test` runs the fixtures |
+| `windows/Nextly.Core/` | C# library for the native Windows app: models, rules, lists, SQLite store, sync, live updates (ports of the `app/src` files above; record data stays `System.Text.Json` nodes so unknown fields survive). `cd windows && dotnet test` runs the fixtures and syncs against `server/` (Node 24, or Docker) |
 | `docs/` | Cloudflare, Apple signing, Incident IQ setup |
 | `scripts/set-version.mjs` | Date-based versions (`Y.M.D.N`, New York time, Nth commit that day) |
 

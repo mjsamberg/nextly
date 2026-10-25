@@ -46,21 +46,22 @@ jobs:
           node-version: 24 # what the server's Docker image runs
       - run: npm test
 
-  # Nextly.Core, the C# library behind the native Windows app (planned in
-  # docs/parity.md): the shared fixtures.
+  # Nextly.Core, the C# library behind the native Windows app
+  # (docs/parity.md): the shared fixtures, and sync against the real server
+  # (needs Node 24).
   windows-core:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-dotnet@v5
-        with:
-          dotnet-version: 9.0.x
-      - name: dotnet test (includes spec/fixtures)
-        working-directory: windows
-        run: dotnet test Nextly.sln -c Release
       - uses: actions/setup-node@v7
         with:
           node-version: 24
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 9.0.x
+      - name: dotnet test (includes spec/fixtures and the sync tests)
+        working-directory: windows
+        run: dotnet test Nextly.sln -c Release
       - name: Fixture gate (every app runs every shared case)
         run: node scripts/check-fixtures.mjs
 
