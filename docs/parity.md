@@ -95,3 +95,23 @@ fixtures there, but stay unchecked until the app shows them.
 | Siri: add a task, read a list | — | ⬜ (built; tasks Siri saves offline are added on launch, checked; Siri itself not yet tried) |
 | Widgets open the app on tap | — | ⬜ (nextly://open and nextly://list checked in the app; tapping a placed widget not yet tried) |
 | Signed and notarized Mac build; iOS build from CI | — | ⬜ (CI jobs ready; need the native identifiers registered and NATIVE_SIGNING on, docs/apple-signing.md step 4) |
+
+## Next: a native Windows app (planned, not started)
+
+Agreed on 2026-10-24: Windows moves off Tauri too, to a native Fluent app
+built with **WinUI 3 and C#**, so each platform has a native app on the same
+server. It follows the path the Swift apps took:
+
+1. **A C# core library first**, a port of `app/src` like NextlyKit: models,
+   rules, quick add, repeats, lists, local store, sync (two addresses with
+   failover, Cloudflare headers), live updates. Its tests run every case in
+   `spec/fixtures` and it joins `scripts/check-fixtures.mjs` as a third suite.
+2. **Then the WinUI app** on top: Mica, NavigationView sidebar, Fluent icons
+   and type, dark mode, keyboard shortcuts, the district branding and
+   student-information warnings, `nextly://` links for the Gmail bookmarklet.
+3. **Builds and an installer** on GitHub Actions' Windows runners.
+4. **Parity:** these tables get a "Windows Native" column. The Tauri Windows
+   build keeps shipping until every row is checked; then Tauri is retired.
+
+Needs the .NET SDK on the Windows PC (`winget install Microsoft.DotNet.SDK.9`);
+Visual Studio is optional.

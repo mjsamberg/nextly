@@ -53,7 +53,8 @@ when something here changes.
 ## Two apps, one data format
 
 Windows runs the Tauri app; iOS and macOS are moving to native Swift
-(`docs/parity.md`). They must not drift apart:
+(`docs/parity.md`). A native WinUI 3 / C# Windows app is planned next, not
+started (end of `docs/parity.md`). They must not drift apart:
 
 - A rule change starts in `spec/fixtures` (and `spec/protocol.md`), then
   goes into `app/src/rules.ts`/`logic.ts` and the Swift package. `node
