@@ -17,3 +17,5 @@ windows/**/bin/
 windows/**/obj/
 windows/**/TestResults/
 windows/.vs/
+windows/publish/
+windows/installer-out/

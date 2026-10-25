@@ -65,6 +65,44 @@ jobs:
       - name: Fixture gate (every app runs every shared case)
         run: node scripts/check-fixtures.mjs
 
+  # The native Windows app (windows/Nextly.App), self-contained, in a
+  # per-user installer named "Nextly Native" (windows/installer/Nextly.iss).
+  # Unsigned for now: Windows SmartScreen warns on first run, and PCs with
+  # Smart App Control on won't run it until it's signed (docs/parity.md).
+  windows-native:
+    needs: windows-core
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # the whole history: set-version counts the day's commits
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - name: Stamp the date-based version
+        run: node scripts/set-version.mjs
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 9.0.x
+      - name: Publish the app (self-contained, x64)
+        shell: pwsh
+        run: |
+          $label = $env:NEXTLY_VERSION_LABEL
+          dotnet publish windows/Nextly.App/Nextly.App.csproj -c Release -r win-x64 -p:Platform=x64 `
+            -p:Version=$label -p:InformationalVersion=$label -o windows/publish/x64
+      - name: Build the installer (Inno Setup)
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { choco install innosetup --no-progress -y | Out-Null }
+          & $iscc /Qp "/DAppVersion=$env:NEXTLY_VERSION_LABEL" "/DPublishDir=..\publish\x64" windows/installer/Nextly.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - uses: actions/upload-artifact@v7
+        with:
+          name: nextly-windows-native
+          if-no-files-found: error
+          path: windows/installer-out/*.exe
+
   # NextlyKit, the Swift package behind the native iOS and macOS apps: the
   # shared fixtures, and sync against the real server (needs Node 24).
   apple:
@@ -333,7 +371,7 @@ jobs:
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [windows, macos, ios]
+    needs: [windows, windows-native, macos, ios]
     runs-on: ubuntu-latest
     permissions:
       contents: write

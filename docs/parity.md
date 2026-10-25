@@ -142,10 +142,16 @@ Visual Studio is optional.
   student-information warning first, then Windows' file picker); email
   cards. Checked by typing into the app (Windows' file picker itself still
   needs trying by hand).
-- [ ] `nextly://` links (Gmail bookmarklet) and one window at a time: built
-  (`Links.cs`, `Program.cs`, Settings → Links), not yet run. It registers
-  for links only when nothing else handles them, or when you ask in Settings.
-- [ ] Code signing. Smart App Control (on for the Windows PC) blocks newly
-  built unsigned programs, so a signed build is needed both for testing on
-  that PC and for installing anywhere it's on.
-- [ ] Installer from CI; the Windows Native parity column.
+- [x] `nextly://` links (Gmail bookmarklet) and one window at a time
+  (`Links.cs`, `Program.cs`, Settings → Links). A second launch hands its
+  link to the running copy. It registers for links only when nothing else
+  handles them, or when you ask in Settings, so it doesn't take them from
+  the Tauri app.
+- [x] Installer from CI: `windows-native` publishes the self-contained app
+  with the date-based version and builds a per-user Inno Setup installer,
+  "Nextly Native" (`windows/installer/Nextly.iss`), artifact
+  `nextly-windows-native`. Uninstalling keeps your data.
+- [ ] Code signing. Unsigned, SmartScreen warns on first run, and PCs with
+  Smart App Control on won't run it (it's off on the Windows PC now).
+- [ ] The Windows Native parity column, then a week of daily use.
+- [x] (see below)

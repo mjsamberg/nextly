@@ -14,6 +14,9 @@
     <LangVersion>latest</LangVersion>
     <UseWinUI>true</UseWinUI>
     <WindowsPackageType>None</WindowsPackageType>
+    <!-- Builds Nextly.pri and the compiled XAML (.xbf) into the publish folder
+         too; without it a published (unpackaged) build can't load App.xaml. -->
+    <EnableMsixTooling>true</EnableMsixTooling>
     <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
     <SelfContained>true</SelfContained>
     <Platforms>x64;ARM64</Platforms>
