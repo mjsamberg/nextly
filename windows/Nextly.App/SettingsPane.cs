@@ -57,6 +57,7 @@ public sealed class SettingsPane : Grid
         page.Children.Add(Ui.Heading("Settings"));
         page.Children.Add(SyncCard());
         page.Children.Add(Card(H2("Incident IQ"), iiq));
+        page.Children.Add(LinksCard());
         page.Children.Add(Card(H2("Areas and projects"), Ui.Muted("Areas group projects in the sidebar, like Classroom or Tech committee."), org));
         page.Children.Add(KeysCard());
         page.Children.Add(Card(H2("Privacy"), Ui.Muted("Notes and attachments sync to your own server, not a district system. Keep student records such as grades, IEP or 504 details out of Nextly. Directory information, like a name on a conference list, is the most you should store.")));
@@ -310,6 +311,37 @@ public sealed class SettingsPane : Grid
         g.Children.Add(box);
         g.Children.Add(x);
         return g;
+    }
+
+    // ---------- nextly:// links ----------
+
+    /// <summary>Which app opens nextly:// links (the Gmail bookmarklet), with a switch.</summary>
+    Border LinksCard()
+    {
+        var status = new TextBlock { TextWrapping = TextWrapping.Wrap };
+        var take = new Button { Content = "Open them in this app" };
+        var giveBack = new Button { Content = "Give them back to the other Nextly app" };
+        void Update()
+        {
+            var handler = Links.Handler();
+            status.Text = Links.HandledHere ? "nextly:// links (the Gmail bookmarklet) open in this app."
+                : handler is null ? "Nothing opens nextly:// links yet."
+                : $"nextly:// links open in another Nextly app ({handler.Split('"', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault()}).";
+            take.Visibility = Links.HandledHere ? Visibility.Collapsed : Visibility.Visible;
+            giveBack.Visibility = Links.RegisteredForUser() && Links.HandledHere && Links.Handler() is not null ? Visibility.Visible : Visibility.Collapsed;
+        }
+        take.Click += (_, _) => { try { Links.Register(); } catch (Exception e) { status.Text = $"Couldn’t change it: {e.Message}"; return; } Update(); };
+        giveBack.Click += (_, _) =>
+        {
+            try { Links.Unregister(); } catch (Exception e) { status.Text = $"Couldn’t change it: {e.Message}"; return; }
+            Update();
+        };
+        Update();
+        var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+        buttons.Children.Add(take);
+        buttons.Children.Add(giveBack);
+        return Card(H2("Links"), status, buttons,
+            Ui.Muted("A link from a web page can only ever add a task to your Inbox. Switching only changes it for your Windows account.", 12));
     }
 
     static Border KeysCard()

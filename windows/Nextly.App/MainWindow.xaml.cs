@@ -193,6 +193,22 @@ public sealed partial class MainWindow : Window
         if (await Ask("New area", "Area name, like Classroom") is { } name) m.Store.CreateArea(name);
     }
 
+    /// <summary>A nextly:// link: add its task to the Inbox and open it, so you can choose Today or Next.</summary>
+    public void HandleLink(string link)
+    {
+        if (Links.Capture(m.Store, link) is not { } id) return;
+        Go("inbox");
+        Open(id);
+    }
+
+    /// <summary>Brings the window forward (a second launch handed us a link).</summary>
+    public void BringToFront()
+    {
+        if (AppWindow.Presenter is OverlappedPresenter { State: OverlappedPresenterState.Minimized } p) p.Restore();
+        AppWindow.Show();
+        Activate();
+    }
+
     // ---------- the open task ----------
 
     void Open(string id)

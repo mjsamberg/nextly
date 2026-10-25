@@ -1,10 +1,11 @@
 using Microsoft.UI.Xaml;
+using Microsoft.Windows.AppLifecycle;
 
 namespace Nextly.App;
 
 public partial class App : Application
 {
-    Window? window;
+    MainWindow? window;
 
     public App()
     {
@@ -20,7 +21,26 @@ public partial class App : Application
 
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
+        Links.AutoRegister();
         window = new MainWindow();
         window.Activate();
+        // A nextly:// link that started the app, and any that later launches hand over.
+        HandleActivation(AppInstance.GetCurrent().GetActivatedEventArgs());
+        AppInstance.GetCurrent().Activated += (_, e) => window.DispatcherQueue.TryEnqueue(() =>
+        {
+            window.BringToFront();
+            HandleActivation(e);
+        });
+    }
+
+    void HandleActivation(AppActivationArguments e)
+    {
+        var arguments = e.Data switch
+        {
+            Windows.ApplicationModel.Activation.ILaunchActivatedEventArgs l => l.Arguments,
+            Windows.ApplicationModel.Activation.IProtocolActivatedEventArgs p => p.Uri.ToString(),
+            _ => null,
+        };
+        if (Links.FromArguments(arguments) is { } link) window?.HandleLink(link);
     }
 }

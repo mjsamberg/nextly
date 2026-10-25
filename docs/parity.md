@@ -142,5 +142,10 @@ Visual Studio is optional.
   student-information warning first, then Windows' file picker); email
   cards. Checked by typing into the app (Windows' file picker itself still
   needs trying by hand).
-- [ ] `nextly://` links (Gmail bookmarklet); one window at a time.
+- [ ] `nextly://` links (Gmail bookmarklet) and one window at a time: built
+  (`Links.cs`, `Program.cs`, Settings → Links), not yet run. It registers
+  for links only when nothing else handles them, or when you ask in Settings.
+- [ ] Code signing. Smart App Control (on for the Windows PC) blocks newly
+  built unsigned programs, so a signed build is needed both for testing on
+  that PC and for installing anywhere it's on.
 - [ ] Installer from CI; the Windows Native parity column.
