@@ -137,6 +137,10 @@ Visual Studio is optional.
   status, connection check, Incident IQ, areas and projects); shortcuts;
   light and dark. Checked against a real server: sync both ways, live
   updates, and a ticket resolved with notes.
-- [ ] Notes editor (blocks, attachments with the student-information
-  warning, email cards); `nextly://` links; single instance.
+- [x] Notes editor: heading, text, checklist, quote, divider; Enter splits,
+  Backspace on an empty block removes it, "/" menu; images and files (the
+  student-information warning first, then Windows' file picker); email
+  cards. Checked by typing into the app (Windows' file picker itself still
+  needs trying by hand).
+- [ ] `nextly://` links (Gmail bookmarklet); one window at a time.
 - [ ] Installer from CI; the Windows Native parity column.

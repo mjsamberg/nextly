@@ -46,7 +46,7 @@ public sealed partial class MainWindow : Window
         AppWindow.SetIcon(Path.Combine(AppContext.BaseDirectory, "Assets", "nextly.ico"));
         AppWindow.Resize(new Windows.Graphics.SizeInt32(1280, 820));
 
-        m = new AppModel(DispatcherQueue);
+        m = new AppModel(DispatcherQueue) { WindowHandle = WinRT.Interop.WindowNative.GetWindowHandle(this) };
         list = new TaskListPane(m, Open, Delete, Go);
         detail = new DetailPane(m, Open, CloseDetail, Delete);
         settings = new SettingsPane(m);

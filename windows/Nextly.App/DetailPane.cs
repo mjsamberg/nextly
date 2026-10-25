@@ -29,6 +29,7 @@ public sealed class DetailPane : Grid
     readonly ScrollViewer scroll = new() { HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
     readonly Button back = new() { Content = "Back", Visibility = Visibility.Collapsed };
     string? shown;
+    NotesView? notes;
     bool dirty;
 
     public DetailPane(AppModel model, Action<string> onOpen, Action onClose, Action<string> onDelete)
@@ -49,8 +50,13 @@ public sealed class DetailPane : Grid
         Children.Add(top);
         SetRow(scroll, 1);
         Children.Add(scroll);
-        // A refresh that waited for typing to finish runs when focus leaves.
-        LostFocus += (_, _) => { if (dirty && !Typing()) { dirty = false; Build(); } };
+        // A refresh that waited for typing to finish runs when focus leaves, just
+        // after the focus change: rebuilding during it can crash WinUI.
+        LostFocus += (_, _) =>
+        {
+            if (!dirty) return;
+            DispatcherQueue.TryEnqueue(() => { if (dirty && !Typing()) { dirty = false; Build(); } });
+        };
     }
 
     /// <summary>On a narrow window the pane covers the list and has a Back button.</summary>
@@ -84,6 +90,8 @@ public sealed class DetailPane : Grid
 
     void Build()
     {
+        Debug.Log($"detail build (typing={Typing()})");
+        // Notes keep their editor while the same task is open (see NotesView.Attach).
         var v = m.Store.View;
         if (shown is null || v.Task(shown) is not { } t) { scroll.Content = null; return; }
         var ro = t.ReadOnly;
@@ -180,7 +188,8 @@ public sealed class DetailPane : Grid
 
         Subtasks(p, v, t, ro);
         Dependencies(p, v, t, ro);
-        NotesView.Build(p, m, t);
+        if (notes is null || notes.TaskId != t.Id) { notes?.Retire(); notes = new NotesView(m, t.Id); }
+        notes.Attach(p);
 
         var foot = new Grid { Margin = new Thickness(0, 24, 0, 0) };
         var dates = $"Added {Js.DateParse(t.CreatedAt) switch { var ms when !double.IsNaN(ms) => DateTimeOffset.FromUnixTimeMilliseconds((long)ms).LocalDateTime.ToShortDateString(), _ => "" }}";

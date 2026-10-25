@@ -24,6 +24,15 @@ public sealed class AppModel : IDisposable
     public string View { get; set; } = "today";
     public string? Selected { get; set; }
     public string Query { get; set; } = "";
+    /// <summary>
+    /// A note block that should get the cursor once it's on screen. Kept here
+    /// so it survives the detail pane being rebuilt by the same change.
+    /// </summary>
+    public string? FocusBlock { get; set; }
+    public bool FocusBlockAtEnd { get; set; }
+
+    /// <summary>The main window, for Windows' pickers.</summary>
+    public nint WindowHandle { get; set; }
 
     /// <summary>Where the local database lives; NEXTLY_DATA_DIR points elsewhere (tests, demos).</summary>
     public static string DataFolder => Environment.GetEnvironmentVariable("NEXTLY_DATA_DIR") is { Length: > 0 } dir ? dir
