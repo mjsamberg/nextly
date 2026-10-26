@@ -72,6 +72,10 @@ features):
 
 ## Lessons learned
 
+- **The Mac is low on resources.** Run one iOS simulator at a time at most;
+  even one simulator running XCUITests pushed the load past 200 and made the
+  results meaningless. Check UI changes in the Mac app, or on a real device.
+
 - **iPhone layout: verify on the device.** Desktop browsers and emulators
   passed a fix that didn't work on the iPhone. For iOS UI bugs, ask early for
   a screen recording.

@@ -9,6 +9,8 @@ struct SidebarView: View {
     /// Where a new project or area is being typed: an area id, `noArea`, `newArea`, or nil.
     @State private var adding: String?
     @FocusState private var searchFocused: Bool
+    /// The list or project a dragged task is over.
+    @State private var dropOver: ListView?
 
     private static let noArea = "__no-area__", newArea = "__new-area__"
 
@@ -34,6 +36,7 @@ struct SidebarView: View {
                     Label { Text(item.1) } icon: { Image(systemName: item.2).foregroundStyle(item.3 ?? Theme.plum) }
                         .badge(n)
                         .tag(item.0)
+                        .taskDrop(item.0, model: model, over: $dropOver)
                 }
             }
             ForEach(groups(v), id: \.key) { g in
@@ -43,6 +46,7 @@ struct SidebarView: View {
                         Label(p.title.nonEmpty ?? "Untitled project", systemImage: "folder")
                             .badge(n)
                             .tag(ListView.project(p.id))
+                            .taskDrop(.project(p.id), model: model, over: $dropOver)
                     }
                     if adding == g.key {
                         NameField(placeholder: g.area.map { "New project in \($0.title)" } ?? "Project name") { name in
@@ -162,5 +166,22 @@ private extension View {
     /// ⌘K focuses search on macOS 15 and iOS 18; on older systems the menu item does nothing.
     @ViewBuilder func searchFocusedIfAvailable(_ focused: FocusState<Bool>.Binding) -> some View {
         if #available(macOS 15, iOS 18, *) { searchFocused(focused) } else { self }
+    }
+}
+
+private extension View {
+    /// Inbox, In Progress, Today, Next, Someday and projects take dropped tasks
+    /// (TaskDrag.swift); the row is highlighted while one is over it.
+    @ViewBuilder func taskDrop(_ list: ListView, model: AppModel, over: Binding<ListView?>) -> some View {
+        if let target = DropTarget(list) {
+            dropDestination(for: DraggedTask.self) { items, _ in
+                model.drop(items, on: target)
+            } isTargeted: { on in
+                if on { over.wrappedValue = list } else if over.wrappedValue == list { over.wrappedValue = nil }
+            }
+            .listRowBackground(over.wrappedValue == list ? RoundedRectangle(cornerRadius: 8).fill(Theme.plum.opacity(0.18)) : nil)
+        } else {
+            self
+        }
     }
 }

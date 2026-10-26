@@ -144,15 +144,18 @@ struct TaskListView: View {
         }
     }
 
+    /// Drag a task between two others to put it there. Rows carry their own
+    /// drag (for dropping on the sidebar), so the drop is handled here rather
+    /// than by List's built-in reorder; the index is where it was dropped.
     @ViewBuilder private func nextBody(_ tasks: [TaskItem]) -> some View {
         if tasks.isEmpty { empty }
         ForEach(tasks) { row($0, as: .next) }
-            .onMove { from, to in
-                guard let i = from.first else { return }
-                let before = to < tasks.count ? tasks[to].id : nil
-                if before != tasks[i].id { model.store.moveInNext(tasks[i].id, before: before) }
+            .dropDestination(for: DraggedTask.self) { items, at in
+                _ = model.dropInNext(items, before: at < tasks.count ? tasks[at].id : nil)
             }
     }
+
+
 
     private func sectionHeader(_ text: String, color: Color = .secondary) -> some View {
         Text(text.uppercased()).font(Theme.section).foregroundStyle(color)
@@ -184,6 +187,7 @@ struct TaskListView: View {
         let ctx = context ?? list
         return TaskRow(model: model, t: t, context: ctx)
             .tag(t.id)
+            .taskDrag(t, enabled: model.canDrag(t))
             .swipeActions(edge: .leading, allowsFullSwipe: true) {
                 if !t.done && !t.readOnly && Logic.promote(t.flag) != t.flag {
                     let to = Logic.promote(t.flag)
@@ -295,5 +299,22 @@ struct CheckBox: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(done ? "Mark not done" : "Mark done")
+    }
+}
+
+extension View {
+    /// Lets a task be dragged onto the sidebar, or within Next (TaskDrag.swift).
+    @ViewBuilder func taskDrag(_ t: TaskItem, enabled: Bool) -> some View {
+        if enabled {
+            draggable(DraggedTask(id: t.id)) {
+                Label(t.title.isEmpty ? "New task" : t.title, systemImage: "circle")
+                    .font(Theme.body())
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
+            }
+        } else {
+            self
+        }
     }
 }

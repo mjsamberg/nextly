@@ -40,7 +40,7 @@ final class AppModel {
     init() {
         let store: LocalStore
         do {
-            store = try LocalStore(url: Self.databaseURL())
+            store = try LocalStore(url: Self.uiTesting ? Self.uiTestURL() : Self.databaseURL())
         } catch {
             // Keep the app usable enough to say what's wrong.
             store = try! LocalStore(url: FileManager.default.temporaryDirectory.appendingPathComponent("nextly-\(UUID().uuidString).sqlite"))
@@ -49,6 +49,33 @@ final class AppModel {
         self.store = store
         sync = SyncClient(store: store)
         share = AppleShare(store: store)
+        if Self.uiTesting { seedForUITests() }
+    }
+
+    // MARK: - UI tests (apple/UITests)
+
+    /// Started by the UI tests: a throwaway database with made-up tasks, no
+    /// sync. Debug builds only.
+    static var uiTesting: Bool {
+        #if DEBUG
+        ProcessInfo.processInfo.arguments.contains("-NextlyUITests")
+        #else
+        false
+        #endif
+    }
+
+    private static func uiTestURL() -> URL {
+        FileManager.default.temporaryDirectory.appendingPathComponent("nextly-uitest-\(UUID().uuidString).sqlite")
+    }
+
+    private func seedForUITests() {
+        let project = store.createProject("Field trip", areaId: nil)
+        for (i, title) in ["Next one", "Next two", "Next three"].enumerated() {
+            store.createTask(["title": .string(title), "flag": "next", "order": .number(Double(1000 * (i + 1)))])
+        }
+        store.createTask(["title": "Inbox task", "flag": "inbox"])
+        store.createTask(["title": "Already in the trip", "flag": nil, "projectId": .string(project)])
+        list = .next
     }
 
     /// Application Support, separate from the Tauri app's data. The widgets

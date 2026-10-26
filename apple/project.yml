@@ -63,6 +63,11 @@ targets:
         LSApplicationCategoryType: public.app-category.productivity
         ITSAppUsesNonExemptEncryption: false
         NextlyAppGroup: $(NEXTLY_APP_GROUP)
+        # What a dragged task carries (TaskDrag.swift): only Nextly accepts it.
+        UTExportedTypeDeclarations:
+          - UTTypeIdentifier: com.mjsamberg.nextly.task
+            UTTypeDescription: Nextly task
+            UTTypeConformsTo: [public.data]
         # nextly://add links (the Gmail bookmarklet) and widget taps (nextly://open, nextly://list).
         CFBundleURLTypes:
           - CFBundleURLName: com.mjsamberg.nextly
@@ -146,3 +151,24 @@ targets:
     dependencies:
       - sdk: AppIntents.framework
       - sdk: WidgetKit.framework
+
+  NextlyUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: UITests
+    dependencies:
+      - target: Nextly
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.mjsamberg.nextly.native.uitests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: Nextly
+
+schemes:
+  Nextly:
+    build:
+      targets:
+        Nextly: all
+    test:
+      targets: [NextlyUITests]

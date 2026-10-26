@@ -6,7 +6,7 @@ Windows app (`windows/`, WinUI 3) and the Swift app for Mac, iPhone and iPad
 2026-10-24 and is kept on the `tauri` branch; its column below is the list of
 features it had, which the native apps are measured against.
 
-Key: ✅ done (for Swift: built and checked on the iPhone simulator, or against a test server; for Windows: built and checked in the app on the Windows PC, or by `dotnet test` against the real server) · ⬜ not yet · — not applicable.
+Key: ✅ done (for Swift: built and checked on the iPhone simulator, in the Mac app, or against a test server; for Windows: built and checked in the app on the Windows PC, or by `dotnet test` against the real server) · ⬜ not yet · — not applicable.
 The Swift app hasn't been checked on a real iPhone, an iPad or visually on the Mac yet.
 The rules behind a row are covered by `spec/fixtures` (named in brackets).
 Swift rows marked done for data and sync are in `apple/NextlyKit` and its tests;
@@ -38,8 +38,8 @@ fixtures there, but stay unchecked until the app shows them.
 | Search over titles and notes [lists: search] | ✅ | ⬜ (built; not yet checked) | ⬜ (built; not yet checked) |
 | Today: In Progress first, grouped by project, "Up next" (5) | ✅ | ✅ | ✅ |
 | All: grouped by area and project | ✅ | ⬜ (built; not yet checked) | ⬜ (built; not yet checked) |
-| Next: drag to reorder [actions: move-in-next] | ✅ | ⬜ (built; not yet checked) | ✅ |
-| Drag a task onto a sidebar list (flags it) or project (moves it) | — | ⬜ (not built) | ✅ |
+| Next: drag to reorder [actions: move-in-next] | ✅ | ✅ (checked in the Mac app; not yet on iPad or iPhone) | ✅ |
+| Drag a task onto a sidebar list (flags it) or project (moves it) | — | ✅ (checked in the Mac app; iPad not yet; on iPhone the sidebar isn't beside the list) | ✅ |
 | Empty-list messages | ✅ | ✅ | ⬜ (built; not yet checked) |
 | Phone: one pane at a time, swipe from the edge to go back | ✅ | ✅ | — (a narrow window shows the task over the list, with Back) |
 | Row chips: subtasks, mail, attachments, waiting, flag, ticket status, repeat, start, deadline | ✅ | ✅ | ✅ |
