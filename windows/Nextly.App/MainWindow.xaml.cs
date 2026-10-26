@@ -161,6 +161,7 @@ public sealed partial class MainWindow : Window
             Nav.MenuItems.Add(new NavigationViewItemSeparator());
             Nav.MenuItems.Add(new NavigationViewItem { Content = "New project", Tag = "new-project", Icon = Ui.Icon(Ui.Add, 14), SelectsOnInvoked = false });
             Nav.MenuItems.Add(new NavigationViewItem { Content = "New area", Tag = "new-area", Icon = Ui.Icon(Ui.Add, 14), SelectsOnInvoked = false });
+            foreach (var item in Nav.MenuItems.OfType<NavigationViewItem>()) Droppable(item);
             navigating = false;
             SelectNav(m.View);
         }
@@ -173,6 +174,39 @@ public sealed partial class MainWindow : Window
                 : tag.StartsWith("project:") ? v.Tasks.Count((t) => t.ProjectId == tag["project:".Length..] && !t.Done && !t.HasParent) : 0;
             item.InfoBadge = n > 0 ? new InfoBadge { Value = n } : null;
         }
+    }
+
+    /// <summary>
+    /// Lets a task dragged from a list drop on a flagged list (as its menu
+    /// would flag it) or a project (as the detail pane's picker would move it).
+    /// Finished tasks, Incident IQ tickets leaving their project or going to
+    /// the Inbox, and subtasks changing project aren't accepted.
+    /// </summary>
+    void Droppable(NavigationViewItem item)
+    {
+        if (item.Tag is not string tag || !(tag is "inbox" or "doing" or "today" or "next" or "someday" || tag.StartsWith("project:"))) return;
+        item.AllowDrop = true;
+        TaskItem? Dragged(DragEventArgs e) =>
+            e.DataView.Properties.TryGetValue(TaskListPane.DragKey, out var id) && id is string s && m.Store.View.Task(s) is { ReadOnly: false, Done: false } t ? t : null;
+        bool Accepts(TaskItem t) => tag.StartsWith("project:")
+            ? !t.HasParent && !t.IsTicket && t.ProjectId != tag["project:".Length..]
+            : t.Flag != tag && !(tag == "inbox" && t.IsTicket);
+        item.DragOver += (_, e) =>
+        {
+            if (Dragged(e) is not { } t || !Accepts(t)) { e.AcceptedOperation = Windows.ApplicationModel.DataTransfer.DataPackageOperation.None; return; }
+            e.AcceptedOperation = Windows.ApplicationModel.DataTransfer.DataPackageOperation.Move;
+            e.DragUIOverride.Caption = $"Move to {item.Content}";
+        };
+        item.Drop += (_, e) =>
+        {
+            if (Dragged(e) is not { } t || !Accepts(t)) return;
+            // After the drag finishes: the save rebuilds the list the drag came from.
+            DispatcherQueue.TryEnqueue(() =>
+            {
+                if (tag.StartsWith("project:")) m.Store.UpdateTask(t.Id, new System.Text.Json.Nodes.JsonObject { ["projectId"] = tag["project:".Length..] });
+                else m.Store.SetFlag(t.Id, tag);
+            });
+        };
     }
 
     static NavigationViewItem ProjectItem(ProjectItem p) =>

@@ -1,7 +1,8 @@
 // The list on screen (port of app/src/TaskList.tsx): a heading, quick add,
 // and the tasks. Today shows In Progress first, then its tasks grouped by
 // project, then "Up next"; All groups by area and project; Next can be
-// reordered by dragging. The header and quick add stay put while the
+// reordered by dragging, and any task can be dragged onto a list or project
+// in the sidebar. The header and quick add stay put while the
 // tasks refresh, so typing isn't interrupted by a sync.
 
 using System.Text.Json.Nodes;
@@ -25,6 +26,9 @@ public sealed class TaskListPane : Grid
     readonly ScrollViewer scroll = new() { HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
     readonly StackPanel body = new() { Padding = new Thickness(16, 4, 16, 32) };
     readonly List<ListView> lists = [];
+
+    /// <summary>The drag data that carries a task's id (read by MainWindow.Droppable).</summary>
+    public const string DragKey = "nextly-task";
 
     static readonly Dictionary<string, string> Empty = new()
     {
@@ -165,6 +169,13 @@ public sealed class TaskListPane : Grid
         lv.ItemClick += (_, e) => { if (e.ClickedItem is TaskRow r) open(r.TaskId); };
         // Arrow keys (and screen readers) move the selection: the task follows it.
         lv.SelectionChanged += (_, _) => { if (!selecting && lv.SelectedItem is TaskRow r && r.TaskId != m.Selected) open(r.TaskId); };
+        lv.CanDragItems = true;
+        lv.DragItemsStarting += (_, e) =>
+        {
+            if (e.Items.FirstOrDefault() is not TaskRow r || m.Store.View.Task(r.TaskId) is not { ReadOnly: false }) { e.Cancel = true; return; }
+            e.Data.Properties[DragKey] = r.TaskId;
+            e.Data.RequestedOperation = Windows.ApplicationModel.DataTransfer.DataPackageOperation.Move;
+        };
         lists.Add(lv);
         return lv;
     }
@@ -237,14 +248,16 @@ public sealed class TaskListPane : Grid
     {
         if (tasks.Count == 0) { EmptyText("next"); return; }
         var lv = RowList(v, tasks, "next");
-        lv.CanDragItems = true;
         lv.CanReorderItems = true;
         lv.AllowDrop = true;
+        var from = -1;
+        lv.DragItemsStarting += (_, e) => from = e.Items.FirstOrDefault() is TaskRow r ? lv.Items.IndexOf(r) : -1;
         lv.DragItemsCompleted += (_, e) =>
         {
             if (e.DropResult != Windows.ApplicationModel.DataTransfer.DataPackageOperation.Move || e.Items.FirstOrDefault() is not TaskRow moved) return;
             var rows = lv.Items.OfType<TaskRow>().ToList();
             var at = rows.IndexOf(moved);
+            if (at == from) return; // dropped on the sidebar, or back where it was
             m.Store.MoveInNext(moved.TaskId, at + 1 < rows.Count ? rows[at + 1].TaskId : null);
         };
         body.Children.Add(lv);

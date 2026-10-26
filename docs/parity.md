@@ -38,7 +38,8 @@ fixtures there, but stay unchecked until the app shows them.
 | Search over titles and notes [lists: search] | ✅ | ⬜ (built; not yet checked) | ⬜ (built; not yet checked) |
 | Today: In Progress first, grouped by project, "Up next" (5) | ✅ | ✅ | ✅ |
 | All: grouped by area and project | ✅ | ⬜ (built; not yet checked) | ⬜ (built; not yet checked) |
-| Next: drag to reorder [actions: move-in-next] | ✅ | ⬜ (built; not yet checked) | ⬜ (built; not yet checked) |
+| Next: drag to reorder [actions: move-in-next] | ✅ | ⬜ (built; not yet checked) | ✅ |
+| Drag a task onto a sidebar list (flags it) or project (moves it) | — | ⬜ (not built) | ✅ |
 | Empty-list messages | ✅ | ✅ | ⬜ (built; not yet checked) |
 | Phone: one pane at a time, swipe from the edge to go back | ✅ | ✅ | — (a narrow window shows the task over the list, with Back) |
 | Row chips: subtasks, mail, attachments, waiting, flag, ticket status, repeat, start, deadline | ✅ | ✅ | ✅ |
