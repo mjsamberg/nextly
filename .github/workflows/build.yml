@@ -209,6 +209,12 @@ jobs:
       - name: Stamp the date-based version
         run: node scripts/set-version.mjs
       - run: brew list xcodegen >/dev/null 2>&1 || brew install xcodegen
+      # One fixed certificate, so automatic signing doesn't make a new one each run.
+      - name: Import the iPhone signing certificate
+        env:
+          IOS_CERTIFICATE: ${{ secrets.IOS_CERTIFICATE }}
+          IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+        run: bash apple/scripts/import-ios-cert.sh
       - name: Build signed IPA
         env:
           APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}

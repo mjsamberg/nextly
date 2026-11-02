@@ -74,8 +74,9 @@ elif [ "$mode" = "ios" ]; then
   method="${EXPORT_METHOD:-debugging}"
   archive="$out/Nextly-ios.xcarchive"
   # Automatic signing through the API key lets Xcode register the app's
-  # identifiers and App Group and make the profiles it needs, as the Tauri
-  # iOS build does for its own.
+  # identifiers and App Group and make the profiles it needs. It signs with
+  # the certificate import-ios-cert.sh put in the keychain; without one it
+  # would make a new certificate on every run.
   auth=(-allowProvisioningUpdates -authenticationKeyPath "$APPLE_API_KEY_PATH"
         -authenticationKeyID "$APPLE_API_KEY" -authenticationKeyIssuerID "$APPLE_API_ISSUER")
   xcodebuild -project "$project" -scheme Nextly -configuration Release \

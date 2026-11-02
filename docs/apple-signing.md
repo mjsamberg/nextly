@@ -46,6 +46,26 @@ itself.
 | `APPLE_API_KEY_P8` | The full contents of the `.p8` file, including the BEGIN/END lines |
 | `IOS_EXPORT_METHOD` (optional) | `debugging` (default, installs on your registered iPhone), `release-testing` (ad hoc), or `app-store-connect` (TestFlight) |
 
+3. Give CI one signing certificate to reuse. Each build runs on a fresh Mac
+   with an empty keychain; without a certificate there, Xcode makes Apple a
+   new one every time until the account reaches its limit ("Your account has
+   reached the maximum number of certificates").
+   - On your Mac, Xcode → Settings → Accounts → your team → **Manage
+     Certificates** → **+** → **Apple Development** (skip this if one is
+     already listed with no "missing private key" note). For
+     `release-testing` or `app-store-connect`, add **Apple Distribution** too.
+   - Keychain Access → **My Certificates** → select "Apple Development: …"
+     (and "Apple Distribution: …" if you made one) → right-click →
+     **Export** as `.p12` with a password.
+   - Add the secrets `IOS_CERTIFICATE` (`base64 -i Certificates.p12 | pbcopy`,
+     then paste) and `IOS_CERTIFICATE_PASSWORD`.
+
+   **If the limit was already reached:** developer.apple.com → Certificates,
+   revoke the extra Apple Development certificates that CI made (their
+   private keys were thrown away with the build machines, so they're
+   useless). Keep the one you export above. If the app on your iPhone was
+   signed with one you revoke, it may stop opening: install the next build.
+
 **Install it:** plug in the iPhone, open Xcode → Window → Devices and
 Simulators, select the phone and drag the `.ipa` onto **Installed Apps**. With
 `app-store-connect`, upload to TestFlight instead.
