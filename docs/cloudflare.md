@@ -16,7 +16,7 @@ team (one.dash.cloudflare.com).
 3. **Public hostname**: add `nextly.example.com` (your domain) with service
    **HTTP** and URL `nextly:8080`. That's the Compose service name, which
    cloudflared can reach on the Compose network.
-4. On the host: `docker compose up -d --build`. The tunnel shows **Healthy**.
+4. On the host: `docker login ghcr.io -u mjsamberg` (once; README, "Run the sync server"), then `docker compose up -d`. The tunnel shows **Healthy**.
 
 ## 2. Protect it with Access
 

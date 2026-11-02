@@ -112,11 +112,28 @@ Access first: [docs/cloudflare.md](docs/cloudflare.md). Then copy
 
 ```bash
 cp .env.example .env    # set NEXTLY_TOKEN and CLOUDFLARE_TUNNEL_TOKEN
-docker compose up -d --build
+docker login ghcr.io -u mjsamberg
+docker compose up -d
 ```
 
-Compose builds the server from the `server/` folder of this repo's `main`
-branch and runs `cloudflared` next to it. In each app, open **Settings** and
+GitHub Actions builds the server's image from the `server/` folder of each
+push to `main` and publishes it as a private package,
+`ghcr.io/mjsamberg/nextly-server`. Compose runs it with `cloudflared` next to
+it. For `docker login`, make a classic personal access token (GitHub →
+Settings → Developer settings) with only the `read:packages` scope and an
+expiry date, and paste it as the password. It can download images but not
+read or change the code. Classic tokens can't be limited to one package, so a
+separate GitHub account with read access to just this package isolates it
+further.
+
+To update: `docker compose pull && docker compose up -d`. To check first
+that the image was built by this repo's workflow (needs the `gh` CLI):
+
+```bash
+gh attestation verify oci://ghcr.io/mjsamberg/nextly-server:main --owner mjsamberg
+```
+
+In each app, open **Settings** and
 enter `https://nextly.example.com` (your hostname), the sync token, and the
 Access service token under **Request headers** → **Add Cloudflare Access headers**.
 

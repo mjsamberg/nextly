@@ -20,7 +20,7 @@ file is a "port of `app/src/…`" point there.
 | `windows/installer/` | The per-user Inno Setup installer ("Nextly Native"), built by CI |
 | `apple/` | The SwiftUI app (`App/`, `project.yml`) on `NextlyKit/`; widget and Siri extensions (`Shared`, `Widgets`, `Intents`); CI scripts |
 | `apple/NextlyKit/` | Swift package: models, rules, lists, SQLite store, sync, live updates. `swift test` runs the fixtures and syncs against `server/` |
-| `server/` | Sync server: Node 24, no dependencies, `node:sqlite`; Docker Compose builds it from GitHub `main` |
+| `server/` | Sync server: Node 24, no dependencies, `node:sqlite`; GitHub Actions publishes its image (private, `ghcr.io/mjsamberg/nextly-server`) from each push to `main`; the server pulls it |
 | `server/iiq.js` | Incident IQ sync (see below); `iiq-probe.js`, `iiq-options.js` are read-only diagnostics |
 | `capture/` | The Gmail bookmarklet (`nextly://add` links) |
 | `brand/icon.svg` | The app icon's source (`apple/scripts/render-icons.swift` renders it) |
@@ -54,7 +54,12 @@ file is a "port of `app/src/…`" point there.
   installer isn't code-signed yet: SmartScreen warns, and Smart App Control
   blocks it.
 - The server's `.env` lives only on the server. Never put tokens or secrets in
-  the repo (it's public).
+  the repo, even though it's private now (it was public, and history would
+  show them if it's made public again).
+- The server runs the image CI publishes on each push to `main`
+  (`server-image` job, private on ghcr.io, with a build attestation); it logs
+  in with a read-only `read:packages` token. That job can publish, so its
+  third-party actions are pinned to commits: keep them pinned when updating.
 - Pull before starting and push when done; the other computer may have work.
 - Commits: short imperative subject, a body saying why.
 

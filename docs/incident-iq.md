@@ -49,7 +49,7 @@ pulling everyone's tickets; set `IIQ_USER_ID` instead.
 Then restart:
 
 ```bash
-docker compose up -d --build
+docker compose up -d
 ```
 
 The server log says `Incident IQ sync on.` In any Nextly app, **Settings →
