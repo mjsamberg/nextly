@@ -72,3 +72,51 @@ test('a device edit made while the server waits on Incident IQ is kept', async (
   assert.equal(b.done, true);
   assert.equal(b.notes[0]?.text, 'typed on the phone');
 });
+
+test('a resolve is checked afterwards: done only if Incident IQ closed the ticket', async () => {
+  const s = store();
+  const t0 = Date.now() - 60_000;
+  const action = (id, tid) => ({ id, kind: 'iiq-action', hlc: hlc(t0 + 1), data: { type: 'resolve', taskId: `iiq-${tid}`, ticketId: tid, state: 'pending', text: 'Replaced the charger.', createdAt: new Date(t0).toISOString() } });
+  s.applyChanges([
+    { id: `iiq-${A}`, kind: 'task', hlc: hlc(t0), data: task(A, 1, 'In Progress') },
+    { id: `iiq-${B}`, kind: 'task', hlc: hlc(t0), data: task(B, 2, 'In Progress') },
+    action('act-a', A), action('act-b', B),
+  ]);
+  // IIQ accepts both resolutions but only closes A.
+  const resolved = new Set();
+  const client = {
+    ticket: async (id) => ticket(id, id === A ? 1 : 2, resolved.has(id) && id === A ? 'Resolved' : 'In Progress', resolved.has(id) && id === A),
+    resolution: async (id, actionId, notes) => { assert.equal(actionId, 'act-1'); assert.equal(notes, 'Replaced the charger.'); resolved.add(id); return { ItemId: 'x' }; },
+  };
+  const cfg = iiqConfig({ IIQ_URL: 'https://iiq.test', IIQ_SITE_ID: 's', IIQ_TOKEN: 't', IIQ_USER_ID: ME, IIQ_RESOLUTION_ACTION_ID: 'act-1' });
+  const iiq = createIiq({ db: s.db, applyChanges: s.applyChanges, onChange: () => {}, cfg, client });
+
+  await iiq.processActions();
+  assert.deepEqual([...resolved].sort(), [A, B].sort());
+  assert.equal(s.get('act-a').state, 'done');
+  assert.match(s.get('act-a').message, /Resolved in Incident IQ \(Resolved\)/);
+  assert.equal(s.get('act-b').state, 'manual');
+  assert.match(s.get('act-b').message, /still open/);
+});
+
+test('a resolve Incident IQ answers with an error is not sent again', async () => {
+  const s = store();
+  const t0 = Date.now() - 60_000;
+  s.applyChanges([
+    { id: `iiq-${A}`, kind: 'task', hlc: hlc(t0), data: task(A, 1, 'In Progress') },
+    { id: 'act-a', kind: 'iiq-action', hlc: hlc(t0 + 1), data: { type: 'resolve', taskId: `iiq-${A}`, ticketId: A, state: 'pending', text: 'x', createdAt: new Date(t0).toISOString() } },
+  ]);
+  let calls = 0;
+  const client = {
+    ticket: async (id) => ticket(id, 1, 'In Progress'),
+    resolution: async () => { calls++; throw Object.assign(new Error('Incident IQ answered 500 for POST /api/v1.0/tickets/…/activities/new'), { status: 500 }); },
+  };
+  const cfg = iiqConfig({ IIQ_URL: 'https://iiq.test', IIQ_SITE_ID: 's', IIQ_TOKEN: 't', IIQ_USER_ID: ME, IIQ_RESOLUTION_ACTION_ID: 'act-1' });
+  const iiq = createIiq({ db: s.db, applyChanges: s.applyChanges, onChange: () => {}, cfg, client });
+
+  await iiq.processActions();
+  await iiq.processActions();
+  assert.equal(calls, 1);
+  assert.equal(s.get('act-a').state, 'failed');
+  assert.match(s.get('act-a').message, /500/);
+});

@@ -580,6 +580,7 @@ export function createIiq({ db, applyChanges, onChange, cfg, client = cfg && cre
           continue;
         }
         let result;
+        let failure = null;
         try {
           const refusal = await vet(d, done);
           if (refusal?.wait) {
@@ -593,7 +594,7 @@ export function createIiq({ db, applyChanges, onChange, cfg, client = cfg && cre
           }
           done.add(`${d.type}:${d.ticketId}`);
           sent.push(Date.now());
-          console.log(`Incident IQ: ${d.type} on ticket #${getNumber(d)}`); // what, not the text
+          console.log(`Incident IQ: sending ${d.type} on ticket #${getNumber(d)}`); // what, not the text
           if (d.type === 'comment') {
             await client.comment(d.ticketId, String(d.text ?? '').slice(0, 10000));
             result = { state: 'done', message: 'Posted to Incident IQ as an internal comment.' };
@@ -604,10 +605,18 @@ export function createIiq({ db, applyChanges, onChange, cfg, client = cfg && cre
             // Resolution action first (required by many districts), then the
             // district's own close request if it needs one.
             const actionId = cfg.resolutionActionId; // set on the server only, never by a device
-            if (actionId) await client.resolution(d.ticketId, actionId, d.text || 'Resolved in Nextly.');
+            if (actionId) {
+              const answer = await client.resolution(d.ticketId, actionId, d.text || 'Resolved in Nextly.');
+              // The answer's field names only (never values), to see what IIQ says back.
+              console.log(`Incident IQ: resolution action answer fields: ${answer && typeof answer === 'object' ? Object.keys(answer).join(', ') || '(none)' : String(answer === null ? 'empty' : typeof answer)}`);
+            }
             if (cfg.resolve) await client.call(cfg.resolve.method ?? 'POST', fill(cfg.resolve.path, d), fill(cfg.resolve.body ?? {}, d));
             if (actionId || cfg.resolve) {
-              result = { state: 'done', message: 'Resolved in Incident IQ.' };
+              // IIQ can accept the request and still leave the ticket open, so look.
+              const after = readTicket(await client.ticket(d.ticketId), cfg);
+              result = after.closed
+                ? { state: 'done', message: `Resolved in Incident IQ${after.status ? ` (${after.status})` : ''}.` }
+                : { state: 'manual', message: `Incident IQ accepted the resolution, but the ticket is still open${after.status ? ` (${after.status})` : ''}. Close it in Incident IQ.` };
             } else {
               await client.comment(d.ticketId, d.text ? `Marked done in Nextly: ${d.text}` : 'Marked done in Nextly.');
               result = { state: 'manual', message: 'Close this ticket in Incident IQ. Nextly can’t close tickets until IIQ_RESOLUTION_ACTION_ID is set (docs/incident-iq.md).' };
@@ -617,10 +626,18 @@ export function createIiq({ db, applyChanges, onChange, cfg, client = cfg && cre
           }
         } catch (e) {
           // Keep retrying failures that look temporary; give up on the rest.
-          const temporary = /fetch failed|timeout|ECONN|5\d\d/.test(e.message);
+          // A resolve retries only when IIQ didn't answer at all: IIQ answers
+          // 500 to a resolution it can't read, and sending that again won't help.
+          const temporary = e.status
+            ? d.type !== 'resolve' && e.status >= 500
+            : /fetch failed|timeout|ECONN|abort/i.test(e.message);
           const tries = (d.tries ?? 0) + 1;
           result = temporary && tries < 10 ? { state: 'pending', tries, message: e.message } : { state: 'failed', message: e.message };
+          failure = e.status ? `Incident IQ answered ${e.status}` : 'no answer from Incident IQ';
         }
+        // The outcome. A failure gives only IIQ's status code here: its full
+        // answer, which could echo the notes, stays in the action record.
+        console.log(`Incident IQ: ${d.type} on ticket #${getNumber(d)}: ${result.state} (${failure ?? result.message})`);
         write([record(a.id, 'iiq-action', { ...d, ...result, finishedAt: result.state === 'pending' ? null : now().toISOString() }, a.hlc)]);
       }
     } finally {
