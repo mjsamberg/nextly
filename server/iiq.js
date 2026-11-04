@@ -110,6 +110,7 @@ export function createClient(cfg, fetchImpl = fetch, { readOnly = false } = {}) 
     if (!m) refuse('not a change Nextly makes');
     if (path.includes('?')) refuse('changes take no query');
     if (body?.TicketId !== undefined && String(body.TicketId).toLowerCase() !== m[1].toLowerCase()) refuse('the body names a different ticket');
+    if (Array.isArray(body?.ActivityItems) && body.ActivityItems.some((i) => i?.TicketId !== undefined && String(i.TicketId).toLowerCase() !== m[1].toLowerCase())) refuse('an activity names a different ticket');
   }
 
   async function call(method, path, body) {
@@ -241,16 +242,30 @@ export function createClient(cfg, fetchImpl = fetch, { readOnly = false } = {}) 
       IsPublic: false, WaitForResponse: false, TicketWasUpdated: false,
     }),
     start: (id, userId) => either('POST', [`/api/v1.0/tickets/${id}/start`, `/services/tickets/${id}/start`], userId ? { UserId: userId } : {}),
-    /** A resolution action (activity type 8), which is how tickets get resolved. */
-    resolution: (id, actionId, notes) => call('POST', `/api/v1.0/tickets/${id}/activities/new`, {
+    /**
+     * A resolution action (activity type 8), which is how tickets get
+     * resolved. Shaped like one IIQ's own website saved on chathamnc: the
+     * item names its ticket, date and user, and is public like the activity.
+     */
+    resolution: (id, actionId, notes, userId) => call('POST', `/api/v1.0/tickets/${id}/activities/new`, {
       TicketId: id,
       IsPublic: true,
+      WaitForResponse: false,
+      TicketWasUpdated: false,
       ActivityItems: [{
         $type: 'Spark.Shared.Models.TicketActivityAction, Spark.Shared',
         TicketActivityTypeId: 8,
+        TicketId: id,
+        ActivityDate: new Date().toISOString(),
+        ...(userId ? { ByUserId: userId } : {}),
         ResolutionActionId: actionId,
+        ResolutionAction: null,
         Notes: notes || null,
-        IsPublic: false,
+        Effort: null,
+        HourlyRate: null,
+        LaborCost: null,
+        LaborTypeId: null,
+        IsPublic: true,
         Meta: null,
       }],
     }),
@@ -606,7 +621,7 @@ export function createIiq({ db, applyChanges, onChange, cfg, client = cfg && cre
             // district's own close request if it needs one.
             const actionId = cfg.resolutionActionId; // set on the server only, never by a device
             if (actionId) {
-              const answer = await client.resolution(d.ticketId, actionId, d.text || 'Resolved in Nextly.');
+              const answer = await client.resolution(d.ticketId, actionId, d.text || 'Resolved in Nextly.', me);
               // The answer's field names only (never values), to see what IIQ says back.
               console.log(`Incident IQ: resolution action answer fields: ${answer && typeof answer === 'object' ? Object.keys(answer).join(', ') || '(none)' : String(answer === null ? 'empty' : typeof answer)}`);
             }
