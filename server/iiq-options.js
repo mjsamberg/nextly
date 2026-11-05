@@ -52,6 +52,7 @@ let actions = 0;
 for (const [label, method, path, body] of [
   ['filter list: closereason (/services)', 'POST', '/services/filters', facet('closereason')],
   ['filter list: closereason (/api/v1.0)', 'POST', '/api/v1.0/filters', facet('closereason')],
+  ['POST /api/v1.0/resolutions/actions (IIQ’s “Actions” menu)', 'POST', '/api/v1.0/resolutions/actions?$s=9999', {}],
   ['GET /api/v1.0/tickets/resolution-actions', 'GET', '/api/v1.0/tickets/resolution-actions'],
   ['GET /services/tickets/resolution-actions', 'GET', '/services/tickets/resolution-actions'],
   ['GET /api/v1.0/resolution-actions', 'GET', '/api/v1.0/resolution-actions'],
