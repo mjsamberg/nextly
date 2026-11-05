@@ -422,6 +422,14 @@ export const RESOLUTION_ACTION_SOURCES = [
   ['GET', '/services/tickets/resolution-actions'],
   ['GET', '/api/v1.0/resolution-actions'],
   ['GET', '/services/resolution-actions'],
+  // IIQ's website lists them under "Actions".
+  ['GET', '/api/v1.0/tickets/actions'],
+  ['GET', '/services/tickets/actions'],
+  ['GET', '/api/v1.0/actions'],
+  ['GET', '/services/actions'],
+  ...['resolutionaction', 'resolutionactions', 'action'].flatMap((facet) => [
+    ['POST', '/services/filters', { Facets: [facet], Query: '', ResultsFilter: { EntityName: 'tickets' } }],
+  ]),
   ['POST', '/services/filters', { Facets: ['closereason'], Query: '', ResultsFilter: { EntityName: 'tickets' } }],
   ['POST', '/api/v1.0/filters', { Facets: ['closereason'], Query: '', ResultsFilter: { EntityName: 'tickets' } }],
 ];
