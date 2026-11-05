@@ -90,7 +90,11 @@ Older forms that readers must still accept (`normalize.json`):
 
 **Project**: `{title, areaId, order}`. **Area**: `{title, order}`.
 
-**iiq-action**: `{type comment/start/resolve, taskId, ticketId, text?, state pending/done/manual/failed, message?, createdAt, finishedAt?}`.
+**iiq-action**: `{type comment/start/resolve, taskId, ticketId, text?, resolutionActionId?, state pending/done/manual/failed, message?, createdAt, finishedAt?}`.
+`resolutionActionId` is on a `resolve` only when the user picked an action
+other than the server's default from the list in `GET /iiq/status`
+(`resolutionActions: [{id, name}]`, `defaultResolutionActionId`); the server
+refuses one that isn't on its list.
 Apps create these with `state: pending`; only the server carries them out and
 sets their result. The widgets and Siri never create them.
 

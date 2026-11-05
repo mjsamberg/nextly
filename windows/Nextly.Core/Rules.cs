@@ -178,7 +178,7 @@ public static class Rules
     }
 
     /// <summary>Asks the server to do something in Incident IQ (server/iiq.js). New ids: the action's.</summary>
-    public static void QueueIiq(Draft d, string taskId, string type, string? text = null)
+    public static void QueueIiq(Draft d, string taskId, string type, string? text = null, string? resolutionActionId = null)
     {
         if (d.Task(taskId) is not { } t || Js.AsString(t["external"]?["source"]) != "iiq") return;
         var action = new JsonObject
@@ -187,6 +187,7 @@ public static class Rules
             ["state"] = "pending", ["createdAt"] = d.Ctx.NowIso,
         };
         if (!string.IsNullOrEmpty(text)) action["text"] = text;
+        if (!string.IsNullOrEmpty(resolutionActionId)) action["resolutionActionId"] = resolutionActionId;
         d.Save("iiq-action", d.Ctx.NewId(), action);
     }
 
@@ -204,13 +205,18 @@ public static class Rules
         return null;
     }
 
-    public static void ResolveWithNotes(Draft d, string id, string notes)
+    /// <summary>
+    /// Finishes an open ticket's task with resolution notes. A resolution
+    /// action chosen in the app (from the server's list) goes with it; none
+    /// means the server's default.
+    /// </summary>
+    public static void ResolveWithNotes(Draft d, string id, string notes, string? resolutionActionId = null)
     {
         var n = notes.Trim();
-        Finish(d, id, false, n.Length > 0 ? n : null);
+        Finish(d, id, false, n.Length > 0 ? n : null, resolutionActionId);
     }
 
-    static void Finish(Draft d, string id, bool viaParent, string? notes = null)
+    static void Finish(Draft d, string id, bool viaParent, string? notes = null, string? resolutionActionId = null)
     {
         if (d.Task(id) is not { } t) return;
         var item = new TaskItem(id, t);
@@ -223,7 +229,7 @@ public static class Rules
         }
         // Subtasks finished along with a repeating parent come back with its copy.
         var nextId = item.Repeat is not null && !viaParent ? SpawnNext(d, id, t, item) : null;
-        if (item.IsOpenTicket && !viaParent) QueueIiq(d, id, "resolve", notes);
+        if (item.IsOpenTicket && !viaParent) QueueIiq(d, id, "resolve", notes, resolutionActionId);
         d.SaveTask(id, Js.With(t, ("done", true), ("doneAt", d.Ctx.NowIso), ("nextId", nextId)));
         foreach (var c in d.Children(id)) if (!c.Done) Finish(d, c.Id, true);
         foreach (var w in d.Blocks(id))

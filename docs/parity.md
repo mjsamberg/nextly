@@ -68,6 +68,7 @@ fixtures there, but stay unchecked until the app shows them.
 | Internal comments and the action log | ✅ | ✅ (queued and shown; carrying them out is the server's job) | ⬜ (built; posting a comment not yet tried) |
 | In Progress starts the ticket [actions: ticket-start] | ✅ | ✅ | ✅ |
 | Finishing asks for resolution notes [actions: ticket-needs-notes, ticket-resolve] | ✅ | ✅ | ✅ (checked against a real server) |
+| Choosing the resolution action when resolving [actions: ticket-resolve-chosen-action] | — | ⬜ (built; not yet checked) | ⬜ (built; not yet checked) |
 | Incident IQ status in Settings | ✅ | ✅ | ⬜ (built; checked only with Incident IQ off) |
 
 ## Settings and district rules

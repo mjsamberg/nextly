@@ -52,6 +52,9 @@ export function iiqConfig(env = process.env) {
     // (community.incidentiq.com, "closing tickets via API now requiring
     // resolution action"). Finishing a ticket task in Nextly posts this one.
     resolutionActionId: (env.IIQ_RESOLUTION_ACTION_ID || '').trim() || null,
+    // The apps let you pick another action from your site's list when you
+    // resolve. Optional: only these ids (comma-separated) are offered.
+    resolutionActions: (env.IIQ_RESOLUTION_ACTIONS || '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean),
     // Some IIQ calls also want the product (ticketing) id; optional.
     productId: (env.IIQ_PRODUCT_ID || '').trim() || null,
     pollSeconds: Math.max(30, Number(env.IIQ_POLL_SECONDS) || POLL_DEFAULT),
@@ -390,6 +393,39 @@ export function isMine(tk, { me, email, onlyMine }) {
   return !!onlyMine;
 }
 
+const FLAGS = ['IsClosed', 'IsResolved', 'IsResolution', 'IsCanceled', 'IsDefault', 'IsActive', 'IsDeleted', 'RequiresNotes'];
+
+/**
+ * Every { name, id, flags } in an answer: configuration lists such as
+ * resolution actions and statuses. People (requesters, agents) are skipped.
+ */
+export function namedOptions(v) {
+  const out = new Map();
+  (function walk(o, depth) {
+    if (!o || typeof o !== 'object' || depth > 8) return;
+    const person = o.Email !== undefined || o.FirstName !== undefined || o.LastName !== undefined || o.UserId !== undefined;
+    if (!Array.isArray(o) && !person) {
+      const name = [o.Name, o.StepName, o.ResolutionActionName, o.Text, o.Label, o.DisplayName].find((x) => typeof x === 'string' && x.trim());
+      const id = [o.ResolutionActionId, o.WorkflowStepId, o.TicketStateId, o.Id, o.ItemId, o.Value, o.Key].find((x) => GUID.test(String(x ?? '')) || (typeof x === 'number'));
+      if (name && id !== undefined && !out.has(String(id))) {
+        out.set(String(id), { name: name.trim().slice(0, 80), id: String(id), flags: FLAGS.filter((f) => o[f] === true), off: o.IsDeleted === true || o.IsActive === false });
+      }
+    }
+    for (const x of Object.values(o)) walk(x, depth + 1);
+  })(v, 0);
+  return [...out.values()];
+}
+
+/** Where a site's resolution actions might be listed (undocumented; iiq-options.js shows which answer). */
+export const RESOLUTION_ACTION_SOURCES = [
+  ['GET', '/api/v1.0/tickets/resolution-actions'],
+  ['GET', '/services/tickets/resolution-actions'],
+  ['GET', '/api/v1.0/resolution-actions'],
+  ['GET', '/services/resolution-actions'],
+  ['POST', '/services/filters', { Facets: ['closereason'], Query: '', ResultsFilter: { EntityName: 'tickets' } }],
+  ['POST', '/api/v1.0/filters', { Facets: ['closereason'], Query: '', ResultsFilter: { EntityName: 'tickets' } }],
+];
+
 // ---------- sync ----------
 
 export function createIiq({ db, applyChanges, onChange, cfg, client = cfg && createClient(cfg), now = () => new Date() }) {
@@ -420,6 +456,33 @@ export function createIiq({ db, applyChanges, onChange, cfg, client = cfg && cre
     }
     return full;
   }
+  /**
+   * The resolution actions devices may choose from: the first list IIQ
+   * gives that includes IIQ_RESOLUTION_ACTION_ID (so it's the right kind of
+   * list), narrowed to IIQ_RESOLUTION_ACTIONS if that's set. Read every few
+   * hours; empty when there's no default, or no list is found.
+   */
+  let actionList = null; // { at, items: [{ id, name }] }
+  async function resolutionActions() {
+    const def = cfg.resolutionActionId?.toLowerCase();
+    if (!def) return [];
+    if (actionList && Date.now() < actionList.at) return actionList.items;
+    let items = [];
+    for (const [method, path, body] of RESOLUTION_ACTION_SOURCES) {
+      try {
+        const found = namedOptions(await client.call(method, path, body));
+        if (!found.some((o) => o.id.toLowerCase() === def)) continue;
+        items = found
+          .filter((o) => o.id.toLowerCase() === def || (!o.off && (!cfg.resolutionActions.length || cfg.resolutionActions.includes(o.id.toLowerCase()))))
+          .map(({ id, name }) => ({ id, name }));
+        break;
+      } catch { /* not here: try the next place */ }
+    }
+    // Found: keep it 6 hours. Not found: try again in 10 minutes.
+    actionList = { at: Date.now() + (items.length ? RECHECK_MS : 600_000), items };
+    return items;
+  }
+
   const getRec = db.prepare('SELECT id, kind, hlc, deleted, data FROM records WHERE id = ?');
   const iiqTasks = db.prepare("SELECT id, hlc, deleted, data FROM records WHERE kind = 'task' AND id LIKE 'iiq-%'");
   const pendingActions = db.prepare("SELECT id, hlc, data FROM records WHERE kind = 'iiq-action' AND deleted = 0 AND json_extract(data, '$.state') = 'pending'");
@@ -562,6 +625,11 @@ export function createIiq({ db, applyChanges, onChange, cfg, client = cfg && cre
     if (task?.id !== `iiq-${d.ticketId}` || ext?.source !== 'iiq' || ext.id !== d.ticketId) return 'That task isn’t linked to this ticket.';
     if (!(Date.parse(d.createdAt) > Date.now() - MAX_ACTION_AGE_MS)) return 'Too old to send (more than 3 days). Do it again if it’s still needed.';
     if (d.type !== 'comment' && done.has(`${d.type}:${d.ticketId}`)) return 'Already sent.';
+    // A chosen resolution action must be one this server offers.
+    if (d.type === 'resolve' && d.resolutionActionId != null) {
+      const offered = await resolutionActions();
+      if (!offered.some((o) => o.id.toLowerCase() === String(d.resolutionActionId).toLowerCase())) return 'That resolution action isn’t one Nextly offers, so nothing was sent.';
+    }
     if (!me) return 'Nextly can’t tell which Incident IQ user you are, so it changes nothing.';
     // Live check: still open and still assigned to you.
     const tk = readTicket(await client.ticket(d.ticketId), cfg);
@@ -619,7 +687,10 @@ export function createIiq({ db, applyChanges, onChange, cfg, client = cfg && cre
           } else if (d.type === 'resolve') {
             // Resolution action first (required by many districts), then the
             // district's own close request if it needs one.
-            const actionId = cfg.resolutionActionId; // set on the server only, never by a device
+            // The server's default, or one from its own list (checked in vet()).
+            const chosen = d.resolutionActionId != null ? (await resolutionActions()).find((o) => o.id.toLowerCase() === String(d.resolutionActionId).toLowerCase()) : null;
+            const actionId = chosen?.id ?? cfg.resolutionActionId;
+            if (chosen) console.log(`Incident IQ: resolution action chosen on the device: ${chosen.name}`);
             if (actionId) {
               const answer = await client.resolution(d.ticketId, actionId, d.text || 'Resolved in Nextly.', me);
               // The answer's field names only (never values), to see what IIQ says back.
@@ -667,19 +738,27 @@ export function createIiq({ db, applyChanges, onChange, cfg, client = cfg && cre
   };
 
   let timer = null;
+  let listTimer = null;
   return {
     state,
     start() {
       void syncOnce();
+      void resolutionActions();
+      listTimer = setInterval(() => void resolutionActions(), 600_000); // re-reads when its time comes
+      listTimer.unref?.();
       timer = setInterval(() => void syncOnce(), cfg.pollSeconds * 1000);
       timer.unref?.();
     },
-    stop() { clearInterval(timer); },
+    stop() { clearInterval(timer); clearInterval(listTimer); },
     syncOnce,
     processActions,
+    resolutionActions,
     status: () => ({
       enabled: true, lastSync: state.lastSync, lastError: state.lastError, tickets: state.tickets,
       pollSeconds: cfg.pollSeconds, canResolve: !!(cfg.resolutionActionId || cfg.resolve), knowsUser: !!(me || cfg.userId || cfg.userEmail), openOnly: !!quick,
+      // For the picker in the apps' resolve prompt; empty: no picker, the default is used.
+      resolutionActions: actionList?.items ?? [],
+      defaultResolutionActionId: cfg.resolutionActionId,
     }),
   };
 }

@@ -309,16 +309,41 @@ public sealed partial class MainWindow : Window
         if (m.Store.ResolvingId is { } rid && !resolving) _ = Resolve(rid);
     }
 
-    /// <summary>Finishing an open Incident IQ ticket's task asks for resolution notes first.</summary>
+    /// <summary>The server's resolution actions and its default, as last heard (for the resolve prompt's picker).</summary>
+    (List<(string Id, string Name)> Actions, string? Default)? resolutionActions;
+
+    /// <summary>
+    /// Finishing an open Incident IQ ticket's task asks for resolution notes
+    /// first, and offers the server's resolution actions (its default
+    /// selected). Only a choice other than the default is sent; the server
+    /// accepts it only if it's on its own list.
+    /// </summary>
     async Task Resolve(string id)
     {
         resolving = true;
         var t = m.Store.View.Task(id);
         var notes = new TextBox { AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, MinHeight = 120, PlaceholderText = "What was done to fix it…", Header = "Resolution notes" };
+        var actions = new ComboBox { Header = "Resolution action", MinWidth = 260, Visibility = Visibility.Collapsed };
+        var note = Ui.Muted("Saved to the ticket in Incident IQ with your default resolution action.", 12);
+        void ShowActions()
+        {
+            if (resolutionActions is not { Actions.Count: > 1 } ra) return;
+            var picked = (actions.SelectedItem as ComboBoxItem)?.Tag as string ?? ra.Default;
+            actions.Items.Clear();
+            foreach (var (aid, name) in ra.Actions) actions.Items.Add(new ComboBoxItem { Content = name, Tag = aid });
+            actions.SelectedItem = actions.Items.OfType<ComboBoxItem>().FirstOrDefault((i) => string.Equals((string)i.Tag, picked, StringComparison.OrdinalIgnoreCase))
+                ?? actions.Items.OfType<ComboBoxItem>().FirstOrDefault((i) => string.Equals((string)i.Tag, ra.Default, StringComparison.OrdinalIgnoreCase));
+            actions.Visibility = Visibility.Visible;
+            note.Text = "Saved to the ticket in Incident IQ with this resolution action.";
+        }
         var p = new StackPanel { Spacing = 8 };
         p.Children.Add(Ui.Muted(t?.Title ?? ""));
+        p.Children.Add(actions);
         p.Children.Add(notes);
-        p.Children.Add(Ui.Muted("Saved to the ticket in Incident IQ with your resolution action.", 12));
+        p.Children.Add(note);
+        ShowActions();
+        // Refresh the list while the prompt is open (offline: the last list, or the default).
+        _ = RefreshResolutionActions(ShowActions);
         var dlg = new ContentDialog
         {
             XamlRoot = Content.XamlRoot, Title = $"Resolve ticket #{(t?.External?["number"] is { } n ? Js.Str(n) : "?")}", Content = p,
@@ -327,8 +352,20 @@ public sealed partial class MainWindow : Window
         notes.TextChanged += (_, _) => dlg.IsPrimaryButtonEnabled = notes.Text.Trim().Length > 0;
         var result = await dlg.ShowAsync();
         resolving = false;
-        if (result == ContentDialogResult.Primary) m.Store.ResolveWithNotes(id, notes.Text);
+        var chosen = (actions.SelectedItem as ComboBoxItem)?.Tag as string;
+        if (string.Equals(chosen, resolutionActions?.Default, StringComparison.OrdinalIgnoreCase)) chosen = null;
+        if (result == ContentDialogResult.Primary) m.Store.ResolveWithNotes(id, notes.Text, chosen);
         else m.Store.CancelResolve();
+    }
+
+    async Task RefreshResolutionActions(Action then)
+    {
+        if (await m.Sync.IiqStatus() is not { } s) return;
+        var list = (s["resolutionActions"] as System.Text.Json.Nodes.JsonArray ?? [])
+            .Select((a) => (Id: Js.AsString(a?["id"]) ?? "", Name: Js.AsString(a?["name"]) ?? ""))
+            .Where((a) => a.Id.Length > 0 && a.Name.Length > 0).ToList();
+        resolutionActions = (list, Js.AsString(s["defaultResolutionActionId"]));
+        then();
     }
 
     void UpdateSyncLine()

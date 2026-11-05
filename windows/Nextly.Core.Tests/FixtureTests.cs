@@ -94,7 +94,7 @@ public class FixtureTests
         ["updateTask"] = (d, a) => { Rules.UpdateTask(d, Str(a["id"])!, a["patch"]!.AsObject()); return null; },
         ["setFlag"] = (d, a) => { Rules.SetFlag(d, Str(a["id"])!, Str(a["flag"])); return null; },
         ["toggleDone"] = (d, a) => Rules.ToggleDone(d, Str(a["id"])!),
-        ["resolveWithNotes"] = (d, a) => { Rules.ResolveWithNotes(d, Str(a["id"])!, Str(a["notes"]) ?? ""); return null; },
+        ["resolveWithNotes"] = (d, a) => { Rules.ResolveWithNotes(d, Str(a["id"])!, Str(a["notes"]) ?? "", Str(a["resolutionActionId"])); return null; },
         ["queueIiq"] = (d, a) => { Rules.QueueIiq(d, Str(a["id"])!, Str(a["iiq"])!, Str(a["text"])); return null; },
         ["setStartOn"] = (d, a) => { Rules.SetStartOn(d, Str(a["id"])!, Str(a["startOn"])); return null; },
         ["promoteDue"] = (d, _) => { Rules.PromoteDue(d); return null; },

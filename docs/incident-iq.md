@@ -112,6 +112,28 @@ IIQ_RESOLVE_REQUEST={"method":"POST","path":"/api/v1.0/tickets/{TicketId}/…","
 
 It must be a POST or PUT to `/api/v1.0/tickets/{TicketId}/…` or
 `/services/tickets/{TicketId}/…`; anything else is ignored (see Safeguards).
+On chathamnc it's a close request with the "Resolved" close reason, like
+this (check the path against the request your browser sent):
+
+```bash
+IIQ_RESOLVE_REQUEST='{"method":"POST","path":"/api/v1.0/tickets/{TicketId}/close","body":{"CloseReasonTypeId":"c98ae44e-ada0-4ae7-ae30-817785c00002"}}'
+```
+
+### Choosing the resolution action when you resolve
+
+The resolve prompt in each app also lists your site's resolution actions,
+with `IIQ_RESOLUTION_ACTION_ID` selected, so you can pick another one for a
+ticket. The server reads the list from Incident IQ every few hours (from the
+first place that answers with a list that includes your default; deleted or
+inactive actions are left out). To offer only some of them, name them
+(comma-separated; the default is always offered):
+
+```bash
+IIQ_RESOLUTION_ACTIONS=ab026d86-…,1f3c…
+```
+
+With no list (no default set, the list can't be found, or the device is
+offline), the prompt has no picker and the default is used.
 
 ## Safeguards
 
@@ -134,8 +156,11 @@ leaked sync token from reaching beyond your own tickets:
 - **No replays or repeats.** Requests older than 3 days are refused, and a
   ticket is started or resolved at most once per batch.
 - **Rate limit.** At most 30 changes an hour; the rest wait their turn.
-- **Settings stay on the server.** Devices can't choose the resolution
-  action or the close request; those come only from `.env`.
+- **Settings stay on the server.** The close request comes only from
+  `.env`. A device can choose a resolution action only from the list the
+  server read from Incident IQ itself (and narrowed with
+  `IIQ_RESOLUTION_ACTIONS`); any other choice is refused and logged, and
+  nothing is sent.
 - **Read-only tools.** `iiq-probe.js` and `iiq-options.js` can't send any
   change at all.
 - **A log.** The server log records each change (ticket number and kind,

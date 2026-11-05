@@ -82,17 +82,30 @@ struct ContentView: View {
     }
 }
 
-/// Asks for resolution notes before an Incident IQ ticket's task is completed (ResolveDialog.tsx).
+/// Asks for resolution notes before an Incident IQ ticket's task is completed
+/// (ResolveDialog.tsx), and offers the server's resolution actions with its
+/// default selected. Only a choice other than the default is sent; the server
+/// accepts it only if it's on its own list.
 struct ResolveSheet: View {
     let model: AppModel
     let task: TaskItem
     @State private var notes = ""
+    @State private var actions: [IiqResolutionAction] = []
+    @State private var defaultActionId: String?
+    @State private var pickedActionId = ""
     @FocusState private var focused: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Resolve ticket #\(task.external?.number.text ?? "?")").font(Theme.heading(22, relativeTo: .title2))
             Text(task.title).font(Theme.small).foregroundStyle(.secondary)
+            if actions.count > 1 {
+                Picker("Resolution action", selection: $pickedActionId) {
+                    ForEach(actions) { Text($0.name).tag($0.id) }
+                }
+                .pickerStyle(.menu)
+                .frame(minHeight: 44)
+            }
             Text("Resolution notes").font(Theme.body(.semibold))
             TextEditor(text: $notes)
                 .focused($focused)
@@ -103,13 +116,16 @@ struct ResolveSheet: View {
                     }
                 }
                 .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(.quaternary))
-            Text("Saved to the ticket in Incident IQ with your resolution action.")
+            Text(actions.count > 1 ? "Saved to the ticket in Incident IQ with this resolution action." : "Saved to the ticket in Incident IQ with your default resolution action.")
                 .font(Theme.small).foregroundStyle(.secondary)
             HStack {
                 Spacer()
                 Button("Cancel", role: .cancel) { model.store.cancelResolve() }
                     .keyboardShortcut(.cancelAction)
-                Button("Resolve") { model.store.resolveWithNotes(task.id, notes) }
+                Button("Resolve") {
+                    let chosen = pickedActionId.isEmpty || pickedActionId.lowercased() == defaultActionId?.lowercased() ? nil : pickedActionId
+                    model.store.resolveWithNotes(task.id, notes, resolutionActionId: chosen)
+                }
                     .keyboardShortcut(.return, modifiers: .command)
                     .buttonStyle(.borderedProminent)
                     .disabled(notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
@@ -119,6 +135,13 @@ struct ResolveSheet: View {
         .frame(minWidth: 380)
         .presentationDetents([.medium, .large])
         .onAppear { focused = true }
+        // Offline or an older server: no list, so no picker and the default is used.
+        .task {
+            guard let s = await model.sync.iiqStatus(), let list = s.resolutionActions, list.count > 1 else { return }
+            defaultActionId = s.defaultResolutionActionId
+            pickedActionId = list.first { $0.id.lowercased() == s.defaultResolutionActionId?.lowercased() }?.id ?? list[0].id
+            actions = list
+        }
     }
 }
 

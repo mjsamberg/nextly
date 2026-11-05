@@ -1077,6 +1077,102 @@
       }
     },
     {
+      "id": "ticket-resolve-chosen-action",
+      "about": "A resolution action chosen on the device goes with the resolve; the server checks it against its own list.",
+      "records": [
+        {
+          "id": "t",
+          "kind": "task",
+          "data": {
+            "title": "t",
+            "flag": null,
+            "projectId": "iiq-project",
+            "parentId": null,
+            "deadline": null,
+            "startOn": null,
+            "repeat": null,
+            "nextId": null,
+            "external": {
+              "source": "iiq",
+              "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+              "number": 1042,
+              "url": null,
+              "status": "New",
+              "closed": false,
+              "requester": null,
+              "location": null,
+              "issue": null,
+              "priority": null,
+              "syncedAt": null
+            },
+            "done": false,
+            "doneAt": null,
+            "order": 1000,
+            "dependsOn": [],
+            "notes": [],
+            "createdAt": "2026-10-01T12:00:00.000Z"
+          }
+        }
+      ],
+      "action": {
+        "type": "resolveWithNotes",
+        "id": "t",
+        "notes": "  Replaced the charger.  ",
+        "resolutionActionId": "dddddddd-dddd-dddd-dddd-dddddddddddd"
+      },
+      "expect": {
+        "result": null,
+        "changed": {
+          "n1": {
+            "kind": "iiq-action",
+            "deleted": false,
+            "data": {
+              "type": "resolve",
+              "taskId": "t",
+              "ticketId": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+              "state": "pending",
+              "createdAt": "2026-10-20T13:00:00.000Z",
+              "text": "Replaced the charger.",
+              "resolutionActionId": "dddddddd-dddd-dddd-dddd-dddddddddddd"
+            }
+          },
+          "t": {
+            "kind": "task",
+            "deleted": false,
+            "data": {
+              "title": "t",
+              "flag": null,
+              "projectId": "iiq-project",
+              "parentId": null,
+              "deadline": null,
+              "startOn": null,
+              "repeat": null,
+              "nextId": null,
+              "external": {
+                "number": 1042,
+                "url": null,
+                "status": "New",
+                "closed": false,
+                "requester": null,
+                "location": null,
+                "issue": null,
+                "priority": null,
+                "syncedAt": null,
+                "source": "iiq",
+                "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+              },
+              "done": true,
+              "doneAt": "2026-10-20T13:00:00.000Z",
+              "order": 1000,
+              "dependsOn": [],
+              "notes": [],
+              "createdAt": "2026-10-01T12:00:00.000Z"
+            }
+          }
+        }
+      }
+    },
+    {
       "id": "ticket-start",
       "about": "Moving a ticket task to In Progress asks the server to start the ticket.",
       "records": [

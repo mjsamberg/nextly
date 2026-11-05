@@ -211,9 +211,9 @@ public final class LocalStore {
         if run({ Rules.toggleDone($0, id) }) == .needsNotes { resolvingId = id; bump() }
     }
 
-    public func resolveWithNotes(_ id: String, _ notes: String) {
+    public func resolveWithNotes(_ id: String, _ notes: String, resolutionActionId: String? = nil) {
         resolvingId = nil
-        run { Rules.resolveWithNotes($0, id, notes) }
+        run { Rules.resolveWithNotes($0, id, notes, resolutionActionId: resolutionActionId) }
     }
 
     public func cancelResolve() {

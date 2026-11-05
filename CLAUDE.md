@@ -100,9 +100,10 @@ features):
 - **Safeguards against changing tickets beyond your own; keep them.** The
   client allows only reads and three single-ticket changes (comment, start,
   resolve) on known paths; each action is checked live (open, assigned to
-  you, linked to its task), rate-limited, and logged. Devices can't choose the
-  resolution action; the widget and Siri never change tickets. Resolving asks
-  for notes in the app.
+  you, linked to its task), rate-limited, and logged. A device can choose a
+  resolution action only from the list the server read from IIQ (refused
+  otherwise); the close request comes only from `.env`. The widget and Siri
+  never change tickets. Resolving asks for notes in the app.
 - Tickets marked sensitive keep their requester and description in IIQ only.
 
 ## District rules (Chatham County Schools)

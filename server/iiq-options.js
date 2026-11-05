@@ -8,7 +8,7 @@
 // Incident IQ doesn't document where these lists live, so this tries each
 // likely place and shows which ones answer.
 
-import { createClient, iiqConfig, isMine, readTicket, resolveMe } from './iiq.js';
+import { createClient, iiqConfig, isMine, namedOptions, readTicket, resolveMe } from './iiq.js';
 
 const cfg = iiqConfig();
 if (!cfg) {
@@ -16,28 +16,8 @@ if (!cfg) {
   process.exit(1);
 }
 const client = createClient(cfg, fetch, { readOnly: true }); // this tool never changes anything
-const GUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const FLAGS = ['IsClosed', 'IsResolved', 'IsResolution', 'IsCanceled', 'IsDefault', 'IsActive', 'IsDeleted', 'RequiresNotes'];
-
 /** Every { name, id } pair in an answer, with any yes/no flags beside them. */
-function options(v) {
-  const out = new Map();
-  (function walk(o, depth) {
-    if (!o || typeof o !== 'object' || depth > 8) return;
-    // People (requesters, agents) are skipped: only configuration is printed.
-    const person = o.Email !== undefined || o.FirstName !== undefined || o.LastName !== undefined || o.UserId !== undefined;
-    if (!Array.isArray(o) && !person) {
-      const name = [o.Name, o.StepName, o.ResolutionActionName, o.Text, o.Label, o.DisplayName].find((x) => typeof x === 'string' && x.trim());
-      const id = [o.ResolutionActionId, o.WorkflowStepId, o.TicketStateId, o.Id, o.ItemId, o.Value, o.Key].find((x) => GUID.test(String(x ?? '')) || (typeof x === 'number'));
-      if (name && id !== undefined && !out.has(String(id))) {
-        const flags = FLAGS.filter((f) => o[f] === true).join(', ');
-        out.set(String(id), { name: name.trim().slice(0, 80), id: String(id), flags });
-      }
-    }
-    for (const x of Object.values(o)) walk(x, depth + 1);
-  })(v, 0);
-  return [...out.values()];
-}
+const options = (v) => namedOptions(v).map((o) => ({ ...o, flags: o.flags.join(', ') }));
 
 async function show(label, method, path, body) {
   try {

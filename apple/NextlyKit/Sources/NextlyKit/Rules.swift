@@ -238,9 +238,10 @@ public enum Rules {
     }
 
     /// Asks the server to do something in Incident IQ (server/iiq.js). New ids: the action's.
-    public static func queueIiq(_ d: Draft, _ taskId: String, _ type: String, text: String? = nil) {
+    public static func queueIiq(_ d: Draft, _ taskId: String, _ type: String, text: String? = nil, resolutionActionId: String? = nil) {
         guard let ext = d.task(taskId)?.external, ext.source == "iiq" else { return }
-        let a = IiqAction(type: type, taskId: taskId, ticketId: ext.id, text: text?.isEmpty == false ? text : nil, createdAt: d.ctx.nowISO)
+        var a = IiqAction(type: type, taskId: taskId, ticketId: ext.id, text: text?.isEmpty == false ? text : nil, createdAt: d.ctx.nowISO)
+        if let resolutionActionId, !resolutionActionId.isEmpty { a.extras["resolutionActionId"] = .string(resolutionActionId) }
         d.save(Kind.iiqAction, d.ctx.newId(), a.json)
     }
 
@@ -259,12 +260,15 @@ public enum Rules {
         return nil
     }
 
-    public static func resolveWithNotes(_ d: Draft, _ id: String, _ notes: String) {
+    /// Finishes an open ticket's task with resolution notes. A resolution action
+    /// chosen in the app (from the server's list) goes with it; nil means the
+    /// server's default.
+    public static func resolveWithNotes(_ d: Draft, _ id: String, _ notes: String, resolutionActionId: String? = nil) {
         let n = JS.trim(notes)
-        finish(d, id, viaParent: false, notes: n.isEmpty ? nil : n)
+        finish(d, id, viaParent: false, notes: n.isEmpty ? nil : n, resolutionActionId: resolutionActionId)
     }
 
-    static func finish(_ d: Draft, _ id: String, viaParent: Bool, notes: String? = nil) {
+    static func finish(_ d: Draft, _ id: String, viaParent: Bool, notes: String? = nil, resolutionActionId: String? = nil) {
         guard var t = d.task(id) else { return }
         if t.done {
             if let next = t.nextId, let copy = d.task(next), !copy.done { deleteTask(d, next) }
@@ -274,7 +278,7 @@ public enum Rules {
         }
         // Subtasks finished along with a repeating parent come back with its copy.
         let nextId = t.repeat != nil && !viaParent ? spawnNext(d, id, t) : nil
-        if openTicket(t) && !viaParent { queueIiq(d, id, "resolve", text: notes) }
+        if openTicket(t) && !viaParent { queueIiq(d, id, "resolve", text: notes, resolutionActionId: resolutionActionId) }
         t.done = true; t.doneAt = d.ctx.nowISO; t.nextId = nextId
         d.saveTask(id, t)
         for c in d.children(id) where !c.done { finish(d, c.id, viaParent: true) }

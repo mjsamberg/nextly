@@ -51,6 +51,16 @@ public struct IiqStatus: Codable, Hashable, Sendable {
     public var pollSeconds: Double?
     public var canResolve: Bool?
     public var knowsUser: Bool?
+    /// The resolution actions the server lets the app choose from (empty or
+    /// missing: no choice, the server uses its default), and that default.
+    public var resolutionActions: [IiqResolutionAction]?
+    public var defaultResolutionActionId: String?
+}
+
+/// One of the site's resolution actions, as the server lists it.
+public struct IiqResolutionAction: Codable, Hashable, Sendable, Identifiable {
+    public var id: String
+    public var name: String
 }
 
 /// An HTTP answer, with the address it finally came from (after redirects).

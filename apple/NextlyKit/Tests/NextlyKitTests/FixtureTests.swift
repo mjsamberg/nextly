@@ -70,7 +70,7 @@ final class FixtureTests: XCTestCase {
         case "updateTask": Rules.updateTask(d, id, patch)
         case "setFlag": Rules.setFlag(d, id, a["flag"]?.string.flatMap(Flag.init))
         case "toggleDone": result = json(Rules.toggleDone(d, id)?.rawValue)
-        case "resolveWithNotes": Rules.resolveWithNotes(d, id, a["notes"]?.string ?? "")
+        case "resolveWithNotes": Rules.resolveWithNotes(d, id, a["notes"]?.string ?? "", resolutionActionId: a["resolutionActionId"]?.string)
         case "queueIiq": Rules.queueIiq(d, id, a["iiq"]?.string ?? "", text: a["text"]?.string)
         case "setStartOn": Rules.setStartOn(d, id, a["startOn"]?.string)
         case "promoteDue": Rules.promoteDue(d)

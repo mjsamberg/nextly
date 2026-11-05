@@ -279,10 +279,10 @@ public sealed class LocalStore : IDisposable
         if (Run((d) => Rules.ToggleDone(d, id)) == "needs-notes") { ResolvingId = id; Notify(false); }
     }
 
-    public void ResolveWithNotes(string id, string notes)
+    public void ResolveWithNotes(string id, string notes, string? resolutionActionId = null)
     {
         ResolvingId = null;
-        Run((d) => Rules.ResolveWithNotes(d, id, notes));
+        Run((d) => Rules.ResolveWithNotes(d, id, notes, resolutionActionId));
     }
 
     public void CancelResolve()

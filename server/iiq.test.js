@@ -120,3 +120,38 @@ test('a resolve Incident IQ answers with an error is not sent again', async () =
   assert.equal(s.get('act-a').state, 'failed');
   assert.match(s.get('act-a').message, /500/);
 });
+
+test('a device may pick a resolution action only from the server’s list', async () => {
+  const s = store();
+  const t0 = Date.now() - 60_000;
+  const DEF = 'dddddddd-dddd-dddd-dddd-dddddddddddd';
+  const OTHER = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee';
+  const HIDDEN = 'ffffffff-ffff-ffff-ffff-ffffffffffff';
+  const act = (id, tid, pick) => ({ id, kind: 'iiq-action', hlc: hlc(t0 + 1), data: { type: 'resolve', taskId: `iiq-${tid}`, ticketId: tid, state: 'pending', text: 'x', createdAt: new Date(t0).toISOString(), resolutionActionId: pick } });
+  s.applyChanges([
+    { id: `iiq-${A}`, kind: 'task', hlc: hlc(t0), data: task(A, 1, 'In Progress') },
+    { id: `iiq-${B}`, kind: 'task', hlc: hlc(t0), data: task(B, 2, 'In Progress') },
+    act('act-a', A, OTHER), act('act-b', B, HIDDEN),
+  ]);
+  const used = new Map();
+  const client = {
+    // The first place has no list; the second has one with the default in it.
+    call: async (method, path) => {
+      if (path === '/api/v1.0/tickets/resolution-actions') throw Object.assign(new Error('404'), { status: 404 });
+      return { Items: [{ ResolutionActionId: DEF, Name: 'Fixed' }, { ResolutionActionId: OTHER, Name: 'Replaced part' }, { ResolutionActionId: HIDDEN, Name: 'Old', IsDeleted: true }] };
+    },
+    ticket: async (id) => ticket(id, id === A ? 1 : 2, used.has(id) ? 'Resolved' : 'In Progress', used.has(id)),
+    resolution: async (id, actionId) => { used.set(id, actionId); return {}; },
+  };
+  const cfg = iiqConfig({ IIQ_URL: 'https://iiq.test', IIQ_SITE_ID: 's', IIQ_TOKEN: 't', IIQ_USER_ID: ME, IIQ_RESOLUTION_ACTION_ID: DEF });
+  const iiq = createIiq({ db: s.db, applyChanges: s.applyChanges, onChange: () => {}, cfg, client });
+
+  assert.deepEqual((await iiq.resolutionActions()).map((o) => o.name), ['Fixed', 'Replaced part']);
+  assert.equal(iiq.status().defaultResolutionActionId, DEF);
+  await iiq.processActions();
+  assert.equal(used.get(A), OTHER);
+  assert.equal(s.get('act-a').state, 'done');
+  assert.equal(used.has(B), false, 'a deleted action is not offered, so not sent');
+  assert.equal(s.get('act-b').state, 'failed');
+  assert.match(s.get('act-b').message, /isn’t one Nextly offers/);
+});
