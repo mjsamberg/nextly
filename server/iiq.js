@@ -463,21 +463,32 @@ export function createIiq({ db, applyChanges, onChange, cfg, client = cfg && cre
    * hours; empty when there's no default, or no list is found.
    */
   let actionList = null; // { at, items: [{ id, name }] }
+  let actionListNote = '';
   async function resolutionActions() {
     const def = cfg.resolutionActionId?.toLowerCase();
     if (!def) return [];
     if (actionList && Date.now() < actionList.at) return actionList.items;
     let items = [];
+    const tried = [];
     for (const [method, path, body] of RESOLUTION_ACTION_SOURCES) {
+      const where = `${method} ${path}${body?.Facets ? ` (${body.Facets[0]})` : ''}`;
       try {
         const found = namedOptions(await client.call(method, path, body));
-        if (!found.some((o) => o.id.toLowerCase() === def)) continue;
+        if (!found.some((o) => o.id.toLowerCase() === def)) { tried.push(`${where}: ${found.length} named, not including the default`); continue; }
         items = found
           .filter((o) => o.id.toLowerCase() === def || (!o.off && (!cfg.resolutionActions.length || cfg.resolutionActions.includes(o.id.toLowerCase()))))
           .map(({ id, name }) => ({ id, name }));
+        tried.push(`${where}: ${items.length} offered`);
         break;
-      } catch { /* not here: try the next place */ }
+      } catch (e) {
+        tried.push(`${where}: ${e.status ? `answered ${e.status}` : 'no answer'}`);
+      }
     }
+    // Said once, and again only when it changes: names and ids are configuration, not tickets.
+    const note = items.length
+      ? `Incident IQ: ${items.length} resolution action(s) to choose from (${tried.at(-1)}).`
+      : `Incident IQ: no list of resolution actions includes IIQ_RESOLUTION_ACTION_ID, so the apps show no picker. Tried: ${tried.join('; ')}.`;
+    if (note !== actionListNote) console.log((actionListNote = note));
     // Found: keep it 6 hours. Not found: try again in 10 minutes.
     actionList = { at: Date.now() + (items.length ? RECHECK_MS : 600_000), items };
     return items;
