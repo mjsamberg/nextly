@@ -316,7 +316,9 @@ public sealed partial class MainWindow : Window
     /// Finishing an open Incident IQ ticket's task asks for resolution notes
     /// first, and offers the server's resolution actions (its default
     /// selected). Only a choice other than the default is sent; the server
-    /// accepts it only if it's on its own list.
+    /// accepts it only if it's on its own list. The first time, Resolve
+    /// waits (up to 5 s) for the list, so it isn't sent with the default by
+    /// mistake; after that the last list shows at once and refreshes quietly.
     /// </summary>
     async Task Resolve(string id)
     {
@@ -325,9 +327,18 @@ public sealed partial class MainWindow : Window
         var notes = new TextBox { AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, MinHeight = 120, PlaceholderText = "What was done to fix it…", Header = "Resolution notes" };
         var actions = new ComboBox { Header = "Resolution action", MinWidth = 260, Visibility = Visibility.Collapsed };
         var note = Ui.Muted("Saved to the ticket in Incident IQ with your default resolution action.", 12);
+        var loading = resolutionActions is null;
+        var loadingRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Visibility = loading ? Visibility.Visible : Visibility.Collapsed };
+        loadingRow.Children.Add(new ProgressRing { IsActive = true, Width = 16, Height = 16 });
+        loadingRow.Children.Add(Ui.Muted("Loading resolution actions…", 12));
         void ShowActions()
         {
-            if (resolutionActions is not { Actions.Count: > 1 } ra) return;
+            if (resolutionActions is not { Actions.Count: > 1 } ra)
+            {
+                actions.Visibility = Visibility.Collapsed;
+                note.Text = "Saved to the ticket in Incident IQ with your default resolution action.";
+                return;
+            }
             var picked = (actions.SelectedItem as ComboBoxItem)?.Tag as string ?? ra.Default;
             actions.Items.Clear();
             foreach (var (aid, name) in ra.Actions) actions.Items.Add(new ComboBoxItem { Content = name, Tag = aid });
@@ -338,18 +349,27 @@ public sealed partial class MainWindow : Window
         }
         var p = new StackPanel { Spacing = 8 };
         p.Children.Add(Ui.Muted(t?.Title ?? ""));
+        p.Children.Add(loadingRow);
         p.Children.Add(actions);
         p.Children.Add(notes);
         p.Children.Add(note);
         ShowActions();
-        // Refresh the list while the prompt is open (offline: the last list, or the default).
-        _ = RefreshResolutionActions(ShowActions);
         var dlg = new ContentDialog
         {
             XamlRoot = Content.XamlRoot, Title = $"Resolve ticket #{(t?.External?["number"] is { } n ? Js.Str(n) : "?")}", Content = p,
             PrimaryButtonText = "Resolve", CloseButtonText = "Cancel", DefaultButton = ContentDialogButton.Primary, IsPrimaryButtonEnabled = false,
         };
-        notes.TextChanged += (_, _) => dlg.IsPrimaryButtonEnabled = notes.Text.Trim().Length > 0;
+        void UpdateButton() => dlg.IsPrimaryButtonEnabled = notes.Text.Trim().Length > 0 && !loading;
+        notes.TextChanged += (_, _) => UpdateButton();
+        // Refresh the list while the prompt is open (offline: the last list, or the default).
+        _ = FinishLoading();
+        async Task FinishLoading()
+        {
+            await Task.WhenAny(RefreshResolutionActions(ShowActions), Task.Delay(5000));
+            loading = false;
+            loadingRow.Visibility = Visibility.Collapsed;
+            UpdateButton();
+        }
         var result = await dlg.ShowAsync();
         resolving = false;
         var chosen = (actions.SelectedItem as ComboBoxItem)?.Tag as string;

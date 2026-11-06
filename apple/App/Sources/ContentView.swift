@@ -85,7 +85,8 @@ struct ContentView: View {
 /// Asks for resolution notes before an Incident IQ ticket's task is completed
 /// (ResolveDialog.tsx), and offers the server's resolution actions with its
 /// default selected. Only a choice other than the default is sent; the server
-/// accepts it only if it's on its own list.
+/// accepts it only if it's on its own list. Resolve waits (up to 5 s) for the
+/// list, so it isn't sent with the default by mistake.
 struct ResolveSheet: View {
     let model: AppModel
     let task: TaskItem
@@ -93,13 +94,20 @@ struct ResolveSheet: View {
     @State private var actions: [IiqResolutionAction] = []
     @State private var defaultActionId: String?
     @State private var pickedActionId = ""
+    @State private var loadingActions = true
     @FocusState private var focused: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Resolve ticket #\(task.external?.number.text ?? "?")").font(Theme.heading(22, relativeTo: .title2))
             Text(task.title).font(Theme.small).foregroundStyle(.secondary)
-            if actions.count > 1 {
+            if loadingActions {
+                HStack(spacing: 8) {
+                    ProgressView().controlSize(.small)
+                    Text("Loading resolution actions…").font(Theme.small).foregroundStyle(.secondary)
+                }
+                .frame(minHeight: 44)
+            } else if actions.count > 1 {
                 Picker("Resolution action", selection: $pickedActionId) {
                     ForEach(actions) { Text($0.name).tag($0.id) }
                 }
@@ -128,7 +136,7 @@ struct ResolveSheet: View {
                 }
                     .keyboardShortcut(.return, modifiers: .command)
                     .buttonStyle(.borderedProminent)
-                    .disabled(notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .disabled(notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || loadingActions)
             }
         }
         .padding(20)
@@ -137,7 +145,11 @@ struct ResolveSheet: View {
         .onAppear { focused = true }
         // Offline or an older server: no list, so no picker and the default is used.
         .task {
-            guard let s = await model.sync.iiqStatus(), let list = s.resolutionActions, list.count > 1 else { return }
+            let giveUp = Task { try? await Task.sleep(nanoseconds: 5_000_000_000); loadingActions = false }
+            let status = await model.sync.iiqStatus()
+            giveUp.cancel()
+            loadingActions = false
+            guard let s = status, let list = s.resolutionActions, list.count > 1 else { return }
             defaultActionId = s.defaultResolutionActionId
             pickedActionId = list.first { $0.id.lowercased() == s.defaultResolutionActionId?.lowercased() }?.id ?? list[0].id
             actions = list
