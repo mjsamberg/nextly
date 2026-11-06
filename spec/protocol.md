@@ -122,7 +122,8 @@ Each app holds the rules as pure functions over records (`Rules.swift`,
   deadline keeps the same distance from the start as before. Un-finishing
   deletes the copy if it's still open.
 - **Finishing an open ticket's task** asks for notes first, then queues a
-  `resolve` action. Moving the task to In Progress queues `start`.
+  `resolve` action. As in IIQ, the apps require notes only with the
+  default resolution action; with another they're optional. Moving the task to In Progress queues `start`.
 - **New ids**, in the order the rules files document. Fixtures name them `n1`,
   `n2`, …, so both apps must make them in the same order. Rules visit tasks
   in id order.

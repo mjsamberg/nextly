@@ -319,6 +319,7 @@ public sealed partial class MainWindow : Window
     /// accepts it only if it's on its own list. The first time, Resolve
     /// waits (up to 5 s) for the list, so it isn't sent with the default by
     /// mistake; after that the last list shows at once and refreshes quietly.
+    /// As in IIQ, notes are required only with the default resolution action.
     /// </summary>
     async Task Resolve(string id)
     {
@@ -359,8 +360,20 @@ public sealed partial class MainWindow : Window
             XamlRoot = Content.XamlRoot, Title = $"Resolve ticket #{(t?.External?["number"] is { } n ? Js.Str(n) : "?")}", Content = p,
             PrimaryButtonText = "Resolve", CloseButtonText = "Cancel", DefaultButton = ContentDialogButton.Primary, IsPrimaryButtonEnabled = false,
         };
-        void UpdateButton() => dlg.IsPrimaryButtonEnabled = notes.Text.Trim().Length > 0 && !loading;
+        // Like IIQ: notes are required with the default resolution action, optional with any other.
+        string? Chosen()
+        {
+            var c = actions.Visibility == Visibility.Visible ? (actions.SelectedItem as ComboBoxItem)?.Tag as string : null;
+            return string.Equals(c, resolutionActions?.Default, StringComparison.OrdinalIgnoreCase) ? null : c;
+        }
+        void UpdateButton()
+        {
+            var needNotes = Chosen() is null;
+            notes.Header = needNotes ? "Resolution notes" : "Resolution notes (optional)";
+            dlg.IsPrimaryButtonEnabled = !loading && (!needNotes || notes.Text.Trim().Length > 0);
+        }
         notes.TextChanged += (_, _) => UpdateButton();
+        actions.SelectionChanged += (_, _) => UpdateButton();
         // Refresh the list while the prompt is open (offline: the last list, or the default).
         _ = FinishLoading();
         async Task FinishLoading()
@@ -372,9 +385,7 @@ public sealed partial class MainWindow : Window
         }
         var result = await dlg.ShowAsync();
         resolving = false;
-        var chosen = (actions.SelectedItem as ComboBoxItem)?.Tag as string;
-        if (string.Equals(chosen, resolutionActions?.Default, StringComparison.OrdinalIgnoreCase)) chosen = null;
-        if (result == ContentDialogResult.Primary) m.Store.ResolveWithNotes(id, notes.Text, chosen);
+        if (result == ContentDialogResult.Primary) m.Store.ResolveWithNotes(id, notes.Text, Chosen());
         else m.Store.CancelResolve();
     }
 

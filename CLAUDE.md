@@ -103,7 +103,8 @@ features):
   you, linked to its task), rate-limited, and logged. A device can choose a
   resolution action only from the list the server read from IIQ (refused
   otherwise); the close request comes only from `.env`. The widget and Siri
-  never change tickets. Resolving asks for notes in the app.
+  never change tickets. Resolving asks for notes in the app
+  (required only with the default resolution action, as in IIQ).
 - Tickets marked sensitive keep their requester and description in IIQ only.
 
 ## District rules (Chatham County Schools)

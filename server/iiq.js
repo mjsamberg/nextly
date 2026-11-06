@@ -706,7 +706,8 @@ export function createIiq({ db, applyChanges, onChange, cfg, client = cfg && cre
             const actionId = chosen?.id ?? cfg.resolutionActionId;
             if (chosen) console.log(`Incident IQ: resolution action chosen on the device: ${chosen.name}`);
             if (actionId) {
-              const answer = await client.resolution(d.ticketId, actionId, d.text || 'Resolved in Nextly.', me);
+              // IIQ requires notes only with the default action; with another, none is fine.
+              const answer = await client.resolution(d.ticketId, actionId, d.text || (chosen ? null : 'Resolved in Nextly.'), me);
               // The answer's field names only (never values), to see what IIQ says back.
               console.log(`Incident IQ: resolution action answer fields: ${answer && typeof answer === 'object' ? Object.keys(answer).join(', ') || '(none)' : String(answer === null ? 'empty' : typeof answer)}`);
             }

@@ -97,6 +97,12 @@ struct ResolveSheet: View {
     @State private var loadingActions = true
     @FocusState private var focused: Bool
 
+    /// The picked action when it isn't the default (only that is sent). As in
+    /// IIQ, notes are required with the default and optional with any other.
+    private var chosenActionId: String? {
+        actions.count > 1 && !pickedActionId.isEmpty && pickedActionId.lowercased() != defaultActionId?.lowercased() ? pickedActionId : nil
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Resolve ticket #\(task.external?.number.text ?? "?")").font(Theme.heading(22, relativeTo: .title2))
@@ -114,7 +120,7 @@ struct ResolveSheet: View {
                 .pickerStyle(.menu)
                 .frame(minHeight: 44)
             }
-            Text("Resolution notes").font(Theme.body(.semibold))
+            Text(chosenActionId == nil ? "Resolution notes" : "Resolution notes (optional)").font(Theme.body(.semibold))
             TextEditor(text: $notes)
                 .focused($focused)
                 .frame(minHeight: 110)
@@ -131,12 +137,11 @@ struct ResolveSheet: View {
                 Button("Cancel", role: .cancel) { model.store.cancelResolve() }
                     .keyboardShortcut(.cancelAction)
                 Button("Resolve") {
-                    let chosen = pickedActionId.isEmpty || pickedActionId.lowercased() == defaultActionId?.lowercased() ? nil : pickedActionId
-                    model.store.resolveWithNotes(task.id, notes, resolutionActionId: chosen)
+                    model.store.resolveWithNotes(task.id, notes, resolutionActionId: chosenActionId)
                 }
                     .keyboardShortcut(.return, modifiers: .command)
                     .buttonStyle(.borderedProminent)
-                    .disabled(notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || loadingActions)
+                    .disabled(loadingActions || (chosenActionId == nil && notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty))
             }
         }
         .padding(20)
