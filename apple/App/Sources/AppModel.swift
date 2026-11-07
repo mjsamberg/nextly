@@ -150,21 +150,32 @@ final class AppModel {
             if parts.count > 1, let l = ListView(name: parts[1]) { go(l) }
         default:
             guard let c = Logic.parseCaptureLink(url.absoluteString) else { return }
-            var notes: [JSONValue] = []
-            if !c.note.isEmpty { notes.append(Block(id: Logic.uid(), type: .paragraph, text: c.note).json) }
-            if let mail = c.emailUrl {
-                var b = Block(id: Logic.uid(), type: .email)
-                b.url = mail
-                b.subject = c.title
-                notes.append(b.json)
-            }
-            if let other = c.otherUrl { notes.append(Block(id: Logic.uid(), type: .paragraph, text: other).json) }
-            let id = store.createTask(["title": .string(c.title), "flag": .string(c.flag.rawValue), "notes": .array(notes)])
+            add(c)
+        }
+    }
+
+    /// Adds the task a capture describes (a nextly://add link, or an email
+    /// dropped on the window: MailDrop.swift) and returns its id. With `open`,
+    /// shows its list, selects it, and says where it went.
+    @discardableResult
+    func add(_ c: Logic.Capture, open: Bool = true) -> String {
+        var notes: [JSONValue] = []
+        if !c.note.isEmpty { notes.append(Block(id: Logic.uid(), type: .paragraph, text: c.note).json) }
+        if let mail = c.emailUrl {
+            var b = Block(id: Logic.uid(), type: .email)
+            b.url = mail
+            b.subject = c.title
+            notes.append(b.json)
+        }
+        if let other = c.otherUrl { notes.append(Block(id: Logic.uid(), type: .paragraph, text: other).json) }
+        let id = store.createTask(["title": .string(c.title), "flag": .string(c.flag.rawValue), "notes": .array(notes)])
+        if open {
             let l = ListView(name: c.flag.rawValue) ?? .inbox
             go(l)
             selectedTaskId = id
             show(Toast(text: "Added “\(c.title)” to \(Lists.viewTitle(view, l))"))
         }
+        return id
     }
 
     /// The list a task opened from a widget shows in.

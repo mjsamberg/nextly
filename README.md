@@ -100,6 +100,12 @@ opens it so you can choose Today or Next. It needs the app installed on that
 computer, and works offline. On Windows the app takes `nextly://` links when
 nothing else handles them; otherwise switch them in **Settings → Links**.
 
+**Mac: drag from Mail.** Drag one or more messages from Mail onto the Nextly
+window. Each becomes an Inbox task titled with its subject, with an email card
+that opens the message in Mail, as the bookmarklet does. Only the message's
+link and subject are kept, never its text. A Gmail message's link dragged from
+the browser works the same way.
+
 **iPhone and Mac:** Siri ("Add a task in Nextly"), or paste a Gmail link into
 quick add.
 

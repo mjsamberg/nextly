@@ -88,6 +88,7 @@ fixtures there, but stay unchecked until the app shows them.
 | Feature | Tauri (retired) | Swift | Windows |
 | --- | --- | --- | --- |
 | `nextly://add` links (bookmarklet) [capture-links] | ✅ | ✅ (iOS too, which the Tauri app lacks) | ✅ (a second launch hands its link to the running copy) |
+| Drop emails from Mail (or a Gmail link from a browser) on the window: Inbox task with an email card [capture-links] | — | ✅ (Mac: one message from Mail, checked in the app; several at once and Gmail links from a browser not yet) | — (Windows has no Mail app to drag from) |
 | App icon | ✅ | ✅ | ✅ |
 | Widgets: Today, Next; finish from the widget | — | ⬜ (built; the app shares settings and a snapshot with them, checked in the simulator; not yet placed on a home screen) | — |
 | Siri: add a task, read a list | — | ⬜ (built; tasks Siri saves offline are added on launch, checked; Siri itself not yet tried) | — |

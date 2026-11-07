@@ -39,6 +39,8 @@ struct ContentView: View {
             }
         }
         .overlay(alignment: .bottom) { toast }
+        // Emails dragged from Mail or a browser (MailDrop.swift).
+        .onDrop(of: AppModel.mailDropTypes, isTargeted: nil) { model.dropEmails($0) }
         .sheet(isPresented: Binding(get: { model.store.resolvingId != nil }, set: { if !$0 { model.store.cancelResolve() } })) {
             if let id = model.store.resolvingId, let t = model.view.task(id) {
                 ResolveSheet(model: model, task: t)
