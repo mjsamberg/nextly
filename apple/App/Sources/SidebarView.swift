@@ -55,14 +55,7 @@ struct SidebarView: View {
                         }
                     }
                 } header: {
-                    HStack {
-                        Text(g.title)
-                        Spacer()
-                        Button { adding = g.key } label: { Image(systemName: "plus") }
-                            .buttonStyle(.borderless)
-                            .accessibilityLabel("New project in \(g.title)")
-                            .help("New project in \(g.title)")
-                    }
+                    GroupHeader(title: g.title) { adding = g.key }
                 }
             }
             Section {
@@ -113,6 +106,39 @@ struct SidebarView: View {
         case .today: c.today
         case .next: c.next
         default: 0
+        }
+    }
+
+    /// An area's header, with a small + for a new project in it. On the Mac
+    /// the + shows only while the pointer is over the header, as in Mail and
+    /// Notes ("New project" at the bottom of the sidebar is always there);
+    /// iPhone and iPad have no pointer to hover, so it stays.
+    private struct GroupHeader: View {
+        let title: String
+        let add: () -> Void
+        @State private var hovering = false
+
+        var body: some View {
+            HStack {
+                Text(title)
+                Spacer()
+                Button(action: add) {
+                    Image(systemName: "plus").font(.system(size: 11, weight: .semibold))
+                }
+                .buttonStyle(.borderless)
+                .foregroundStyle(.secondary)
+                #if os(macOS)
+                .opacity(hovering ? 1 : 0)
+                // Lines up with the project counts, which sit inside the row's edge.
+                .padding(.trailing, 14)
+                #endif
+                .accessibilityLabel("New project in \(title)")
+                .help("New project in \(title)")
+            }
+            #if os(macOS)
+            .contentShape(Rectangle())
+            .onHover { hovering = $0 }
+            #endif
         }
     }
 
