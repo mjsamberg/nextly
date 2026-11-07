@@ -52,7 +52,12 @@ file is a "port of `app/src/…`" point there.
 - Builds and releases run on GitHub Actions (`.github/workflows/build.yml`) on
   every push to `main`; signing secrets live in GitHub, not here. The Windows
   installer isn't code-signed yet: SmartScreen warns, and Smart App Control
-  blocks it.
+  blocks it (it also blocked fresh local builds of `Nextly.exe` while it was
+  on; `dotnet test` still ran). Never try to bypass Smart App Control; how to
+  sign (Azure Trusted Signing, a district certificate…) is still the owner's
+  decision. iPhone builds in CI sign with one fixed Apple Development
+  certificate (`IOS_CERTIFICATE`, `docs/apple-signing.md` step 3), so CI
+  doesn't create a new one each run.
 - The server's `.env` lives only on the server. Never put tokens or secrets in
   the repo, even though it's private now (it was public, and history would
   show them if it's made public again).
@@ -62,6 +67,12 @@ file is a "port of `app/src/…`" point there.
   third-party actions are pinned to commits: keep them pinned when updating.
 - Pull before starting and push when done; the other computer may have work.
 - Commits: short imperative subject, a body saying why.
+- Instructions for Claude live in this file, not in per-computer memory, so
+  a new computer starts with all of them; add lasting lessons here.
+- `.local/` holds per-computer reference files kept out of Git on purpose
+  (listed in `.git/info/exclude`, so add that line on a new clone), e.g.
+  `iiq-resolution-actions.csv` (the district's resolution actions with ids;
+  `docker compose exec nextly node iiq-options.js` on the server lists them).
 
 ## Two apps, one data format
 
@@ -83,7 +94,8 @@ features):
 
 - **iPhone layout: verify on the device.** Desktop browsers and emulators
   passed a fix that didn't work on the iPhone. For iOS UI bugs, ask early for
-  a screen recording.
+  a screen recording. (The old web app's case: a scrolling flex column
+  squashed its clipped sections on the device only; block layout fixed it.)
 - iOS tap targets are at least 44pt.
 - In NextlyKit the task model is `TaskData`, not `Task`: a public `Task` type
   hides Swift's `Task { }` in every file that imports the package.
